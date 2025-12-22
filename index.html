@@ -334,11 +334,13 @@
             align-items: center;
             justify-content: center;
             text-align: center;
-            background: linear-gradient(rgba(0, 0, 0, 0.8), rgba(0, 0, 0, 0.8)), url('https://images.unsplash.com/photo-1585747860715-2ba37e788b70?auto=format&fit=crop&q=80&w=1920');
+            background: linear-gradient(rgba(0, 0, 0, 0.7), rgba(0, 0, 0, 0.7)), url('https://images.unsplash.com/photo-1503951914875-452162b0f3f1?auto=format&fit=crop&q=80&w=2400');
             background-size: cover;
             background-position: center;
             position: relative;
             overflow: hidden;
+            image-rendering: -webkit-optimize-contrast;
+            /* Enhance sharpness */
         }
 
         .hero-bg-anim {
@@ -395,6 +397,93 @@
             justify-content: center;
             flex-wrap: wrap;
             animation: fadeInUp 1s ease 0.6s both;
+        }
+
+        header img,
+        .hero-bg-anim {
+            image-rendering: -webkit-optimize-contrast;
+            image-rendering: crisp-edges;
+            filter: contrast(1.05);
+        }
+
+        /* Pricing / Jhon Club */
+        .plans-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(300px, 1fr));
+            gap: 30px;
+            margin-top: 50px;
+        }
+
+        .plan-card {
+            background: var(--glass);
+            backdrop-filter: blur(10px);
+            border: 1px solid var(--glass-border);
+            padding: 40px;
+            text-align: center;
+            transition: var(--transition-smooth);
+            position: relative;
+            overflow: hidden;
+        }
+
+        .plan-card.best-seller {
+            border-color: var(--gold);
+            transform: scale(1.05);
+            z-index: 2;
+        }
+
+        .badge-best-seller {
+            position: absolute;
+            top: 20px;
+            right: -35px;
+            background: var(--gold-gradient);
+            color: var(--black);
+            padding: 5px 40px;
+            transform: rotate(45deg);
+            font-size: 0.7rem;
+            font-weight: 700;
+            text-transform: uppercase;
+            letter-spacing: 1px;
+        }
+
+        .plan-name {
+            font-family: 'Playfair Display', serif;
+            font-size: 1.8rem;
+            margin-bottom: 20px;
+            color: var(--white);
+        }
+
+        .plan-price {
+            font-size: 2.5rem;
+            font-weight: 700;
+            margin-bottom: 20px;
+            color: var(--gold);
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            gap: 5px;
+        }
+
+        .plan-price span {
+            font-size: 1rem;
+            font-weight: 400;
+        }
+
+        .plan-features {
+            list-style: none;
+            margin-bottom: 30px;
+            color: #ccc;
+        }
+
+        .plan-features li {
+            margin-bottom: 10px;
+            font-size: 0.95rem;
+        }
+
+        .plan-footer-info {
+            text-align: center;
+            margin-top: 40px;
+            color: #aaa;
+            font-size: 0.9rem;
         }
 
         /* Keyframes */
@@ -877,6 +966,65 @@
                     <p>Um refúgio masculino sofisticado. Climatizado e planejado para ser o seu momento de pausa e
                         renovação.</p>
                 </div>
+            </div>
+        </div>
+    </section>
+
+    <!-- Jhon Club Plans -->
+    <section id="jhon-club" class="jhon-club">
+        <div class="container reveal">
+            <div class="section-header">
+                <span class="section-subtitle">Assinaturas</span>
+                <h2 class="section-title">Jhon <span class="gold-text">Club</span></h2>
+                <p style="color: #888; margin-top: 15px;">A exclusividade que seu estilo exige, com economia
+                    inteligente.</p>
+            </div>
+
+            <div class="plans-grid">
+                <!-- Plan 1 -->
+                <div class="plan-card reveal">
+                    <h3 class="plan-name">Jhon Club Barba</h3>
+                    <div class="plan-price"><span>R$</span> 74,90</div>
+                    <ul class="plan-features">
+                        <li>Barba (Ilimitado)</li>
+                        <li>Ambiente Climatizado</li>
+                        <li>Atendimento Premium</li>
+                    </ul>
+                    <a href="https://agendaservico.com/jhonjhonbarbearia" target="_blank" class="btn btn-secondary"
+                        style="width: 100%;">Assinar Agora</a>
+                </div>
+
+                <!-- Plan 2 -->
+                <div class="plan-card best-seller reveal">
+                    <div class="badge-best-seller">Best Seller</div>
+                    <h3 class="plan-name">Jhon Club Corte + Barba</h3>
+                    <div class="plan-price"><span>R$</span> 129,90</div>
+                    <ul class="plan-features">
+                        <li>Corte + Barba (Ilimitado)</li>
+                        <li>10% de desconto em serviços extras</li>
+                        <li>10% de desconto em produtos</li>
+                    </ul>
+                    <a href="https://agendaservico.com/jhonjhonbarbearia" target="_blank" class="btn btn-primary"
+                        style="width: 100%;">Assinar Agora</a>
+                </div>
+
+                <!-- Plan 3 -->
+                <div class="plan-card reveal">
+                    <h3 class="plan-name">Jhon Club Corte</h3>
+                    <div class="plan-price"><span>R$</span> 69,90</div>
+                    <ul class="plan-features">
+                        <li>Corte de Cabelo (Ilimitado)</li>
+                        <li>Acabamento Refinado</li>
+                        <li>Experiência Jhon Jhon</li>
+                    </ul>
+                    <a href="https://agendaservico.com/jhonjhonbarbearia" target="_blank" class="btn btn-secondary"
+                        style="width: 100%;">Assinar Agora</a>
+                </div>
+            </div>
+
+            <div class="plan-footer-info reveal">
+                <p>Os assinantes da JhonJhonClub terão 10% de desconto dos serviços extras e nos produtos 🪒💈</p>
+                <p style="margin-top: 10px; color: var(--gold);">Siga-nos: @JhonJhon_barbearia</p>
             </div>
         </div>
     </section>
