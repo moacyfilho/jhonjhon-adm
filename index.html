@@ -22,6 +22,9 @@
         href="https://fonts.googleapis.com/css2?family=Montserrat:wght@300;400;600;700&family=Playfair+Display:wght@700&display=swap"
         rel="stylesheet">
 
+    <!-- Icons -->
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+
     <!-- JSON-LD -->
     <script type="application/ld+json">
     {
@@ -813,8 +816,30 @@
         footer .social-links {
             display: flex;
             justify-content: center;
-            gap: 20px;
-            margin-bottom: 30px;
+            gap: 25px;
+            margin-bottom: 40px;
+        }
+
+        .social-icon {
+            color: var(--gold);
+            font-size: 1.5rem;
+            transition: var(--transition-fast);
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            width: 50px;
+            height: 50px;
+            border-radius: 50%;
+            background: rgba(212, 175, 55, 0.05);
+            border: 1px solid rgba(212, 175, 55, 0.2);
+            text-decoration: none;
+        }
+
+        .social-icon:hover {
+            background: var(--gold-gradient);
+            color: var(--black);
+            transform: translateY(-5px);
+            box-shadow: 0 5px 15px rgba(212, 175, 55, 0.3);
         }
 
         footer p {
@@ -1265,7 +1290,17 @@
     <footer>
         <div class="container" style="padding: 0;">
             <img src="logo.png" alt="Jhon Jhon Barbearia Logo" class="logo">
-            <p>Jhon Jhon Barbearia - Excelência e Sofisticação</p>
+            <div class="social-links" style="margin-top: 30px;">
+                <a href="https://www.instagram.com/jhonjhon_barbearia/" target="_blank" class="social-icon"
+                    title="Instagram">
+                    <i class="fab fa-instagram"></i>
+                </a>
+                <a href="https://www.facebook.com/profile.php?id=100069501649574" target="_blank" class="social-icon"
+                    title="Facebook">
+                    <i class="fab fa-facebook-f"></i>
+                </a>
+            </div>
+            <p style="margin-top: 40px;">Jhon Jhon Barbearia - Excelência e Sofisticação</p>
             <p>R. Jerônimo Ribeiro, 58 - São Raimundo, Manaus - AM</p>
             <p>(92) 98595-0190</p>
             <p style="margin-top: 40px; color: #333;">&copy; 2025 Jhon Jhon Barbearia. Todos os direitos reservados.</p>
