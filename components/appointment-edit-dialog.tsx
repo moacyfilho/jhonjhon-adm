@@ -1,11 +1,14 @@
 'use client';
 
-import { useState, useEffect } from 'react';
-import { User, Phone, Award, Plus, Minus, Edit2, Trash2, CheckCircle } from 'lucide-react';
+import { useState, useEffect, useMemo } from 'react';
+import { User, Phone, Award, Plus, Minus, Edit2, Trash2, CheckCircle, Search, Check, ChevronsUpDown } from 'lucide-react';
+import { AppointmentStepper } from './appointments/appointment-stepper';
 import { Button } from '@/components/ui/button';
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter } from '@/components/ui/dialog';
-import { isServiceIncluded } from '@/lib/utils';
+import { isServiceIncluded, cn } from '@/lib/utils';
 import { Input } from '@/components/ui/input';
+import { Popover, PopoverContent, PopoverTrigger } from '@/components/ui/popover';
+import { ScrollArea } from '@/components/ui/scroll-area';
 import { Label } from '@/components/ui/label';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
@@ -122,6 +125,17 @@ export function AppointmentEditDialog({
   // UI States
   const [activeTab, setActiveTab] = useState<'services' | 'products'>('services');
   const [activeSubscription, setActiveSubscription] = useState<any>(null);
+  const [openClientSelect, setOpenClientSelect] = useState(false);
+  const [clientSearchText, setClientSearchText] = useState("");
+
+  const filteredClients = useMemo(() => {
+    if (!clientSearchText) return clients;
+    const search = clientSearchText.toLowerCase();
+    return clients.filter(c =>
+      c.name.toLowerCase().includes(search) ||
+      c.phone.includes(search)
+    );
+  }, [clients, clientSearchText]);
 
   useEffect(() => {
     fetchData();
@@ -152,7 +166,7 @@ export function AppointmentEditDialog({
         productsRes.json(),
       ]);
 
-      setClients(Array.isArray(clientsData) ? clientsData : []);
+      setClients(Array.isArray(clientsData) ? clientsData.sort((a: any, b: any) => a.name.localeCompare(b.name)) : []);
       setBarbers(Array.isArray(barbersData) ? barbersData.filter((b: any) => b.isActive) : []);
       setServices(Array.isArray(servicesData) ? servicesData.filter((s: any) => s.isActive) : []);
       setProducts(Array.isArray(productsData) ? productsData.filter((p: any) => p.isActive && p.stock > 0) : []);
@@ -383,354 +397,431 @@ export function AppointmentEditDialog({
   if (loading) {
     return (
       <Dialog open={true} onOpenChange={onClose}>
-        <DialogContent>
+        <DialogContent className="bg-black/90 border-white/10">
           <div className="flex justify-center items-center py-8">
-            <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-primary"></div>
+            <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-gold-500"></div>
           </div>
         </DialogContent>
       </Dialog>
     );
   }
 
+  // Unified Render
   return (
     <Dialog open={true} onOpenChange={onClose}>
-      <DialogContent>
-        <div className="max-h-[80vh] overflow-y-auto">
-          <DialogHeader>
-            <DialogTitle>
-              <div className="flex items-center gap-2">
-                {isNew ? 'Novo Atendimento' : 'Editar Atendimento'}
-                {isOnline && (
-                  <Badge variant="outline" className="border-blue-500 text-blue-600">
-                    ONLINE
-                  </Badge>
-                )}
-              </div>
-            </DialogTitle>
-          </DialogHeader>
+      <DialogContent
+        className={isNew
+          ? "max-w-5xl p-0 overflow-hidden bg-black/95 border-gold-500/20 rounded-3xl"
+          : "max-w-3xl bg-black/95 border-white/10"
+        }
+        aria-describedby={isNew ? undefined : "dialog-description"}
+      >
+        {isNew ? (
+          <>
+            <DialogHeader className="sr-only">
+              <DialogTitle>Novo Atendimento</DialogTitle>
+            </DialogHeader>
+            <AppointmentStepper
+              clients={clients}
+              barbers={barbers}
+              services={services}
+              onSuccess={() => {
+                onSave();
+                onClose();
+              }}
+              onCancel={onClose}
+            />
+          </>
+        ) : (
+          <div className="max-h-[80vh] overflow-y-auto">
+            <DialogHeader>
+              <DialogTitle>
+                <div className="flex items-center gap-2">
+                  {'Editar Atendimento'}
+                  {isOnline && (
+                    <Badge variant="outline" className="border-blue-500 text-blue-600">
+                      ONLINE
+                    </Badge>
+                  )}
+                </div>
+              </DialogTitle>
+            </DialogHeader>
 
-          <div className="space-y-4">
-            {/* Cliente e Barbeiro */}
-            <div className="grid grid-cols-2 gap-4">
-              <div>
-                <Label htmlFor="client" className="flex items-center gap-2">
-                  <User className="w-4 h-4" />
-                  Cliente
-                </Label>
-                {client ? (
-                  <div className="mt-2 p-3 bg-secondary/50 rounded-lg">
-                    <div className="flex items-center justify-between">
-                      <div>
-                        <p className="font-medium">{client.name}</p>
-                        <p className="text-sm text-muted-foreground flex items-center gap-1">
-                          <Phone className="w-3 h-3" />
-                          {client.phone}
-                        </p>
+            <div className="space-y-4">
+              {/* Cliente e Barbeiro */}
+              <div className="grid grid-cols-2 gap-4">
+                <div>
+                  <Label htmlFor="client" className="flex items-center gap-2">
+                    <User className="w-4 h-4" />
+                    Cliente
+                  </Label>
+                  {client ? (
+                    <div className="mt-2 p-3 bg-secondary/50 rounded-lg">
+                      <div className="flex items-center justify-between">
+                        <div>
+                          <p className="font-medium">{client.name}</p>
+                          <p className="text-sm text-muted-foreground flex items-center gap-1">
+                            <Phone className="w-3 h-3" />
+                            {client.phone}
+                          </p>
+                        </div>
+                        {isSubscriber && (
+                          <Badge variant="outline" className="border-yellow-500 text-yellow-600">
+                            <Award className="w-3 h-3 mr-1" />
+                            Assinante
+                          </Badge>
+                        )}
                       </div>
-                      {isSubscriber && (
-                        <Badge variant="outline" className="border-yellow-500 text-yellow-600">
-                          <Award className="w-3 h-3 mr-1" />
-                          Assinante
-                        </Badge>
-                      )}
                     </div>
-                  </div>
-                ) : (
-                  <Select value={clientId} onValueChange={setClientId} disabled={!isNew && isOnline}>
-                    <SelectTrigger id="client" className="mt-2">
-                      <SelectValue placeholder="Selecione um cliente" />
+                  ) : (
+                    <Popover open={openClientSelect} onOpenChange={setOpenClientSelect}>
+                      <PopoverTrigger asChild>
+                        <Button
+                          variant="outline"
+                          role="combobox"
+                          aria-expanded={openClientSelect}
+                          className="w-full justify-between mt-2 px-3 font-normal text-left"
+                          disabled={!isNew && isOnline}
+                        >
+                          {clientId
+                            ? clients.find((c) => c.id === clientId)?.name
+                            : "Selecione um cliente"}
+                          <ChevronsUpDown className="ml-2 h-4 w-4 shrink-0 opacity-50" />
+                        </Button>
+                      </PopoverTrigger>
+                      <PopoverContent className="w-[400px] p-0" align="start">
+                        <div className="flex items-center border-b px-3">
+                          <Search className="mr-2 h-4 w-4 shrink-0 opacity-50" />
+                          <Input
+                            placeholder="Buscar cliente..."
+                            value={clientSearchText}
+                            onChange={(e) => setClientSearchText(e.target.value)}
+                            className="flex h-11 w-full rounded-md bg-transparent py-3 text-sm outline-none placeholder:text-muted-foreground disabled:cursor-not-allowed disabled:opacity-50 border-none focus-visible:ring-0"
+                            autoFocus
+                          />
+                        </div>
+                        <ScrollArea className="h-[300px]">
+                          {filteredClients.length === 0 ? (
+                            <div className="py-6 text-center text-sm text-muted-foreground">
+                              Nenhum cliente encontrado.
+                            </div>
+                          ) : (
+                            <div className="p-1">
+                              {filteredClients.map((client) => (
+                                <div
+                                  key={client.id}
+                                  className={cn(
+                                    "flex cursor-default select-none items-center rounded-sm px-2 py-2 text-sm outline-none hover:bg-accent hover:text-accent-foreground cursor-pointer transition-colors",
+                                    clientId === client.id && "bg-accent"
+                                  )}
+                                  onClick={() => {
+                                    setClientId(client.id);
+                                    setOpenClientSelect(false);
+                                  }}
+                                >
+                                  <Check
+                                    className={cn(
+                                      "mr-2 h-4 w-4",
+                                      clientId === client.id ? "opacity-100" : "opacity-0"
+                                    )}
+                                  />
+                                  <div className="flex flex-col">
+                                    <span className="font-medium">{client.name}</span>
+                                    <span className="text-xs text-muted-foreground">
+                                      {client.phone}
+                                    </span>
+                                  </div>
+                                </div>
+                              ))}
+                            </div>
+                          )}
+                        </ScrollArea>
+                      </PopoverContent>
+                    </Popover>
+                  )}
+                </div>
+
+                <div>
+                  <Label htmlFor="barber">Barbeiro</Label>
+                  <Select value={barberId} onValueChange={setBarberId} disabled={!isNew && isOnline}>
+                    <SelectTrigger id="barber" className="mt-2">
+                      <SelectValue placeholder="Selecione um barbeiro" />
                     </SelectTrigger>
                     <SelectContent>
-                      {clients.map(c => (
-                        <SelectItem key={c.id} value={c.id}>
-                          {c.name} - {c.phone}
+                      {barbers.map(b => (
+                        <SelectItem key={b.id} value={b.id}>
+                          {b.name} ({b.commissionRate}%)
                         </SelectItem>
                       ))}
                     </SelectContent>
                   </Select>
-                )}
+                </div>
               </div>
 
-              <div>
-                <Label htmlFor="barber">Barbeiro</Label>
-                <Select value={barberId} onValueChange={setBarberId} disabled={!isNew && isOnline}>
-                  <SelectTrigger id="barber" className="mt-2">
-                    <SelectValue placeholder="Selecione um barbeiro" />
-                  </SelectTrigger>
-                  <SelectContent>
-                    {barbers.map(b => (
-                      <SelectItem key={b.id} value={b.id}>
-                        {b.name} ({b.commissionRate}%)
-                      </SelectItem>
-                    ))}
-                  </SelectContent>
-                </Select>
-              </div>
-            </div>
+              <Separator />
 
-            <Separator />
+              {/* Tabs: Serviços e Produtos */}
+              <Tabs value={activeTab} onValueChange={(v) => setActiveTab(v as 'services' | 'products')}>
+                <TabsList className="grid w-full grid-cols-2">
+                  <TabsTrigger value="services">Serviços</TabsTrigger>
+                  <TabsTrigger value="products">Produtos</TabsTrigger>
+                </TabsList>
 
-            {/* Tabs: Serviços e Produtos */}
-            <Tabs value={activeTab} onValueChange={(v) => setActiveTab(v as 'services' | 'products')}>
-              <TabsList className="grid w-full grid-cols-2">
-                <TabsTrigger value="services">Serviços</TabsTrigger>
-                <TabsTrigger value="products">Produtos</TabsTrigger>
-              </TabsList>
+                {/* Tab: Serviços */}
+                <TabsContent value="services" className="space-y-4">
+                  <div className="flex gap-2">
+                    <Select
+                      onValueChange={(value) => {
+                        addService(value);
+                      }}
+                    >
+                      <SelectTrigger className="flex-1">
+                        <SelectValue placeholder="Selecione um serviço" />
+                      </SelectTrigger>
+                      <SelectContent>
+                        {services
+                          .filter(s => !selectedServices.find(ss => ss.serviceId === s.id))
+                          .map(service => (
+                            <SelectItem key={service.id} value={service.id}>
+                              {service.name} - {formatCurrency(service.price)}
+                            </SelectItem>
+                          ))}
+                      </SelectContent>
+                    </Select>
+                    <Button size="icon" variant="outline" disabled>
+                      <Plus className="w-4 h-4" />
+                    </Button>
+                  </div>
 
-              {/* Tab: Serviços */}
-              <TabsContent value="services" className="space-y-4">
-                <div className="flex gap-2">
-                  <Select
-                    onValueChange={(value) => {
-                      addService(value);
-                    }}
-                  >
-                    <SelectTrigger className="flex-1">
-                      <SelectValue placeholder="Selecione um serviço" />
-                    </SelectTrigger>
-                    <SelectContent>
-                      {services
-                        .filter(s => !selectedServices.find(ss => ss.serviceId === s.id))
-                        .map(service => (
-                          <SelectItem key={service.id} value={service.id}>
-                            {service.name} - {formatCurrency(service.price)}
-                          </SelectItem>
-                        ))}
-                    </SelectContent>
-                  </Select>
-                  <Button size="icon" variant="outline" disabled>
-                    <Plus className="w-4 h-4" />
-                  </Button>
-                </div>
-
-                {/* Lista de serviços selecionados */}
-                <div className="space-y-2">
-                  {selectedServices.map(item => {
-                    const service = getService(item.serviceId);
-                    if (!service) return null;
-                    return (
-                      <div key={item.serviceId} className="bg-teal-50 p-3 rounded-lg border border-teal-200">
-                        <div className="flex items-center justify-between">
-                          <div className="flex-1">
-                            <p className="font-medium text-sm">{service.name}</p>
-                            <p className="text-xs text-muted-foreground">
-                              {formatCurrency(service.price)} • {service.duration} min
-                            </p>
-                          </div>
-                          <div className="flex items-center gap-2">
-                            <Input
-                              type="number"
-                              value={item.price}
-                              onChange={(e) =>
-                                updateServicePrice(item.serviceId, parseFloat(e.target.value) || 0)
-                              }
-                              className="w-24 h-8 text-sm"
-                              step="0.01"
-                              min="0"
-                            />
-                            {item.price === 0 && isSubscriber && (
-                              <Badge variant="outline" className="bg-yellow-100 text-yellow-700 border-yellow-200 text-[10px] h-5">
-                                Plano
-                              </Badge>
-                            )}
-                            <Button
-                              size="icon"
-                              variant="ghost"
-                              className="h-8 w-8 text-red-600 hover:text-red-700 hover:bg-red-100"
-                              onClick={() => removeService(item.serviceId)}
-                            >
-                              <Trash2 className="w-4 h-4" />
-                            </Button>
-                          </div>
-                        </div>
-                      </div>
-                    );
-                  })}
-                  {selectedServices.length === 0 && (
-                    <p className="text-sm text-muted-foreground text-center py-4">
-                      Nenhum serviço selecionado
-                    </p>
-                  )}
-                </div>
-              </TabsContent>
-
-              {/* Tab: Produtos */}
-              <TabsContent value="products" className="space-y-4">
-                <div className="flex gap-2">
-                  <Select
-                    onValueChange={(value) => {
-                      addProduct(value);
-                    }}
-                  >
-                    <SelectTrigger className="flex-1">
-                      <SelectValue placeholder="Selecione um produto" />
-                    </SelectTrigger>
-                    <SelectContent>
-                      {products
-                        .filter(p => !selectedProducts.find(sp => sp.productId === p.id))
-                        .map(product => (
-                          <SelectItem key={product.id} value={product.id}>
-                            {product.name} - {formatCurrency(product.price)} (Estoque: {product.stock})
-                          </SelectItem>
-                        ))}
-                    </SelectContent>
-                  </Select>
-                  <Button size="icon" variant="outline" disabled>
-                    <Plus className="w-4 h-4" />
-                  </Button>
-                </div>
-
-                {/* Lista de produtos selecionados */}
-                <div className="space-y-2">
-                  {selectedProducts.map(item => {
-                    const product = getProduct(item.productId);
-                    if (!product) return null;
-                    return (
-                      <div key={item.productId} className="bg-teal-50 p-3 rounded-lg border border-teal-200">
-                        <div className="flex items-center justify-between">
-                          <div className="flex-1">
-                            <p className="font-medium text-sm">{product.name}</p>
-                            <p className="text-xs text-muted-foreground">
-                              {formatCurrency(product.price)}/{product.unit}
-                            </p>
-                          </div>
-                          <div className="flex items-center gap-2">
-                            <div className="flex items-center gap-1 bg-white rounded border px-2 py-1">
+                  {/* Lista de serviços selecionados */}
+                  <div className="space-y-2">
+                    {selectedServices.map(item => {
+                      const service = getService(item.serviceId);
+                      if (!service) return null;
+                      return (
+                        <div key={item.serviceId} className="bg-teal-50 p-3 rounded-lg border border-teal-200">
+                          <div className="flex items-center justify-between">
+                            <div className="flex-1">
+                              <p className="font-medium text-sm">{service.name}</p>
+                              <p className="text-xs text-muted-foreground">
+                                {formatCurrency(service.price)} • {service.duration} min
+                              </p>
+                            </div>
+                            <div className="flex items-center gap-2">
+                              <Input
+                                type="number"
+                                value={item.price}
+                                onChange={(e) =>
+                                  updateServicePrice(item.serviceId, parseFloat(e.target.value) || 0)
+                                }
+                                className="w-24 h-8 text-sm"
+                                step="0.01"
+                                min="0"
+                              />
+                              {item.price === 0 && isSubscriber && (
+                                <Badge variant="outline" className="bg-yellow-100 text-yellow-700 border-yellow-200 text-[10px] h-5">
+                                  Plano
+                                </Badge>
+                              )}
                               <Button
                                 size="icon"
                                 variant="ghost"
-                                className="h-6 w-6"
-                                onClick={() => updateProductQuantity(item.productId, -1)}
-                                disabled={item.quantity <= 1}
+                                className="h-8 w-8 text-red-600 hover:text-red-700 hover:bg-red-100"
+                                onClick={() => removeService(item.serviceId)}
                               >
-                                <Minus className="w-3 h-3" />
-                              </Button>
-                              <span className="w-8 text-center text-sm font-medium">{item.quantity}</span>
-                              <Button
-                                size="icon"
-                                variant="ghost"
-                                className="h-6 w-6"
-                                onClick={() => updateProductQuantity(item.productId, 1)}
-                              >
-                                <Plus className="w-3 h-3" />
+                                <Trash2 className="w-4 h-4" />
                               </Button>
                             </div>
-                            <span className="text-sm font-medium w-20 text-right">
-                              {formatCurrency(item.unitPrice * item.quantity)}
-                            </span>
-                            <Button
-                              size="icon"
-                              variant="ghost"
-                              className="h-8 w-8 text-red-600 hover:text-red-700 hover:bg-red-100"
-                              onClick={() => removeProduct(item.productId)}
-                            >
-                              <Trash2 className="w-4 h-4" />
-                            </Button>
                           </div>
                         </div>
-                      </div>
-                    );
-                  })}
-                  {selectedProducts.length === 0 && (
-                    <p className="text-sm text-muted-foreground text-center py-4">
-                      Nenhum produto selecionado
-                    </p>
-                  )}
-                </div>
-              </TabsContent>
-            </Tabs>
+                      );
+                    })}
+                    {selectedServices.length === 0 && (
+                      <p className="text-sm text-muted-foreground text-center py-4">
+                        Nenhum serviço selecionado
+                      </p>
+                    )}
+                  </div>
+                </TabsContent>
 
-            <Separator />
+                {/* Tab: Produtos */}
+                <TabsContent value="products" className="space-y-4">
+                  <div className="flex gap-2">
+                    <Select
+                      onValueChange={(value) => {
+                        addProduct(value);
+                      }}
+                    >
+                      <SelectTrigger className="flex-1">
+                        <SelectValue placeholder="Selecione um produto" />
+                      </SelectTrigger>
+                      <SelectContent>
+                        {products
+                          .filter(p => !selectedProducts.find(sp => sp.productId === p.id))
+                          .map(product => (
+                            <SelectItem key={product.id} value={product.id}>
+                              {product.name} - {formatCurrency(product.price)} (Estoque: {product.stock})
+                            </SelectItem>
+                          ))}
+                      </SelectContent>
+                    </Select>
+                    <Button size="icon" variant="outline" disabled>
+                      <Plus className="w-4 h-4" />
+                    </Button>
+                  </div>
 
-            {/* Resumo de Pagamento */}
-            <div className="bg-teal-50 border border-teal-200 rounded-lg p-4 space-y-3">
-              <h3 className="font-semibold text-teal-900">Resumo de pagamento</h3>
+                  {/* Lista de produtos selecionados */}
+                  <div className="space-y-2">
+                    {selectedProducts.map(item => {
+                      const product = getProduct(item.productId);
+                      if (!product) return null;
+                      return (
+                        <div key={item.productId} className="bg-teal-50 p-3 rounded-lg border border-teal-200">
+                          <div className="flex items-center justify-between">
+                            <div className="flex-1">
+                              <p className="font-medium text-sm">{product.name}</p>
+                              <p className="text-xs text-muted-foreground">
+                                {formatCurrency(product.price)}/{product.unit}
+                              </p>
+                            </div>
+                            <div className="flex items-center gap-2">
+                              <div className="flex items-center gap-1 bg-white rounded border px-2 py-1">
+                                <Button
+                                  size="icon"
+                                  variant="ghost"
+                                  className="h-6 w-6"
+                                  onClick={() => updateProductQuantity(item.productId, -1)}
+                                  disabled={item.quantity <= 1}
+                                >
+                                  <Minus className="w-3 h-3" />
+                                </Button>
+                                <span className="w-8 text-center text-sm font-medium">{item.quantity}</span>
+                                <Button
+                                  size="icon"
+                                  variant="ghost"
+                                  className="h-6 w-6"
+                                  onClick={() => updateProductQuantity(item.productId, 1)}
+                                >
+                                  <Plus className="w-3 h-3" />
+                                </Button>
+                              </div>
+                              <span className="text-sm font-medium w-20 text-right">
+                                {formatCurrency(item.unitPrice * item.quantity)}
+                              </span>
+                              <Button
+                                size="icon"
+                                variant="ghost"
+                                className="h-8 w-8 text-red-600 hover:text-red-700 hover:bg-red-100"
+                                onClick={() => removeProduct(item.productId)}
+                              >
+                                <Trash2 className="w-4 h-4" />
+                              </Button>
+                            </div>
+                          </div>
+                        </div>
+                      );
+                    })}
+                    {selectedProducts.length === 0 && (
+                      <p className="text-sm text-muted-foreground text-center py-4">
+                        Nenhum produto selecionado
+                      </p>
+                    )}
+                  </div>
+                </TabsContent>
+              </Tabs>
 
-              <div className="space-y-2">
-                <div className="flex justify-between text-sm">
-                  <span>Serviços:</span>
-                  <span className="font-medium">{formatCurrency(servicesTotal)}</span>
-                </div>
-                {productsTotal > 0 && (
+              <Separator />
+
+              {/* Resumo de Pagamento */}
+              <div className="bg-teal-50 border border-teal-200 rounded-lg p-4 space-y-3">
+                <h3 className="font-semibold text-teal-900">Resumo de pagamento</h3>
+
+                <div className="space-y-2">
                   <div className="flex justify-between text-sm">
-                    <span>Produtos:</span>
-                    <span className="font-medium">{formatCurrency(productsTotal)}</span>
+                    <span>Serviços:</span>
+                    <span className="font-medium">{formatCurrency(servicesTotal)}</span>
+                  </div>
+                  {productsTotal > 0 && (
+                    <div className="flex justify-between text-sm">
+                      <span>Produtos:</span>
+                      <span className="font-medium">{formatCurrency(productsTotal)}</span>
+                    </div>
+                  )}
+                  <Separator />
+                  <div className="flex justify-between">
+                    <span className="font-semibold">{isSubscriber ? 'Total Extra:' : 'Total:'}</span>
+                    <span className="font-bold text-lg text-teal-700">{formatCurrency(grandTotal)}</span>
+                  </div>
+                </div>
+
+                {isSubscriber && (
+                  <div className="bg-yellow-50 border border-yellow-300 rounded p-3">
+                    <div className="flex items-center gap-2 mb-2">
+                      <Award className="w-4 h-4 text-yellow-600" />
+                      <span className="font-semibold text-yellow-900">Cliente Assinante ({activeSubscription.planName})</span>
+                    </div>
+                    <p className="text-sm text-yellow-700">
+                      Serviços cobertos pelo plano aparecem como R$ 0,00. Produtos e serviços extras são somados ao total extra.
+                    </p>
                   </div>
                 )}
-                <Separator />
-                <div className="flex justify-between">
-                  <span className="font-semibold">{isSubscriber ? 'Total Extra:' : 'Total:'}</span>
-                  <span className="font-bold text-lg text-teal-700">{formatCurrency(grandTotal)}</span>
-                </div>
-              </div>
 
-              {isSubscriber && (
-                <div className="bg-yellow-50 border border-yellow-300 rounded p-3">
-                  <div className="flex items-center gap-2 mb-2">
-                    <Award className="w-4 h-4 text-yellow-600" />
-                    <span className="font-semibold text-yellow-900">Cliente Assinante ({activeSubscription.planName})</span>
+                {grandTotal > 0 && (
+                  <div>
+                    <Label htmlFor="paymentMethod" className="text-sm">Selecione a forma de pagamento</Label>
+                    <Select value={paymentMethod} onValueChange={setPaymentMethod}>
+                      <SelectTrigger id="paymentMethod" className="mt-2 bg-white">
+                        <SelectValue placeholder="Escolha uma forma de pagamento" />
+                      </SelectTrigger>
+                      <SelectContent>
+                        <SelectItem value="CASH">Dinheiro</SelectItem>
+                        <SelectItem value="DEBIT_CARD">Cartão de Débito</SelectItem>
+                        <SelectItem value="CREDIT_CARD">Cartão de Crédito</SelectItem>
+                        <SelectItem value="PIX">PIX</SelectItem>
+                      </SelectContent>
+                    </Select>
                   </div>
-                  <p className="text-sm text-yellow-700">
-                    Serviços cobertos pelo plano aparecem como R$ 0,00. Produtos e serviços extras são somados ao total extra.
-                  </p>
-                </div>
-              )}
+                )}
 
-              {grandTotal > 0 && (
-                <div>
-                  <Label htmlFor="paymentMethod" className="text-sm">Selecione a forma de pagamento</Label>
-                  <Select value={paymentMethod} onValueChange={setPaymentMethod}>
-                    <SelectTrigger id="paymentMethod" className="mt-2 bg-white">
-                      <SelectValue placeholder="Escolha uma forma de pagamento" />
-                    </SelectTrigger>
-                    <SelectContent>
-                      <SelectItem value="CASH">Dinheiro</SelectItem>
-                      <SelectItem value="DEBIT_CARD">Cartão de Débito</SelectItem>
-                      <SelectItem value="CREDIT_CARD">Cartão de Crédito</SelectItem>
-                      <SelectItem value="PIX">PIX</SelectItem>
-                    </SelectContent>
-                  </Select>
+                <div className="bg-white rounded p-3 border">
+                  <div className="flex justify-between text-sm">
+                    <span>Valor a pagar agora:</span>
+                    <span className="font-bold text-teal-700">{formatCurrency(grandTotal)}</span>
+                  </div>
                 </div>
-              )}
+              </div>
 
-              <div className="bg-white rounded p-3 border">
-                <div className="flex justify-between text-sm">
-                  <span>Valor a pagar agora:</span>
-                  <span className="font-bold text-teal-700">{formatCurrency(grandTotal)}</span>
-                </div>
+              {/* Observações */}
+              <div>
+                <Label htmlFor="observations">Observações (Opcional)</Label>
+                <Textarea
+                  id="observations"
+                  value={observations}
+                  onChange={(e) => setObservations(e.target.value)}
+                  placeholder="Adicione observações sobre o atendimento..."
+                  rows={3}
+                  className="mt-2"
+                />
               </div>
             </div>
 
-            {/* Observações */}
-            <div>
-              <Label htmlFor="observations">Observações (Opcional)</Label>
-              <Textarea
-                id="observations"
-                value={observations}
-                onChange={(e) => setObservations(e.target.value)}
-                placeholder="Adicione observações sobre o atendimento..."
-                rows={3}
-                className="mt-2"
-              />
-            </div>
+            <DialogFooter className="mt-6">
+              <div className="flex gap-2 w-full">
+                <Button variant="outline" onClick={onClose} className="flex-1">
+                  Cancelar
+                </Button>
+                <Button
+                  onClick={handleSave}
+                  disabled={saving || (selectedServices.length === 0 && selectedProducts.length === 0)}
+                  className="flex-1 bg-teal-600 hover:bg-teal-700 text-white"
+                >
+                  <CheckCircle className="w-4 h-4 mr-2" />
+                  {saving ? 'Salvando...' : 'Salvar Alterações'}
+                </Button>
+              </div>
+            </DialogFooter>
           </div>
-        </div>
-
-        <DialogFooter>
-          <div className="flex gap-2 w-full">
-            <Button variant="outline" onClick={onClose} className="flex-1">
-              Cancelar
-            </Button>
-            <Button
-              onClick={handleSave}
-              disabled={saving || (selectedServices.length === 0 && selectedProducts.length === 0)}
-              className="flex-1 bg-teal-600 hover:bg-teal-700 text-white"
-            >
-              <CheckCircle className="w-4 h-4 mr-2" />
-              {saving ? 'Salvando...' : (isNew ? 'Agendar' : 'Salvar Alterações')}
-            </Button>
-          </div>
-        </DialogFooter>
+        )}
       </DialogContent>
     </Dialog>
   );

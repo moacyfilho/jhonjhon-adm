@@ -21,7 +21,7 @@ import { CardGridSkeleton } from "@/components/ui/table-skeleton";
 import { EmptyState } from "@/components/ui/empty-state";
 import { DateRangePicker } from "@/components/ui/date-range-picker";
 import { DateRange } from "react-day-picker";
-import { AppointmentForm } from "@/components/appointments/appointment-form";
+import { AppointmentStepper } from "@/components/appointments/appointment-stepper";
 
 interface Client {
   id: string;
@@ -493,11 +493,11 @@ export default function AtendimentosPage() {
 
       {/* Create Dialog */}
       <Dialog open={isDialogOpen} onOpenChange={setIsDialogOpen}>
-        <DialogContent>
-          <DialogHeader>
+        <DialogContent className="max-w-5xl p-0 overflow-hidden bg-black/95 border-gold-500/20 rounded-3xl" aria-describedby={undefined}>
+          <DialogHeader className="sr-only">
             <DialogTitle>Novo Atendimento</DialogTitle>
           </DialogHeader>
-          <AppointmentForm
+          <AppointmentStepper
             clients={clients}
             barbers={barbers}
             services={services}
