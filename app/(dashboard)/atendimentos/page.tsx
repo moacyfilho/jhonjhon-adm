@@ -104,7 +104,12 @@ export default function AtendimentosPage() {
 
       const res = await fetch(`/api/appointments?${params.toString()}`);
       const data = await res.json();
-      setAppointments(data);
+      if (Array.isArray(data)) {
+        setAppointments(data);
+      } else {
+        console.error("API response is not an array:", data);
+        toast.error("Erro ao carregar dados dos atendimentos");
+      }
     } catch (error) {
       console.error("Error fetching appointments:", error);
       toast.error("Erro ao carregar atendimentos");
