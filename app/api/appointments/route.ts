@@ -100,7 +100,33 @@ export async function GET(request: NextRequest) {
       },
     });
 
-    return NextResponse.json(appointments);
+    const sanitizedAppointments = appointments.map(appt => ({
+      ...appt,
+      totalAmount: Number(appt.totalAmount),
+      services: appt.services.map(s => ({
+        ...s,
+        price: Number(s.price),
+        service: {
+          ...s.service,
+          price: Number(s.service.price)
+        }
+      })),
+      products: appt.products.map(p => ({
+        ...p,
+        unitPrice: Number(p.unitPrice),
+        totalPrice: Number(p.totalPrice),
+        product: {
+          ...p.product,
+          price: Number(p.product.price)
+        }
+      })),
+      commission: appt.commission ? {
+        ...appt.commission,
+        amount: Number(appt.commission.amount)
+      } : null
+    }));
+
+    return NextResponse.json(sanitizedAppointments);
   } catch (error) {
     console.error("Error fetching appointments:", error);
     return NextResponse.json(
