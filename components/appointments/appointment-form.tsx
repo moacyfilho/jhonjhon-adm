@@ -5,7 +5,7 @@ import { useForm } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
 import * as z from "zod";
 import { format } from "date-fns";
-import { Calendar as CalendarIcon, Check, Loader2, ChevronsUpDown, Search } from "lucide-react";
+import { Calendar as CalendarIcon, Check, Loader2 } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { Button } from "@/components/ui/button";
 import {
@@ -32,7 +32,6 @@ import {
     PopoverTrigger,
 } from "@/components/ui/popover";
 import { Calendar } from "@/components/ui/calendar";
-import { ScrollArea } from "@/components/ui/scroll-area";
 import { ptBR } from "date-fns/locale";
 import { toast } from "sonner";
 
@@ -69,13 +68,7 @@ export function AppointmentForm({
     onCancel,
 }: AppointmentFormProps) {
     const [submitting, setSubmitting] = useState(false);
-    const [openClientSelect, setOpenClientSelect] = useState(false);
-    const [clientSearch, setClientSearch] = useState("");
 
-    const filteredClients = clients.filter(client =>
-        client.name.toLowerCase().includes(clientSearch.toLowerCase()) ||
-        client.phone.includes(clientSearch)
-    );
 
     const form = useForm<z.infer<typeof formSchema>>({
         resolver: zodResolver(formSchema),
@@ -159,71 +152,22 @@ export function AppointmentForm({
                         control={form.control}
                         name="clientId"
                         render={({ field }) => (
-                            <FormItem className="flex flex-col">
+                            <FormItem>
                                 <FormLabel className="text-white">Cliente *</FormLabel>
-                                <Popover open={openClientSelect} onOpenChange={setOpenClientSelect}>
-                                    <PopoverTrigger asChild>
-                                        <FormControl>
-                                            <Button
-                                                variant="outline"
-                                                role="combobox"
-                                                aria-expanded={openClientSelect}
-                                                className={cn(
-                                                    "h-12 w-full justify-between bg-white/5 border-white/10 text-white hover:bg-white/10 hover:text-gold-500 font-normal",
-                                                    !field.value && "text-muted-foreground"
-                                                )}
-                                            >
-                                                {field.value
-                                                    ? clients.find((client) => client.id === field.value)?.name
-                                                    : "Selecione o cliente"}
-                                                <ChevronsUpDown className="ml-2 h-4 w-4 shrink-0 opacity-50" />
-                                            </Button>
-                                        </FormControl>
-                                    </PopoverTrigger>
-                                    <PopoverContent className="w-[300px] p-0 bg-black/95 border-gold-500/20" align="start">
-                                        <div className="flex items-center border-b border-white/10 px-3">
-                                            <Search className="mr-2 h-4 w-4 shrink-0 opacity-50 text-white" />
-                                            <Input
-                                                placeholder="Buscar cliente..."
-                                                value={clientSearch}
-                                                onChange={(e) => setClientSearch(e.target.value)}
-                                                className="flex h-11 w-full rounded-md bg-transparent py-3 text-sm outline-none placeholder:text-muted-foreground disabled:cursor-not-allowed disabled:opacity-50 border-none focus-visible:ring-0 text-white focus:ring-0 focus:border-none"
-                                            />
-                                        </div>
-                                        <ScrollArea className="h-60">
-                                            {filteredClients.length === 0 ? (
-                                                <div className="py-6 text-center text-sm text-muted-foreground">Nenhum cliente encontrado.</div>
-                                            ) : (
-                                                <div className="p-1">
-                                                    {filteredClients.map((client) => (
-                                                        <div
-                                                            key={client.id}
-                                                            className={cn(
-                                                                "flex cursor-default select-none items-center rounded-sm px-2 py-2 text-sm outline-none hover:bg-white/10 cursor-pointer text-white",
-                                                                client.id === field.value && "bg-gold-500/20 text-gold-500"
-                                                            )}
-                                                            onClick={() => {
-                                                                field.onChange(client.id);
-                                                                setOpenClientSelect(false);
-                                                            }}
-                                                        >
-                                                            <Check
-                                                                className={cn(
-                                                                    "mr-2 h-4 w-4",
-                                                                    client.id === field.value ? "opacity-100" : "opacity-0"
-                                                                )}
-                                                            />
-                                                            <div className="flex flex-col">
-                                                                <span className="font-medium">{client.name}</span>
-                                                                <span className="text-xs text-muted-foreground">{client.phone}</span>
-                                                            </div>
-                                                        </div>
-                                                    ))}
-                                                </div>
-                                            )}
-                                        </ScrollArea>
-                                    </PopoverContent>
-                                </Popover>
+                                <Select onValueChange={field.onChange} defaultValue={field.value}>
+                                    <FormControl>
+                                        <SelectTrigger className="bg-white/5 border-white/10 text-white h-12">
+                                            <SelectValue placeholder="Selecione o cliente" />
+                                        </SelectTrigger>
+                                    </FormControl>
+                                    <SelectContent>
+                                        {clients.map((client) => (
+                                            <SelectItem key={client.id} value={client.id}>
+                                                {client.name} - {client.phone}
+                                            </SelectItem>
+                                        ))}
+                                    </SelectContent>
+                                </Select>
                                 <FormMessage />
                             </FormItem>
                         )}

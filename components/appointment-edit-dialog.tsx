@@ -1,14 +1,12 @@
 'use client';
 
 import { useState, useEffect, useMemo } from 'react';
-import { User, Phone, Award, Plus, Minus, Edit2, Trash2, CheckCircle, Search, Check, ChevronsUpDown } from 'lucide-react';
+import { User, Phone, Award, Plus, Minus, Edit2, Trash2, CheckCircle } from 'lucide-react';
 import { AppointmentStepper } from './appointments/appointment-stepper';
 import { Button } from '@/components/ui/button';
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter } from '@/components/ui/dialog';
 import { isServiceIncluded, cn } from '@/lib/utils';
 import { Input } from '@/components/ui/input';
-import { Popover, PopoverContent, PopoverTrigger } from '@/components/ui/popover';
-import { ScrollArea } from '@/components/ui/scroll-area';
 import { Label } from '@/components/ui/label';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
@@ -125,17 +123,7 @@ export function AppointmentEditDialog({
   // UI States
   const [activeTab, setActiveTab] = useState<'services' | 'products'>('services');
   const [activeSubscription, setActiveSubscription] = useState<any>(null);
-  const [openClientSelect, setOpenClientSelect] = useState(false);
-  const [clientSearchText, setClientSearchText] = useState("");
 
-  const filteredClients = useMemo(() => {
-    if (!clientSearchText) return clients;
-    const search = clientSearchText.toLowerCase();
-    return clients.filter(c =>
-      c.name.toLowerCase().includes(search) ||
-      c.phone.includes(search)
-    );
-  }, [clients, clientSearchText]);
 
   useEffect(() => {
     fetchData();
@@ -474,70 +462,18 @@ export function AppointmentEditDialog({
                       </div>
                     </div>
                   ) : (
-                    <Popover open={openClientSelect} onOpenChange={setOpenClientSelect}>
-                      <PopoverTrigger asChild>
-                        <Button
-                          variant="outline"
-                          role="combobox"
-                          aria-expanded={openClientSelect}
-                          className="w-full justify-between mt-2 px-3 font-normal text-left"
-                          disabled={!isNew && isOnline}
-                        >
-                          {clientId
-                            ? clients.find((c) => c.id === clientId)?.name
-                            : "Selecione um cliente"}
-                          <ChevronsUpDown className="ml-2 h-4 w-4 shrink-0 opacity-50" />
-                        </Button>
-                      </PopoverTrigger>
-                      <PopoverContent className="w-[400px] p-0" align="start">
-                        <div className="flex items-center border-b px-3">
-                          <Search className="mr-2 h-4 w-4 shrink-0 opacity-50" />
-                          <Input
-                            placeholder="Buscar cliente..."
-                            value={clientSearchText}
-                            onChange={(e) => setClientSearchText(e.target.value)}
-                            className="flex h-11 w-full rounded-md bg-transparent py-3 text-sm outline-none placeholder:text-muted-foreground disabled:cursor-not-allowed disabled:opacity-50 border-none focus-visible:ring-0"
-                            autoFocus
-                          />
-                        </div>
-                        <ScrollArea className="h-[300px]">
-                          {filteredClients.length === 0 ? (
-                            <div className="py-6 text-center text-sm text-muted-foreground">
-                              Nenhum cliente encontrado.
-                            </div>
-                          ) : (
-                            <div className="p-1">
-                              {filteredClients.map((client) => (
-                                <div
-                                  key={client.id}
-                                  className={cn(
-                                    "flex cursor-default select-none items-center rounded-sm px-2 py-2 text-sm outline-none hover:bg-accent hover:text-accent-foreground cursor-pointer transition-colors",
-                                    clientId === client.id && "bg-accent"
-                                  )}
-                                  onClick={() => {
-                                    setClientId(client.id);
-                                    setOpenClientSelect(false);
-                                  }}
-                                >
-                                  <Check
-                                    className={cn(
-                                      "mr-2 h-4 w-4",
-                                      clientId === client.id ? "opacity-100" : "opacity-0"
-                                    )}
-                                  />
-                                  <div className="flex flex-col">
-                                    <span className="font-medium">{client.name}</span>
-                                    <span className="text-xs text-muted-foreground">
-                                      {client.phone}
-                                    </span>
-                                  </div>
-                                </div>
-                              ))}
-                            </div>
-                          )}
-                        </ScrollArea>
-                      </PopoverContent>
-                    </Popover>
+                    <Select value={clientId} onValueChange={setClientId} disabled={!isNew && isOnline}>
+                      <SelectTrigger id="client" className="mt-2">
+                        <SelectValue placeholder="Selecione um cliente" />
+                      </SelectTrigger>
+                      <SelectContent>
+                        {clients.map(c => (
+                          <SelectItem key={c.id} value={c.id}>
+                            {c.name} - {c.phone}
+                          </SelectItem>
+                        ))}
+                      </SelectContent>
+                    </Select>
                   )}
                 </div>
 
