@@ -347,7 +347,7 @@ export async function POST(request: NextRequest) {
           status: "SCHEDULED",
           onlineBookingId: onlineBookingId || null,
           services: servicesData.length > 0 ? {
-            create: servicesData.map(s => ({
+            create: servicesData.map((s: { serviceId: string; price: number }) => ({
               serviceId: s.serviceId,
               price: s.price,
             })),
