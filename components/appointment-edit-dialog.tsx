@@ -156,8 +156,8 @@ export function AppointmentEditDialog({
 
       setClients(Array.isArray(clientsData) ? clientsData.sort((a: any, b: any) => a.name.localeCompare(b.name)) : []);
       setBarbers(Array.isArray(barbersData) ? barbersData.filter((b: any) => b.isActive) : []);
-      setServices(Array.isArray(servicesData) ? servicesData.filter((s: any) => s.isActive) : []);
-      setProducts(Array.isArray(productsData) ? productsData.filter((p: any) => p.isActive && p.stock > 0) : []);
+      setServices(Array.isArray(servicesData) ? servicesData.filter((s: any) => s.isActive).sort((a: any, b: any) => a.name.localeCompare(b.name)) : []);
+      setProducts(Array.isArray(productsData) ? productsData.filter((p: any) => p.isActive && p.stock > 0).sort((a: any, b: any) => a.name.localeCompare(b.name)) : []);
     } catch (error) {
       console.error('Error fetching data:', error);
       toast.error('Erro ao carregar dados');
