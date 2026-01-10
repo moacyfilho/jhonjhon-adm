@@ -1,0 +1,428 @@
+generator client {
+    provider = "prisma-client-js"
+    binaryTargets = ["native", "linux-musl-arm64-openssl-3.0.x"]
+}
+
+datasource db {
+    provider = "postgresql"
+    url      = env("DATABASE_URL")
+}
+
+// Enums
+enum UserRole {
+  ADMIN
+  SECRETARY
+}
+
+enum AppointmentStatus {
+  SCHEDULED
+  COMPLETED
+  CANCELLED
+}
+
+enum PaymentMethod {
+  CASH
+  DEBIT_CARD
+  CREDIT_CARD
+  PIX
+}
+
+enum CashMovementType {
+  ENTRY
+  EXIT
+}
+
+enum CashRegisterStatus {
+  OPEN
+  CLOSED
+}
+
+enum CommissionStatus {
+  PENDING
+  PAID
+}
+
+enum AccountStatus {
+  PENDING
+  PAID
+  OVERDUE
+  CANCELLED
+}
+
+enum AccountCategory {
+  // Contas a Pagar
+  RENT
+  UTILITIES
+  SALARIES
+  SUPPLIES
+  MAINTENANCE
+  TAXES
+  SERVICES
+  OTHER_EXPENSE
+  
+  // Contas a Receber
+  SERVICES_INCOME
+  PRODUCTS_INCOME
+  SUBSCRIPTION
+  OTHER_INCOME
+}
+
+enum SubscriptionStatus {
+  ACTIVE
+  SUSPENDED
+  CANCELLED
+}
+
+enum OnlineBookingStatus {
+  PENDING
+  CONFIRMED
+  CANCELLED
+  COMPLETED
+}
+
+// Models
+model Account {
+  id                String  @id @default(cuid())
+  userId            String
+  type              String
+  provider          String
+  providerAccountId String
+  refresh_token     String? @db.Text
+  access_token      String? @db.Text
+  expires_at        Int?
+  token_type        String?
+  scope             String?
+  id_token          String? @db.Text
+  session_state     String?
+
+  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@unique([provider, providerAccountId])
+}
+
+model Session {
+  id           String   @id @default(cuid())
+  sessionToken String   @unique
+  userId       String
+  expires      DateTime
+  user         User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+}
+
+model User {
+  id            String    @id @default(cuid())
+  name          String?
+  email         String    @unique
+  emailVerified DateTime?
+  image         String?
+  password      String?
+  role          UserRole  @default(SECRETARY)
+  createdAt     DateTime  @default(now())
+  updatedAt     DateTime  @updatedAt
+  accounts      Account[]
+  sessions      Session[]
+  cashRegisters CashRegister[]
+}
+
+model VerificationToken {
+  identifier String
+  token      String   @unique
+  expires    DateTime
+
+  @@unique([identifier, token])
+}
+
+model Client {
+  id                  String              @id @default(cuid())
+  name                String
+  phone               String
+  email               String?
+  createdAt           DateTime            @default(now())
+  updatedAt           DateTime            @updatedAt
+  appointments        Appointment[]
+  subscriptions       Subscription[]
+  accountsReceivable  AccountReceivable[]
+  onlineBookings      OnlineBooking[]
+}
+
+model Barber {
+  id               String          @id @default(cuid())
+  name             String
+  phone            String
+  email            String?         @unique
+  password         String?         // Hash da senha para login
+  commissionRate   Float           @default(0) // Percentual de comissão (0-100)
+  hourlyRate       Float           @default(0) // Valor por hora para comissão de assinantes
+  isActive         Boolean         @default(true)
+  createdAt        DateTime        @default(now())
+  updatedAt        DateTime        @updatedAt
+  appointments     Appointment[]
+  commissions      Commission[]
+  onlineBookings   OnlineBooking[]
+  scheduleBlocks   ScheduleBlock[]
+}
+
+model Service {
+  id                  String               @id @default(cuid())
+  name                String
+  description         String?
+  price               Float
+  duration            Int                  @default(30) // Duração em minutos
+  isActive            Boolean              @default(true)
+  createdAt           DateTime             @default(now())
+  updatedAt           DateTime             @updatedAt
+  appointmentServices AppointmentService[]
+  onlineBookings      OnlineBooking[]
+}
+
+model Appointment {
+  id                       String               @id @default(cuid())
+  clientId                 String
+  barberId                 String
+  date                     DateTime
+  status                   AppointmentStatus    @default(COMPLETED)
+  paymentMethod            PaymentMethod
+  totalAmount              Float
+  workedHours              Float                @default(0) // Horas trabalhadas normais (calculadas pela duração dos serviços)
+  workedHoursSubscription  Float                @default(0) // Horas trabalhadas com assinantes
+  isSubscriptionAppointment Boolean             @default(false) // Indica se o atendimento é de um assinante
+  observations             String?
+  onlineBookingId          String?              // ID do agendamento online convertido, se aplicável
+  createdAt                DateTime             @default(now())
+  updatedAt                DateTime             @updatedAt
+  client                   Client               @relation(fields: [clientId], references: [id])
+  barber                   Barber               @relation(fields: [barberId], references: [id])
+  services                 AppointmentService[]
+  products                 AppointmentProduct[]
+  commission               Commission?
+}
+
+model AppointmentService {
+  id            String      @id @default(cuid())
+  appointmentId String
+  serviceId     String
+  price         Float       // Preço do serviço no momento do atendimento
+  createdAt     DateTime    @default(now())
+  appointment   Appointment @relation(fields: [appointmentId], references: [id], onDelete: Cascade)
+  service       Service     @relation(fields: [serviceId], references: [id])
+
+  @@unique([appointmentId, serviceId])
+}
+
+model AppointmentProduct {
+  id            String      @id @default(cuid())
+  appointmentId String
+  productId     String
+  quantity      Float       // Quantidade vendida
+  unitPrice     Float       // Preço unitário no momento da venda
+  totalPrice    Float       // Total = quantity * unitPrice
+  createdAt     DateTime    @default(now())
+  appointment   Appointment @relation(fields: [appointmentId], references: [id], onDelete: Cascade)
+  product       Product     @relation(fields: [productId], references: [id])
+
+  @@unique([appointmentId, productId])
+}
+
+model Commission {
+  id            String           @id @default(cuid())
+  appointmentId String           @unique
+  barberId      String
+  amount        Float
+  status        CommissionStatus @default(PENDING)
+  paidAt        DateTime?
+  createdAt     DateTime         @default(now())
+  updatedAt     DateTime         @updatedAt
+  appointment   Appointment      @relation(fields: [appointmentId], references: [id], onDelete: Cascade)
+  barber        Barber           @relation(fields: [barberId], references: [id])
+}
+
+model CashRegister {
+  id              String             @id @default(cuid())
+  openedBy        String
+  openedAt        DateTime           @default(now())
+  closedAt        DateTime?
+  initialAmount   Float              @default(0)
+  finalAmount     Float?
+  expectedAmount  Float?
+  difference      Float?             // Sangria (negativo) ou Sobra (positivo)
+  status          CashRegisterStatus @default(OPEN)
+  createdAt       DateTime           @default(now())
+  updatedAt       DateTime           @updatedAt
+  user            User               @relation(fields: [openedBy], references: [id])
+  movements       CashMovement[]
+}
+
+model CashMovement {
+  id             String            @id @default(cuid())
+  cashRegisterId String
+  type           CashMovementType
+  amount         Float
+  description    String
+  category       String?           // Para saídas: compras, contas, outros
+  paymentMethod  PaymentMethod?    // Para entradas (atendimentos)
+  createdAt      DateTime          @default(now())
+  updatedAt      DateTime          @updatedAt
+  cashRegister   CashRegister      @relation(fields: [cashRegisterId], references: [id], onDelete: Cascade)
+}
+
+model AccountPayable {
+  id             String          @id @default(cuid())
+  description    String
+  category       AccountCategory
+  supplier       String?         // Fornecedor/Credor
+  amount         Float
+  dueDate        DateTime
+  paymentDate    DateTime?
+  status         AccountStatus   @default(PENDING)
+  paymentMethod  PaymentMethod?
+  observations   String?
+  createdAt      DateTime        @default(now())
+  updatedAt      DateTime        @updatedAt
+}
+
+model AccountReceivable {
+  id             String          @id @default(cuid())
+  description    String
+  category       AccountCategory
+  payer          String?         // Pagador/Cliente
+  clientId       String?         // Referência ao cliente (obrigatório para assinaturas)
+  phone          String?         // Telefone do cliente (obrigatório para assinaturas)
+  amount         Float
+  dueDate        DateTime
+  paymentDate    DateTime?
+  status         AccountStatus   @default(PENDING)
+  paymentMethod  PaymentMethod?
+  observations   String?
+  subscriptionId String?         // ID da assinatura (para recorrência automática)
+  createdAt      DateTime        @default(now())
+  updatedAt      DateTime        @updatedAt
+  client         Client?         @relation(fields: [clientId], references: [id])
+  subscription   Subscription?   @relation(fields: [subscriptionId], references: [id])
+  paymentLinks   PaymentLink[]   // Links de pagamento gerados para esta conta
+}
+
+model Subscription {
+  id                String             @id @default(cuid())
+  clientId          String
+  planName          String             // Nome do plano (ex: "Plano Premium Mensal")
+  amount            Float              // Valor mensal da assinatura
+  billingDay        Int                // Dia do mês para cobrança (1-31)
+  status            SubscriptionStatus @default(ACTIVE)
+  startDate         DateTime           @default(now())
+  endDate           DateTime?          // Null se ativa
+  observations      String?
+  servicesIncluded  String?            // JSON ou texto com serviços incluídos
+  usageLimit        Int?               // Limite de usos por mês (null = ilimitado)
+  createdAt         DateTime           @default(now())
+  updatedAt         DateTime           @updatedAt
+  client            Client             @relation(fields: [clientId], references: [id])
+  usageHistory      SubscriptionUsage[]
+  accountsReceivable AccountReceivable[] // Contas a receber geradas pela assinatura
+}
+
+model SubscriptionUsage {
+  id             String       @id @default(cuid())
+  subscriptionId String
+  usedDate       DateTime     @default(now())
+  serviceDetails String?      // Descrição do serviço utilizado
+  bookingId      String?      // Referência ao agendamento, se aplicável
+  createdAt      DateTime     @default(now())
+  subscription   Subscription @relation(fields: [subscriptionId], references: [id], onDelete: Cascade)
+}
+
+model PaymentLink {
+  id                  String            @id @default(cuid())
+  accountReceivableId String            // Conta a receber vinculada
+  linkUrl             String            // URL do link de pagamento
+  generatedBy         String            // ID do usuário que gerou
+  sentAt              DateTime?         // Quando foi enviado
+  expiresAt           DateTime?         // Data de expiração
+  status              String            @default("generated") // generated, sent, paid, expired
+  observations        String?
+  createdAt           DateTime          @default(now())
+  updatedAt           DateTime          @updatedAt
+  accountReceivable   AccountReceivable @relation(fields: [accountReceivableId], references: [id], onDelete: Cascade)
+}
+
+model OnlineBooking {
+  id              String              @id @default(cuid())
+  clientId        String?             // Null se cliente novo (não cadastrado)
+  clientName      String              // Nome informado pelo cliente
+  clientPhone     String              // Telefone informado
+  clientEmail     String?
+  serviceId       String
+  barberId        String?             // Opcional: cliente pode escolher
+  scheduledDate   DateTime            // Data/hora do agendamento
+  status          OnlineBookingStatus @default(PENDING)
+  isSubscriber    Boolean             @default(false) // Marcado se o cliente é assinante
+  observations    String?
+  createdAt       DateTime            @default(now())
+  updatedAt       DateTime            @updatedAt
+  client          Client?             @relation(fields: [clientId], references: [id])
+  service         Service             @relation(fields: [serviceId], references: [id])
+  barber          Barber?             @relation(fields: [barberId], references: [id])
+}
+
+// Configurações de disponibilidade para agendamento online
+model BookingSettings {
+  id                 String   @id @default(cuid())
+  // Horários de funcionamento (JSON)
+  // Formato: { "monday": { "enabled": true, "slots": ["09:00", "10:00", ...] }, ... }
+  schedule           Json
+  // IDs dos serviços disponíveis
+  serviceIds         String[]
+  // IDs dos barbeiros disponíveis
+  barberIds          String[]
+  // Intervalo entre agendamentos (em minutos)
+  slotDuration       Int      @default(30)
+  // Quantos dias no futuro podem ser agendados
+  advanceBookingDays Int      @default(30)
+  // Tempo mínimo de antecedência para agendamento (em horas)
+  minimumNotice      Int      @default(2)
+  createdAt          DateTime @default(now())
+  updatedAt          DateTime @updatedAt
+}
+
+// Produtos para venda
+model Product {
+  id                   String               @id @default(cuid())
+  name                 String
+  description          String?
+  price                Float
+  stock                Float                @default(0) // Quantidade em estoque
+  unit                 String               @default("un") // Unidade: un, kg, L, ml, etc
+  category             String?              // Categoria: Pomadas, Shampoos, Acessórios, etc
+  isActive             Boolean              @default(true)
+  createdAt            DateTime             @default(now())
+  updatedAt            DateTime             @updatedAt
+  sales                ProductSale[]
+  appointmentProducts  AppointmentProduct[]
+}
+
+// Vendas de produtos
+model ProductSale {
+  id             String         @id @default(cuid())
+  productId      String
+  quantity       Float          // Quantidade vendida
+  unitPrice      Float          // Preço unitário no momento da venda
+  totalAmount    Float          // Total = quantity * unitPrice
+  paymentMethod  PaymentMethod
+  soldBy         String?        // Nome de quem vendeu
+  observations   String?
+  soldAt         DateTime       @default(now())
+  createdAt      DateTime       @default(now())
+  updatedAt      DateTime       @updatedAt
+  product        Product        @relation(fields: [productId], references: [id])
+}
+
+// Bloqueios de horário por barbeiro
+model ScheduleBlock {
+  id          String   @id @default(cuid())
+  barberId    String
+  barber      Barber   @relation(fields: [barberId], references: [id], onDelete: Cascade)
+  date        DateTime // Data do bloqueio
+  startTime   String   // HH:mm
+  endTime     String   // HH:mm
+  reason      String?  // Motivo opcional (almoço, folga, etc.)
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+}

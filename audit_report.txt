@@ -1,0 +1,41 @@
+# npm audit report
+
+@eslint/plugin-kit  <0.3.4
+@eslint/plugin-kit is vulnerable to Regular Expression Denial of Service attacks through ConfigCommentParser - https://github.com/advisories/GHSA-xffm-g5w8-qvg7
+fix available via `npm audit fix --force`
+Will install eslint@9.39.2, which is outside the stated dependency range
+node_modules/@eslint/plugin-kit
+  eslint  9.10.0 - 9.26.0
+  Depends on vulnerable versions of @eslint/plugin-kit
+  node_modules/eslint
+
+next  0.9.9 - 14.2.34
+Severity: high
+Information exposure in Next.js dev server due to lack of origin verification - https://github.com/advisories/GHSA-3h52-269p-cp9r
+Next.js Affected by Cache Key Confusion for Image Optimization API Routes - https://github.com/advisories/GHSA-g5qg-72qw-gw5v
+Next.js Improper Middleware Redirect Handling Leads to SSRF - https://github.com/advisories/GHSA-4342-x723-ch2f
+Next.js Content Injection Vulnerability for Image Optimization - https://github.com/advisories/GHSA-xv57-4mr9-wg8v
+Next Vulnerable to Denial of Service with Server Components - https://github.com/advisories/GHSA-mwv6-3258-q52c
+Next has a Denial of Service with Server Components - Incomplete Fix Follow-Up - https://github.com/advisories/GHSA-5j59-xgg2-r9c4
+fix available via `npm audit fix --force`
+Will install next@14.2.35, which is outside the stated dependency range
+node_modules/next
+
+next-auth  <4.24.12
+Severity: moderate
+NextAuthjs Email misdelivery Vulnerability - https://github.com/advisories/GHSA-5jpx-9hw9-2fx4
+fix available via `npm audit fix --force`
+Will install next-auth@4.24.13, which is outside the stated dependency range
+node_modules/next-auth
+
+postcss  <8.4.31
+Severity: moderate
+PostCSS line return parsing error - https://github.com/advisories/GHSA-7fh5-64p2-3v2j
+fix available via `npm audit fix --force`
+Will install postcss@8.5.6, which is outside the stated dependency range
+node_modules/postcss
+
+5 vulnerabilities (2 low, 2 moderate, 1 high)
+
+To address all issues, run:
+  npm audit fix --force

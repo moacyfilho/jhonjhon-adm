@@ -1,0 +1,3661 @@
+{
+  "exportDate": "2026-01-08T21:03:26.822Z",
+  "version": "1.0",
+  "tables": {
+    "users": {
+      "count": 58,
+      "data": [
+        {
+          "id": "cmjiq5eqo0000xe3snhnnva0i",
+          "name": "Administrador",
+          "email": "admin@jhonjhon.com",
+          "emailVerified": null,
+          "image": null,
+          "password": "$2a$10$gt.lido.J3hBx69Kw/KO5ehIU667WA.FaeYApG.lNZK.sfyU.oYVm",
+          "role": "ADMIN",
+          "createdAt": "2025-12-23T15:13:08.065Z",
+          "updatedAt": "2025-12-23T15:13:08.065Z"
+        },
+        {
+          "id": "cmjiq5erc0001xe3sbr8m5tsp",
+          "name": "Secretária",
+          "email": "secretaria@jhonjhon.com",
+          "emailVerified": null,
+          "image": null,
+          "password": "$2a$10$gt.lido.J3hBx69Kw/KO5ehIU667WA.FaeYApG.lNZK.sfyU.oYVm",
+          "role": "SECRETARY",
+          "createdAt": "2025-12-23T15:13:08.088Z",
+          "updatedAt": "2025-12-23T15:13:08.088Z"
+        },
+        {
+          "id": "cmjiqbggi0000xej3vwlftlwn",
+          "name": "John Doe",
+          "email": "testuserwxf8hv46@example.com",
+          "emailVerified": null,
+          "image": null,
+          "password": "$2a$10$SYmYhDHnvFondrS.DDBJce0n4cYmj3Mzo.hIqF19j0CwbZHrJsQHi",
+          "role": "ADMIN",
+          "createdAt": "2025-12-23T15:17:50.226Z",
+          "updatedAt": "2025-12-23T15:17:50.226Z"
+        },
+        {
+          "id": "cmjiqp8v50000xemu03e0l99o",
+          "name": "John Doe",
+          "email": "testuserpb54s48h@example.com",
+          "emailVerified": null,
+          "image": null,
+          "password": "$2a$10$iOjSgrsqOe4HuLqDy.xsx.SyjH6ybaZOpvJA4QMvU0r/O4ydTq4fS",
+          "role": "ADMIN",
+          "createdAt": "2025-12-23T15:28:33.570Z",
+          "updatedAt": "2025-12-23T15:28:33.570Z"
+        },
+        {
+          "id": "cmjiqponb0000xe4nw9aqn4qp",
+          "name": "John Doe",
+          "email": "john@doe.com",
+          "emailVerified": null,
+          "image": null,
+          "password": "$2a$10$.dLCYEojHT6veRaYAWiAsO0b7P1/oDNdKaZmwoZ1yZgHNs81HZBMq",
+          "role": "ADMIN",
+          "createdAt": "2025-12-23T15:28:54.023Z",
+          "updatedAt": "2025-12-23T15:28:54.023Z"
+        },
+        {
+          "id": "cmjiqqenu0000xe8iqv3kum8d",
+          "name": "John Doe",
+          "email": "testuserkdhqjt1m@example.com",
+          "emailVerified": null,
+          "image": null,
+          "password": "$2a$10$R1C2CDWqqzUkgxVi1kaICeqDkq9cmo9SA0Ib7eGqTQ0zvIywaBQ3e",
+          "role": "ADMIN",
+          "createdAt": "2025-12-23T15:29:27.738Z",
+          "updatedAt": "2025-12-23T15:29:27.738Z"
+        },
+        {
+          "id": "cmjiqsfmi0000xe21nmt5jgqb",
+          "name": "John Doe",
+          "email": "testuserpzv3ov96@example.com",
+          "emailVerified": null,
+          "image": null,
+          "password": "$2a$10$415oEAuxJ5D3rtei.lmeD.CTg0MIIzJ41W8OXet4H.cc4/Zk0YyVW",
+          "role": "ADMIN",
+          "createdAt": "2025-12-23T15:31:02.298Z",
+          "updatedAt": "2025-12-23T15:31:02.298Z"
+        },
+        {
+          "id": "cmjiriw1v0000xeq3hpn7b4pn",
+          "name": "John Doe",
+          "email": "testuserk6tm14s6@example.com",
+          "emailVerified": null,
+          "image": null,
+          "password": "$2a$10$PBf42IzykmDWkDH9kuUThOuJAnW3LKYgh1zz6CUjyT2CnIiakaqcS",
+          "role": "ADMIN",
+          "createdAt": "2025-12-23T15:51:36.643Z",
+          "updatedAt": "2025-12-23T15:51:36.643Z"
+        },
+        {
+          "id": "cmjivld3o0000v3em6mjtuqz6",
+          "name": "John Doe",
+          "email": "testuservfnec8h4@example.com",
+          "emailVerified": null,
+          "image": null,
+          "password": "$2a$10$0KPCLNWnjj2N7pofAiIfp.IpSsL0EAk7RTtn7T.ZDcXQxer8Q12na",
+          "role": "ADMIN",
+          "createdAt": "2025-12-23T17:45:30.516Z",
+          "updatedAt": "2025-12-23T17:45:30.516Z"
+        },
+        {
+          "id": "cmjiwp73t0000v3o7nrzfp7oz",
+          "name": "John Doe",
+          "email": "testuser2npas9b5@example.com",
+          "emailVerified": null,
+          "image": null,
+          "password": "$2a$10$koTZ1zUpSqjwuzpWBs93SejhmKIg1TFz8xZQ6adkaKFPgYh.VQEFG",
+          "role": "ADMIN",
+          "createdAt": "2025-12-23T18:16:28.985Z",
+          "updatedAt": "2025-12-23T18:16:28.985Z"
+        },
+        {
+          "id": "cmjix1qyc0000v3k5s789butp",
+          "name": "John Doe",
+          "email": "testuseroomldloc@example.com",
+          "emailVerified": null,
+          "image": null,
+          "password": "$2a$10$gKj0cUel3lkXdP6o9Fb9nOyeSoNxujfAQVO3MO7ry6uSIDb9zCUWS",
+          "role": "ADMIN",
+          "createdAt": "2025-12-23T18:26:14.580Z",
+          "updatedAt": "2025-12-23T18:26:14.580Z"
+        },
+        {
+          "id": "cmjixdy0m0000v3d7wfm0kjr1",
+          "name": "John Doe",
+          "email": "testusery9fjbncr@example.com",
+          "emailVerified": null,
+          "image": null,
+          "password": "$2a$10$mowm5FsBtZD8JyvBIAmjf.Gv.1q1jgwzxLYPWfrljtS63phiq.CUa",
+          "role": "ADMIN",
+          "createdAt": "2025-12-23T18:35:43.607Z",
+          "updatedAt": "2025-12-23T18:35:43.607Z"
+        },
+        {
+          "id": "cmjixuy9d0000v31x68v3qgvw",
+          "name": "John Doe",
+          "email": "testusero17u99zn@example.com",
+          "emailVerified": null,
+          "image": null,
+          "password": "$2a$10$cV/yitc7MGy89sozStbPGu1NrjlnHHLAkXs4zNIvTf1o7ndMsJaV6",
+          "role": "ADMIN",
+          "createdAt": "2025-12-23T18:48:57.074Z",
+          "updatedAt": "2025-12-23T18:48:57.074Z"
+        },
+        {
+          "id": "cmjncy61e0000up3t76kbl8tl",
+          "name": "John Doe",
+          "email": "testuserv46c12dg@example.com",
+          "emailVerified": null,
+          "image": null,
+          "password": "$2a$10$0XPUXpM2vhhJZ8wqT4TZSumjTLnmtNqnXbaU1MJ/Z9uEYiqihYybK",
+          "role": "ADMIN",
+          "createdAt": "2025-12-26T21:02:26.066Z",
+          "updatedAt": "2025-12-26T21:02:26.066Z"
+        },
+        {
+          "id": "cmjndvjgy0000upx9v1plwjer",
+          "name": "John Doe",
+          "email": "testuserq9d69vgp@example.com",
+          "emailVerified": null,
+          "image": null,
+          "password": "$2a$10$ikbv2lfJZ9RFiXILBI.A/OHCTIBMndKKdwiKIl55AsO.jmt69SEZS",
+          "role": "ADMIN",
+          "createdAt": "2025-12-26T21:28:23.122Z",
+          "updatedAt": "2025-12-26T21:28:23.122Z"
+        },
+        {
+          "id": "cmjneja1b0000upvv36p4s67y",
+          "name": "John Doe",
+          "email": "testuser4ot3jq0n@example.com",
+          "emailVerified": null,
+          "image": null,
+          "password": "$2a$10$lrZgUlcHfiqPNq8gEb8/Ke8DSeti89ZlUVY6XqDKKyr8Rzgt/I1nW",
+          "role": "ADMIN",
+          "createdAt": "2025-12-26T21:46:50.639Z",
+          "updatedAt": "2025-12-26T21:46:50.639Z"
+        },
+        {
+          "id": "cmjni0b8l0000up27rlrsvc0f",
+          "name": "John Doe",
+          "email": "testuserxs4544dn@example.com",
+          "emailVerified": null,
+          "image": null,
+          "password": "$2a$10$YUuOjfgYCfssHa2HIKq8G.VlYEiXEktMq31.bGIg0ZmEPSk6kKAd2",
+          "role": "ADMIN",
+          "createdAt": "2025-12-26T23:24:04.197Z",
+          "updatedAt": "2025-12-26T23:24:04.197Z"
+        },
+        {
+          "id": "cmjotlldz00001buftsw11dhe",
+          "name": "John Doe",
+          "email": "testuser8ej4wv5z@example.com",
+          "emailVerified": null,
+          "image": null,
+          "password": "$2a$10$ugqoryd3OYYsLjPnnsxXRevO.dwgSmj7MEB3oRS0Y/cIb74xxvWyS",
+          "role": "ADMIN",
+          "createdAt": "2025-12-27T21:36:19.079Z",
+          "updatedAt": "2025-12-27T21:36:19.079Z"
+        },
+        {
+          "id": "cmjougy4300001bxprxz8mtev",
+          "name": "John Doe",
+          "email": "testuserhei4t0qn@example.com",
+          "emailVerified": null,
+          "image": null,
+          "password": "$2a$10$12t0m/l2HozAbmjeavFO5euuvgr18EqA/oJfDTCJce1cRNnzaijbm",
+          "role": "ADMIN",
+          "createdAt": "2025-12-27T22:00:41.908Z",
+          "updatedAt": "2025-12-27T22:00:41.908Z"
+        },
+        {
+          "id": "cmjyo92w500000copbrk23srr",
+          "name": "John Doe",
+          "email": "testuser5chfiuk1@example.com",
+          "emailVerified": null,
+          "image": null,
+          "password": "$2a$10$307udu9rWTUXANdpjFyf/.0SQuYPY0j47arN25FiYoKG628EvnF4S",
+          "role": "ADMIN",
+          "createdAt": "2026-01-03T19:04:18.918Z",
+          "updatedAt": "2026-01-03T19:04:18.918Z"
+        },
+        {
+          "id": "cmk1j83nv00000cubqu1xxtio",
+          "name": "John Doe",
+          "email": "testusersz308v9t@example.com",
+          "emailVerified": null,
+          "image": null,
+          "password": "$2a$10$9pZSFhGycdOLTBUwsznceOdoTB6ENtcF93ZIOtLWgNIl5Z7j0qvYi",
+          "role": "ADMIN",
+          "createdAt": "2026-01-05T19:06:53.707Z",
+          "updatedAt": "2026-01-05T19:06:53.707Z"
+        },
+        {
+          "id": "cmk2rnve90000y28zlism7h0n",
+          "name": "John Doe",
+          "email": "testuserfqnlaz5o@example.com",
+          "emailVerified": null,
+          "image": null,
+          "password": "$2a$10$uDLCzbuOmra3PxE3wek1sOzoFYx6YS.Nlk1Nf4undg/zWrzytMDmi",
+          "role": "ADMIN",
+          "createdAt": "2026-01-06T15:50:52.593Z",
+          "updatedAt": "2026-01-06T15:50:52.593Z"
+        },
+        {
+          "id": "cmk2s5ng10000y2fwwqtse34o",
+          "name": "John Doe",
+          "email": "testuser366agnuu@example.com",
+          "emailVerified": null,
+          "image": null,
+          "password": "$2a$10$.i2WtG2Vow/NwnX/rgByo.nOz6K9/R.6PmMU5oqHXRPke2sVjnSRq",
+          "role": "ADMIN",
+          "createdAt": "2026-01-06T16:04:42.097Z",
+          "updatedAt": "2026-01-06T16:04:42.097Z"
+        },
+        {
+          "id": "cmk2s7b1m0000y28ga5krw44r",
+          "name": "John Doe",
+          "email": "testuserrh3lk8xo@example.com",
+          "emailVerified": null,
+          "image": null,
+          "password": "$2a$10$xIsDU6h3FghJ6S837NCc.uI/GoBnNUtgcvqOyfaDYPu7ZE70iPwpm",
+          "role": "ADMIN",
+          "createdAt": "2026-01-06T16:05:59.338Z",
+          "updatedAt": "2026-01-06T16:05:59.338Z"
+        },
+        {
+          "id": "cmk2s919v0000y210o6kr4et6",
+          "name": "John Doe",
+          "email": "testuser9x0clx8n@example.com",
+          "emailVerified": null,
+          "image": null,
+          "password": "$2a$10$dzxq4w.xd/1c9Ba1/pFFye26gHoTxrc0o1K08k3YK0Fy6XSnkwQhS",
+          "role": "ADMIN",
+          "createdAt": "2026-01-06T16:07:19.987Z",
+          "updatedAt": "2026-01-06T16:07:19.987Z"
+        },
+        {
+          "id": "cmk2syhyt0000y27szshdogp4",
+          "name": "John Doe",
+          "email": "testuser8273qla2@example.com",
+          "emailVerified": null,
+          "image": null,
+          "password": "$2a$10$hM0mZneam4N8USSYpLAL3e7FYliKuztLKeJtrul3Se2IXItna/82q",
+          "role": "ADMIN",
+          "createdAt": "2026-01-06T16:27:08.021Z",
+          "updatedAt": "2026-01-06T16:27:08.021Z"
+        },
+        {
+          "id": "cmk2ubkvl0000y2idyogj56en",
+          "name": "John Doe",
+          "email": "testusersq37g8da@example.com",
+          "emailVerified": null,
+          "image": null,
+          "password": "$2a$10$piOQwKnY.u8N3qQaCbUdpeowBEaPe6cxZTG8/MWcH1RcJhlI8vfmq",
+          "role": "ADMIN",
+          "createdAt": "2026-01-06T17:05:17.938Z",
+          "updatedAt": "2026-01-06T17:05:17.938Z"
+        },
+        {
+          "id": "cmk2ussdr0000y2hc9wk0u11d",
+          "name": "John Doe",
+          "email": "testusernuvlttwc@example.com",
+          "emailVerified": null,
+          "image": null,
+          "password": "$2a$10$Hklxl0M5Zxu7TfGz1teBI.LQEShTys.R.5XpSPnmuJoa3ix2NqvMu",
+          "role": "ADMIN",
+          "createdAt": "2026-01-06T17:18:40.815Z",
+          "updatedAt": "2026-01-06T17:18:40.815Z"
+        },
+        {
+          "id": "cmk2v6x9s0000y2ezdrnhq6ne",
+          "name": "John Doe",
+          "email": "testusermrupqmk3@example.com",
+          "emailVerified": null,
+          "image": null,
+          "password": "$2a$10$v/PPsiZaZC/fC2Nb8Rj7duOHYhCcK.V9DAk3xZ9oUrKQL2szqMJuC",
+          "role": "ADMIN",
+          "createdAt": "2026-01-06T17:29:40.336Z",
+          "updatedAt": "2026-01-06T17:29:40.336Z"
+        },
+        {
+          "id": "cmk2vsc8c0000y29tnaeq1c5i",
+          "name": "John Doe",
+          "email": "testuser8t6mr9v6@example.com",
+          "emailVerified": null,
+          "image": null,
+          "password": "$2a$10$QtrxMr9fCzVI3Dhw6ShwO.F29ncRvutB04NcHuQh3PcO6/tpYsTGW",
+          "role": "ADMIN",
+          "createdAt": "2026-01-06T17:46:19.501Z",
+          "updatedAt": "2026-01-06T17:46:19.501Z"
+        },
+        {
+          "id": "cmk2w8s4j0000y2123rd3fbux",
+          "name": "John Doe",
+          "email": "testuserr05okl10@example.com",
+          "emailVerified": null,
+          "image": null,
+          "password": "$2a$10$vqTJI2ixQb//Cnkg3QeHg.dcjwvaIbv0X9Z50S7GUISArbuhLNlxO",
+          "role": "ADMIN",
+          "createdAt": "2026-01-06T17:59:06.596Z",
+          "updatedAt": "2026-01-06T17:59:06.596Z"
+        },
+        {
+          "id": "cmk2wuxw90000y26n9yktl9o8",
+          "name": "John Doe",
+          "email": "testuserqdhddxqj@example.com",
+          "emailVerified": null,
+          "image": null,
+          "password": "$2a$10$aV1jGDeH4wfRImYdR19xL.oR02vRqtxhLNNf/TnUSE3uslDIxGwtu",
+          "role": "ADMIN",
+          "createdAt": "2026-01-06T18:16:20.506Z",
+          "updatedAt": "2026-01-06T18:16:20.506Z"
+        },
+        {
+          "id": "cmk2xgvl30000y2b6lonn25ol",
+          "name": "John Doe",
+          "email": "testuser678j4xq7@example.com",
+          "emailVerified": null,
+          "image": null,
+          "password": "$2a$10$/OhuZouGqzqpAAeeFs7H0eKtWpKZENNqK77uLilQBiUpUcHdz6kCm",
+          "role": "ADMIN",
+          "createdAt": "2026-01-06T18:33:23.944Z",
+          "updatedAt": "2026-01-06T18:33:23.944Z"
+        },
+        {
+          "id": "cmk2xx22y0000y251qrot4tgn",
+          "name": "John Doe",
+          "email": "testuserid8jbpfb@example.com",
+          "emailVerified": null,
+          "image": null,
+          "password": "$2a$10$/8uXWQI6MknyhMGJ/SnWp.y8crAUDjDhKtEl9bOZv4yfMwBnDjzz2",
+          "role": "ADMIN",
+          "createdAt": "2026-01-06T18:45:58.858Z",
+          "updatedAt": "2026-01-06T18:45:58.858Z"
+        },
+        {
+          "id": "cmk2yvjq90000y2yqsd14og9g",
+          "name": "John Doe",
+          "email": "testuser0yxrwcw1@example.com",
+          "emailVerified": null,
+          "image": null,
+          "password": "$2a$10$SW5qCpafZpLZbMDKROGgH.hkJEJLZ5tKX2snq1rfum1taqL6KC0zW",
+          "role": "ADMIN",
+          "createdAt": "2026-01-06T19:12:48.034Z",
+          "updatedAt": "2026-01-06T19:12:48.034Z"
+        },
+        {
+          "id": "cmk2zprpu0000y22a3lclznwt",
+          "name": "John Doe",
+          "email": "testuserhsnhe979@example.com",
+          "emailVerified": null,
+          "image": null,
+          "password": "$2a$10$N/BFA9Y4s1AKyE845Uek7.j0Ab8hXtIuOf.f.RBNLu6el0SEVYR3C",
+          "role": "ADMIN",
+          "createdAt": "2026-01-06T19:36:18.067Z",
+          "updatedAt": "2026-01-06T19:36:18.067Z"
+        },
+        {
+          "id": "cmk306qxs0000y2ufokijpytm",
+          "name": "John Doe",
+          "email": "testusercse6978x@example.com",
+          "emailVerified": null,
+          "image": null,
+          "password": "$2a$10$nxI7Jh5DWYNW8yabgZ8inebkhdm1qlngraOswJ/1kEtc0ua4fDycO",
+          "role": "ADMIN",
+          "createdAt": "2026-01-06T19:49:30.209Z",
+          "updatedAt": "2026-01-06T19:49:30.209Z"
+        },
+        {
+          "id": "cmk30mvh80000y2q5mg80zja7",
+          "name": "John Doe",
+          "email": "testuser6pnc09y2@example.com",
+          "emailVerified": null,
+          "image": null,
+          "password": "$2a$10$rAfg5giCa78D6r1SdaDea.tnplun5nfPvVlXZJJNIB7EdCop/wCI6",
+          "role": "ADMIN",
+          "createdAt": "2026-01-06T20:02:02.589Z",
+          "updatedAt": "2026-01-06T20:02:02.589Z"
+        },
+        {
+          "id": "cmk32t74u0000y2guxkcbvg7w",
+          "name": "John Doe",
+          "email": "testuser2jqyiqad@example.com",
+          "emailVerified": null,
+          "image": null,
+          "password": "$2a$10$fEgAd3v.hpZlWaqJsb4IvOR.uvDOjQzXUVlFEAtyVNZk5OqrFujlu",
+          "role": "ADMIN",
+          "createdAt": "2026-01-06T21:02:56.863Z",
+          "updatedAt": "2026-01-06T21:02:56.863Z"
+        },
+        {
+          "id": "cmk33bcqc0000y2ek2hhgtht0",
+          "name": "John Doe",
+          "email": "testuserim3shkk8@example.com",
+          "emailVerified": null,
+          "image": null,
+          "password": "$2a$10$1wLy5OAVFAw527.H4aPj9eBVInW8/R.Q8nK75KbXniaYt2OlfhNQK",
+          "role": "ADMIN",
+          "createdAt": "2026-01-06T21:17:03.924Z",
+          "updatedAt": "2026-01-06T21:17:03.924Z"
+        },
+        {
+          "id": "cmk3459k70000y2ozypyywar9",
+          "name": "John Doe",
+          "email": "testuser1ai8kn6g@example.com",
+          "emailVerified": null,
+          "image": null,
+          "password": "$2a$10$9HNZltqBMdmo7TFR6G2LaO8aR7mGA8lGuNth86erktn8ftq60p8/i",
+          "role": "ADMIN",
+          "createdAt": "2026-01-06T21:40:19.495Z",
+          "updatedAt": "2026-01-06T21:40:19.495Z"
+        },
+        {
+          "id": "cmk350hqb0000y29zt3rqhsk6",
+          "name": "John Doe",
+          "email": "testusertejq516r@example.com",
+          "emailVerified": null,
+          "image": null,
+          "password": "$2a$10$.zw24b25Z/12G6Fkifj9.eSv/OWwxQI0Ix2wz0.yiEDw6OUxZUUOO",
+          "role": "ADMIN",
+          "createdAt": "2026-01-06T22:04:36.420Z",
+          "updatedAt": "2026-01-06T22:04:36.420Z"
+        },
+        {
+          "id": "cmk35bitv0000y2fie5yh8bma",
+          "name": "John Doe",
+          "email": "testuser9qc6yt3h@example.com",
+          "emailVerified": null,
+          "image": null,
+          "password": "$2a$10$s82ceiDmVySSsaQBGyNzbes2ae0q8JTMfd9ikn3TNFLrbSi9KzB.6",
+          "role": "ADMIN",
+          "createdAt": "2026-01-06T22:13:11.060Z",
+          "updatedAt": "2026-01-06T22:13:11.060Z"
+        },
+        {
+          "id": "cmk360zls0000y2fskmlyqcxa",
+          "name": "John Doe",
+          "email": "testusero3xam4gl@example.com",
+          "emailVerified": null,
+          "image": null,
+          "password": "$2a$10$ztxb1TdRQxwDhFxkjDPnpOOHWmwWTqAEiIQ9ChNJWq8VLbuJcO9ze",
+          "role": "ADMIN",
+          "createdAt": "2026-01-06T22:32:59.200Z",
+          "updatedAt": "2026-01-06T22:32:59.200Z"
+        },
+        {
+          "id": "cmk36x18g0000y2hi40q2yw4t",
+          "name": "John Doe",
+          "email": "testuser03sl9nhf@example.com",
+          "emailVerified": null,
+          "image": null,
+          "password": "$2a$10$79ZYGi2q7E5eqlXshI9tDeDZ/WifjFSxE0YaS94lLrHNmHafSpXqG",
+          "role": "ADMIN",
+          "createdAt": "2026-01-06T22:57:54.304Z",
+          "updatedAt": "2026-01-06T22:57:54.304Z"
+        },
+        {
+          "id": "cmk37c8720000y2b8nfe03sbi",
+          "name": "John Doe",
+          "email": "testuser0fd9l8d1@example.com",
+          "emailVerified": null,
+          "image": null,
+          "password": "$2a$10$Xzt1GyTDGqoqNRYfq5lLIeHW3j/8liLARos/7cVO8pO7UDbwmiU46",
+          "role": "ADMIN",
+          "createdAt": "2026-01-06T23:09:43.166Z",
+          "updatedAt": "2026-01-06T23:09:43.166Z"
+        },
+        {
+          "id": "cmk37lny30000y2zbfllymbvr",
+          "name": "John Doe",
+          "email": "testuser44dtijz3@example.com",
+          "emailVerified": null,
+          "image": null,
+          "password": "$2a$10$/6KguhCWpd2sKTwSvBYlVOUk.6RYK1MMgDe./AKIPW2c64FukOaO6",
+          "role": "ADMIN",
+          "createdAt": "2026-01-06T23:17:03.484Z",
+          "updatedAt": "2026-01-06T23:17:03.484Z"
+        },
+        {
+          "id": "cmk37xb5l0000y2rd28cqtrgl",
+          "name": "John Doe",
+          "email": "testuserb6uiclfa@example.com",
+          "emailVerified": null,
+          "image": null,
+          "password": "$2a$10$KK27lCFEi85KmwHWtCP9CePbdL8saSyusKuL778PX4ad6v.QPehS.",
+          "role": "ADMIN",
+          "createdAt": "2026-01-06T23:26:06.778Z",
+          "updatedAt": "2026-01-06T23:26:06.778Z"
+        },
+        {
+          "id": "cmk384ydm0000y2eefgygwflk",
+          "name": "John Doe",
+          "email": "testusere6szps8p@example.com",
+          "emailVerified": null,
+          "image": null,
+          "password": "$2a$10$/NkNpKCGy9T03SryY3KnFu7TGHlV706BB3ddG4x5mv5lZOg4kNsj6",
+          "role": "ADMIN",
+          "createdAt": "2026-01-06T23:32:03.467Z",
+          "updatedAt": "2026-01-06T23:32:03.467Z"
+        },
+        {
+          "id": "cmk38i0v20000y24zz64i1hlw",
+          "name": "John Doe",
+          "email": "testuser2jn1s0nl@example.com",
+          "emailVerified": null,
+          "image": null,
+          "password": "$2a$10$HITNLKfkMW6.Zd3Gvgogcu85vzwQJc3YYD95Ju.WS4Z0pnQhQNyGy",
+          "role": "ADMIN",
+          "createdAt": "2026-01-06T23:42:13.214Z",
+          "updatedAt": "2026-01-06T23:42:13.214Z"
+        },
+        {
+          "id": "cmk38wy4o0000y20hjyqv8201",
+          "name": "John Doe",
+          "email": "testuser6gu6adqc@example.com",
+          "emailVerified": null,
+          "image": null,
+          "password": "$2a$10$MZ8wahLrCxH2UJC9YZGggOLQAshOSbZpqSdsC6PsaU2yaZm.BdHZm",
+          "role": "ADMIN",
+          "createdAt": "2026-01-06T23:53:49.512Z",
+          "updatedAt": "2026-01-06T23:53:49.512Z"
+        },
+        {
+          "id": "cmk39bcle0000y2wg2d3ifnnb",
+          "name": "John Doe",
+          "email": "testuserg9qhwgl7@example.com",
+          "emailVerified": null,
+          "image": null,
+          "password": "$2a$10$NUd2rup4U6q4HhMtDHlX3uQCOu46Kn5QbihhJRm7FfrbJDJsScaem",
+          "role": "ADMIN",
+          "createdAt": "2026-01-07T00:05:01.442Z",
+          "updatedAt": "2026-01-07T00:05:01.442Z"
+        },
+        {
+          "id": "cmk3acu0k0000y2aep6esyyxx",
+          "name": "John Doe",
+          "email": "testuseraowi2nz0@example.com",
+          "emailVerified": null,
+          "image": null,
+          "password": "$2a$10$yYCGKomr33QqlzpURq/jWO9EEwJ9IKbii7pDd6O1jqCRIut0sN1Q6",
+          "role": "ADMIN",
+          "createdAt": "2026-01-07T00:34:10.293Z",
+          "updatedAt": "2026-01-07T00:34:10.293Z"
+        },
+        {
+          "id": "cmk4b5ed40000wq1nv4p1msm7",
+          "name": "John Doe",
+          "email": "testuser9e06d2q0@example.com",
+          "emailVerified": null,
+          "image": null,
+          "password": "$2a$10$F1LoasHyM0Teby2nbYr53.AZaLjUNedMhqVNGk8T2MP3/TU8O9VI2",
+          "role": "ADMIN",
+          "createdAt": "2026-01-07T17:44:09.209Z",
+          "updatedAt": "2026-01-07T17:44:09.209Z"
+        },
+        {
+          "id": "cmk4c3vdw0000wq3kepehyfrb",
+          "name": "John Doe",
+          "email": "testusert38y9a14@example.com",
+          "emailVerified": null,
+          "image": null,
+          "password": "$2a$10$/J05M/edqBJEZArWcqmRBOcYb5myLjJhhU1FnxZLG82tTANLqJuWm",
+          "role": "ADMIN",
+          "createdAt": "2026-01-07T18:10:57.572Z",
+          "updatedAt": "2026-01-07T18:10:57.572Z"
+        },
+        {
+          "id": "cmk4cxce00000wq5rba3hhpxr",
+          "name": "John Doe",
+          "email": "testusert7rp8bkh@example.com",
+          "emailVerified": null,
+          "image": null,
+          "password": "$2a$10$AICgk7EacdjJYk9Yw91lyexeZi1pufKbk/qGIGEinwPxhXrE3A/Aq",
+          "role": "ADMIN",
+          "createdAt": "2026-01-07T18:33:52.633Z",
+          "updatedAt": "2026-01-07T18:33:52.633Z"
+        },
+        {
+          "id": "cmk4dvy6w0000wq8v1toj3233",
+          "name": "John Doe",
+          "email": "testuserh2dhw0ep@example.com",
+          "emailVerified": null,
+          "image": null,
+          "password": "$2a$10$JWuehCs6QuX0iK87gcMWm.dqCPA.NMyRZf9OTegLzMXpUVF9utl9q",
+          "role": "ADMIN",
+          "createdAt": "2026-01-07T19:00:47.193Z",
+          "updatedAt": "2026-01-07T19:00:47.193Z"
+        },
+        {
+          "id": "cmk4dxt2x0000wq5akjdhqcay",
+          "name": "John Doe",
+          "email": "testuser3jg4m14o@example.com",
+          "emailVerified": null,
+          "image": null,
+          "password": "$2a$10$duE50rirHQOf6R22jbAIAuJsgJDNLrlZG7NCzFrslrYL/gZZmkRVi",
+          "role": "ADMIN",
+          "createdAt": "2026-01-07T19:02:13.882Z",
+          "updatedAt": "2026-01-07T19:02:13.882Z"
+        }
+      ]
+    },
+    "barbers": {
+      "count": 3,
+      "data": [
+        {
+          "id": "cmjir4szc0001p208m38g3p13",
+          "name": "jhon jhon",
+          "phone": "92984331287",
+          "email": null,
+          "password": null,
+          "commissionRate": 40,
+          "hourlyRate": 0,
+          "isActive": true,
+          "createdAt": "2025-12-23T15:40:39.479Z",
+          "updatedAt": "2025-12-27T17:30:32.063Z"
+        },
+        {
+          "id": "cmjokmsma0002rc09qso1ymbp",
+          "name": "Eduardo ",
+          "phone": "92991782936",
+          "email": null,
+          "password": null,
+          "commissionRate": 45,
+          "hourlyRate": 0,
+          "isActive": true,
+          "createdAt": "2025-12-27T17:25:18.562Z",
+          "updatedAt": "2025-12-27T20:09:07.135Z"
+        },
+        {
+          "id": "cmjoko0qz0003rc09asvby6r9",
+          "name": "Maikon ",
+          "phone": "92991570180",
+          "email": null,
+          "password": null,
+          "commissionRate": 45,
+          "hourlyRate": 0,
+          "isActive": true,
+          "createdAt": "2025-12-27T17:26:15.755Z",
+          "updatedAt": "2025-12-27T20:09:12.939Z"
+        }
+      ]
+    },
+    "clients": {
+      "count": 71,
+      "data": [
+        {
+          "id": "cmjol2dyc0005rc09169224xt",
+          "name": "Cézar Vilaça",
+          "phone": "92995078981",
+          "email": null,
+          "createdAt": "2025-12-27T17:37:26.052Z",
+          "updatedAt": "2025-12-27T17:37:26.052Z"
+        },
+        {
+          "id": "cmjoxvtge0009qy08qq2t7uf6",
+          "name": "Guilherme Pereira",
+          "phone": "92 986222253",
+          "email": null,
+          "createdAt": "2025-12-27T23:36:14.557Z",
+          "updatedAt": "2025-12-27T23:36:14.557Z"
+        },
+        {
+          "id": "cmjoxwzam000aqy08lfdm1pp7",
+          "name": "Gabriel ferreira",
+          "phone": "92 995163062",
+          "email": null,
+          "createdAt": "2025-12-27T23:37:08.782Z",
+          "updatedAt": "2025-12-27T23:37:08.782Z"
+        },
+        {
+          "id": "cmjoxyadf000bqy08d34gjslj",
+          "name": "Rodrigo Fernandes ",
+          "phone": "92 985263066",
+          "email": null,
+          "createdAt": "2025-12-27T23:38:09.795Z",
+          "updatedAt": "2025-12-27T23:38:09.795Z"
+        },
+        {
+          "id": "cmjoxz2ao000cqy089uy9ropz",
+          "name": "Matheus campos ",
+          "phone": "92 984578428",
+          "email": null,
+          "createdAt": "2025-12-27T23:38:45.984Z",
+          "updatedAt": "2025-12-27T23:38:45.984Z"
+        },
+        {
+          "id": "cmjoxzqta000dqy088bu4lmc1",
+          "name": "Leandro Oliveira dos santos",
+          "phone": "92 993857798",
+          "email": null,
+          "createdAt": "2025-12-27T23:39:17.758Z",
+          "updatedAt": "2025-12-27T23:39:17.758Z"
+        },
+        {
+          "id": "cmjoy0dkb000eqy08jxtac5jp",
+          "name": "Jonhe castro",
+          "phone": "92 982517974",
+          "email": null,
+          "createdAt": "2025-12-27T23:39:47.243Z",
+          "updatedAt": "2025-12-27T23:39:47.243Z"
+        },
+        {
+          "id": "cmjoy121s000fqy085g3xbsqp",
+          "name": "Alex nascimento ",
+          "phone": "92 985439626",
+          "email": null,
+          "createdAt": "2025-12-27T23:40:18.960Z",
+          "updatedAt": "2025-12-27T23:40:18.960Z"
+        },
+        {
+          "id": "cmjoy1l9l000gqy08u6uj4axd",
+          "name": "Gustavo Alberto ",
+          "phone": "92 982615592",
+          "email": null,
+          "createdAt": "2025-12-27T23:40:43.881Z",
+          "updatedAt": "2025-12-27T23:40:43.881Z"
+        },
+        {
+          "id": "cmjoy248r000hqy08dv3bpfb1",
+          "name": "Bruce lennon",
+          "phone": "92 994275607",
+          "email": null,
+          "createdAt": "2025-12-27T23:41:08.475Z",
+          "updatedAt": "2025-12-27T23:41:08.475Z"
+        },
+        {
+          "id": "cmjoy2pln000iqy084blzstlu",
+          "name": "José Gabriel ",
+          "phone": "92 982234562",
+          "email": null,
+          "createdAt": "2025-12-27T23:41:36.155Z",
+          "updatedAt": "2025-12-27T23:41:36.155Z"
+        },
+        {
+          "id": "cmjoy3bis000jqy086sb68w34",
+          "name": "Diego Josafá ",
+          "phone": "92 999441831",
+          "email": null,
+          "createdAt": "2025-12-27T23:42:04.565Z",
+          "updatedAt": "2025-12-27T23:42:04.565Z"
+        },
+        {
+          "id": "cmjoy45f3000kqy082q2z4emt",
+          "name": "Luigi Albuquerque ",
+          "phone": "92 999800318",
+          "email": null,
+          "createdAt": "2025-12-27T23:42:43.311Z",
+          "updatedAt": "2025-12-27T23:42:43.311Z"
+        },
+        {
+          "id": "cmjoy4ri1000lqy08ozysnw7w",
+          "name": "Joab melo ",
+          "phone": "92 996075352",
+          "email": null,
+          "createdAt": "2025-12-27T23:43:11.929Z",
+          "updatedAt": "2025-12-27T23:43:11.929Z"
+        },
+        {
+          "id": "cmjoy55bt000mqy08uenhbr62",
+          "name": "Carol binda ",
+          "phone": "92 984715646",
+          "email": null,
+          "createdAt": "2025-12-27T23:43:29.849Z",
+          "updatedAt": "2025-12-27T23:43:29.849Z"
+        },
+        {
+          "id": "cmjoy5ud8000nqy08aqqplpyg",
+          "name": "Janderson bahia ",
+          "phone": "92 981494741",
+          "email": null,
+          "createdAt": "2025-12-27T23:44:02.300Z",
+          "updatedAt": "2025-12-27T23:44:02.300Z"
+        },
+        {
+          "id": "cmjoy66jr000oqy084p6drdsb",
+          "name": "Marcio cliente",
+          "phone": "92 981201341",
+          "email": null,
+          "createdAt": "2025-12-27T23:44:18.087Z",
+          "updatedAt": "2025-12-27T23:44:18.087Z"
+        },
+        {
+          "id": "cmjoy6nly000pqy08ajfefka4",
+          "name": "Diogo gabriel",
+          "phone": "92 992989889",
+          "email": null,
+          "createdAt": "2025-12-27T23:44:40.198Z",
+          "updatedAt": "2025-12-27T23:44:40.198Z"
+        },
+        {
+          "id": "cmjoy77pj000qqy08ajqo618s",
+          "name": "Luan bayman",
+          "phone": "92 992599815",
+          "email": null,
+          "createdAt": "2025-12-27T23:45:06.247Z",
+          "updatedAt": "2025-12-27T23:45:06.247Z"
+        },
+        {
+          "id": "cmjoy83wf000rqy08biz5fb8i",
+          "name": "Elder da Costa Araújo ",
+          "phone": "92 994650686",
+          "email": null,
+          "createdAt": "2025-12-27T23:45:47.950Z",
+          "updatedAt": "2025-12-27T23:45:47.950Z"
+        },
+        {
+          "id": "cmjoy8l7a000sqy08f1b706yd",
+          "name": "Kael bandeira",
+          "phone": "92 986031991",
+          "email": null,
+          "createdAt": "2025-12-27T23:46:10.390Z",
+          "updatedAt": "2025-12-27T23:46:10.390Z"
+        },
+        {
+          "id": "cmjoy96lm000tqy08b9pl4mbl",
+          "name": "Darc Sales ",
+          "phone": "92 992371995",
+          "email": null,
+          "createdAt": "2025-12-27T23:46:38.122Z",
+          "updatedAt": "2025-12-27T23:46:38.122Z"
+        },
+        {
+          "id": "cmjoy9lzc000uqy08a829bsy3",
+          "name": "Tiago mota",
+          "phone": "92 991934121",
+          "email": null,
+          "createdAt": "2025-12-27T23:46:58.056Z",
+          "updatedAt": "2025-12-27T23:46:58.056Z"
+        },
+        {
+          "id": "cmjoya3v3000vqy089gefqwhl",
+          "name": "Nilson matos",
+          "phone": "92 992987788",
+          "email": null,
+          "createdAt": "2025-12-27T23:47:21.231Z",
+          "updatedAt": "2025-12-27T23:47:21.231Z"
+        },
+        {
+          "id": "cmjoyajr1000wqy08mmxw6wgc",
+          "name": "Leo motors",
+          "phone": "92 974007676",
+          "email": null,
+          "createdAt": "2025-12-27T23:47:41.821Z",
+          "updatedAt": "2025-12-27T23:47:41.821Z"
+        },
+        {
+          "id": "cmjoyawbk000xqy08dswme974",
+          "name": "João thomas ",
+          "phone": "92 992507155",
+          "email": null,
+          "createdAt": "2025-12-27T23:47:58.112Z",
+          "updatedAt": "2025-12-27T23:47:58.112Z"
+        },
+        {
+          "id": "cmjoybd2n000yqy08ki2mlgor",
+          "name": "Leandro cruz ",
+          "phone": "92 992443213",
+          "email": null,
+          "createdAt": "2025-12-27T23:48:19.824Z",
+          "updatedAt": "2025-12-27T23:48:19.824Z"
+        },
+        {
+          "id": "cmjoybun1000zqy08tjzc1ab7",
+          "name": "Eric Vinícius ",
+          "phone": "92 981749895",
+          "email": null,
+          "createdAt": "2025-12-27T23:48:42.589Z",
+          "updatedAt": "2025-12-27T23:48:42.589Z"
+        },
+        {
+          "id": "cmjoyclct0010qy088zdcznro",
+          "name": "Leonardo saraiva ",
+          "phone": "92 981703116",
+          "email": null,
+          "createdAt": "2025-12-27T23:49:17.213Z",
+          "updatedAt": "2025-12-27T23:49:17.213Z"
+        },
+        {
+          "id": "cmjoyd59a0011qy08a7vgbcf1",
+          "name": "Sandro hygor",
+          "phone": "92 981379389",
+          "email": null,
+          "createdAt": "2025-12-27T23:49:43.006Z",
+          "updatedAt": "2025-12-27T23:49:43.006Z"
+        },
+        {
+          "id": "cmjoydl930012qy08law3ogsj",
+          "name": "Andre Menezes ",
+          "phone": "92 993431200",
+          "email": null,
+          "createdAt": "2025-12-27T23:50:03.735Z",
+          "updatedAt": "2025-12-27T23:50:03.735Z"
+        },
+        {
+          "id": "cmjoyeegy0013qy08pdopbd3a",
+          "name": "Renan Souza ",
+          "phone": "92 982764159",
+          "email": null,
+          "createdAt": "2025-12-27T23:50:41.602Z",
+          "updatedAt": "2025-12-27T23:50:41.602Z"
+        },
+        {
+          "id": "cmjoyex5r0014qy08szh78ugu",
+          "name": "Caio italo",
+          "phone": "92 994608642",
+          "email": null,
+          "createdAt": "2025-12-27T23:51:05.807Z",
+          "updatedAt": "2025-12-27T23:51:05.807Z"
+        },
+        {
+          "id": "cmjoyfhlz0015qy085tdz4x7t",
+          "name": "Philippe feitosa",
+          "phone": "92 991926556",
+          "email": null,
+          "createdAt": "2025-12-27T23:51:32.327Z",
+          "updatedAt": "2025-12-27T23:51:32.327Z"
+        },
+        {
+          "id": "cmjoyfwe10016qy08o5w5quix",
+          "name": "Hugo Bessa ",
+          "phone": "92 993744680",
+          "email": null,
+          "createdAt": "2025-12-27T23:51:51.481Z",
+          "updatedAt": "2025-12-27T23:51:51.481Z"
+        },
+        {
+          "id": "cmjoygk720017qy08k7x80fiq",
+          "name": "Julio flavio",
+          "phone": "97 984498118",
+          "email": null,
+          "createdAt": "2025-12-27T23:52:22.334Z",
+          "updatedAt": "2025-12-27T23:52:22.334Z"
+        },
+        {
+          "id": "cmjoyh3sw0018qy08ver57jvl",
+          "name": "SAYMON rick",
+          "phone": "92 988413829",
+          "email": null,
+          "createdAt": "2025-12-27T23:52:47.744Z",
+          "updatedAt": "2025-12-27T23:52:47.744Z"
+        },
+        {
+          "id": "cmjoyhnw30019qy082l4d6uh1",
+          "name": "Daniel brito",
+          "phone": "92 984742651",
+          "email": null,
+          "createdAt": "2025-12-27T23:53:13.779Z",
+          "updatedAt": "2025-12-27T23:53:13.779Z"
+        },
+        {
+          "id": "cmjoyi6i2001aqy08yirmjhcv",
+          "name": "marlison",
+          "phone": "92 991226357",
+          "email": null,
+          "createdAt": "2025-12-27T23:53:37.898Z",
+          "updatedAt": "2025-12-27T23:53:37.898Z"
+        },
+        {
+          "id": "cmjoyivon001bqy083clqj37e",
+          "name": "Romario rodrigues ",
+          "phone": "92 991161006",
+          "email": null,
+          "createdAt": "2025-12-27T23:54:10.535Z",
+          "updatedAt": "2025-12-27T23:54:10.535Z"
+        },
+        {
+          "id": "cmjoyjh7u001cqy081a7s7e99",
+          "name": "Eduardo Torres ",
+          "phone": "92 999767247",
+          "email": null,
+          "createdAt": "2025-12-27T23:54:38.442Z",
+          "updatedAt": "2025-12-27T23:54:38.442Z"
+        },
+        {
+          "id": "cmjoyk19v001dqy08wq1ilcbi",
+          "name": "Alexson brito",
+          "phone": "92 992514577",
+          "email": null,
+          "createdAt": "2025-12-27T23:55:04.435Z",
+          "updatedAt": "2025-12-27T23:55:04.435Z"
+        },
+        {
+          "id": "cmjqgckdw0002mo08o3mk4vpv",
+          "name": "Moacy Soares Nonato Filho",
+          "phone": "92981708066",
+          "email": "moacysoares@gmail.com",
+          "createdAt": "2025-12-29T01:00:55.221Z",
+          "updatedAt": "2025-12-29T01:00:55.221Z"
+        },
+        {
+          "id": "cmjro0m7p000uq60875ex5y83",
+          "name": "Diego serra",
+          "phone": "92 991397759",
+          "email": null,
+          "createdAt": "2025-12-29T21:23:20.821Z",
+          "updatedAt": "2025-12-29T21:23:20.821Z"
+        },
+        {
+          "id": "cmjro14xy000vq608e54u6svy",
+          "name": "Lucas cortez",
+          "phone": "92 993088053",
+          "email": null,
+          "createdAt": "2025-12-29T21:23:45.094Z",
+          "updatedAt": "2025-12-29T21:23:45.094Z"
+        },
+        {
+          "id": "cmjro1uqv000wq608lgqd3jcd",
+          "name": "Gabiel Diniz ",
+          "phone": "92 984123783",
+          "email": null,
+          "createdAt": "2025-12-29T21:24:18.535Z",
+          "updatedAt": "2025-12-29T21:24:18.535Z"
+        },
+        {
+          "id": "cmjro2ka5000xq608dw1b8mm7",
+          "name": "Marcelo Fernandes ",
+          "phone": "92 993169963",
+          "email": null,
+          "createdAt": "2025-12-29T21:24:51.629Z",
+          "updatedAt": "2025-12-29T21:24:51.629Z"
+        },
+        {
+          "id": "cmjro3cpe000yq608f31sm6nn",
+          "name": "Pedrinho Paiva ",
+          "phone": "92 991386504",
+          "email": null,
+          "createdAt": "2025-12-29T21:25:28.466Z",
+          "updatedAt": "2025-12-29T21:25:28.466Z"
+        },
+        {
+          "id": "cmjro40fx000zq6087gc9djdv",
+          "name": "Edhie Bessa ",
+          "phone": "92 992003532",
+          "email": null,
+          "createdAt": "2025-12-29T21:25:59.229Z",
+          "updatedAt": "2025-12-29T21:25:59.229Z"
+        },
+        {
+          "id": "cmjro4jfk0010q608xvszd30f",
+          "name": "Jonhe casttro",
+          "phone": "92 982517974",
+          "email": null,
+          "createdAt": "2025-12-29T21:26:23.840Z",
+          "updatedAt": "2025-12-29T21:26:23.840Z"
+        },
+        {
+          "id": "cmjro6asj0011q608m5lp7oh9",
+          "name": "Otaviano oliveira ",
+          "phone": "92 986165290",
+          "email": null,
+          "createdAt": "2025-12-29T21:27:45.955Z",
+          "updatedAt": "2025-12-29T21:27:45.955Z"
+        },
+        {
+          "id": "cmjro71wh0012q608cm95cyjz",
+          "name": "Luan arruda ",
+          "phone": "92 985010275",
+          "email": null,
+          "createdAt": "2025-12-29T21:28:21.072Z",
+          "updatedAt": "2025-12-29T21:28:21.072Z"
+        },
+        {
+          "id": "cmjro86j50013q608g0qk4ry8",
+          "name": "Sacola racing",
+          "phone": "92 995340792",
+          "email": null,
+          "createdAt": "2025-12-29T21:29:13.745Z",
+          "updatedAt": "2025-12-29T21:29:13.745Z"
+        },
+        {
+          "id": "cmjro8z2e0014q6089x2c8cl1",
+          "name": "Lucas Matheus ",
+          "phone": "92 985196422",
+          "email": null,
+          "createdAt": "2025-12-29T21:29:50.725Z",
+          "updatedAt": "2025-12-29T21:29:50.725Z"
+        },
+        {
+          "id": "cmjro9o6y0015q60808nsutkq",
+          "name": "Vinícius ribeiro",
+          "phone": "92 993004252",
+          "email": null,
+          "createdAt": "2025-12-29T21:30:23.290Z",
+          "updatedAt": "2025-12-29T21:30:23.290Z"
+        },
+        {
+          "id": "cmjroaddw0016q608hyw74lyz",
+          "name": "Thiago antonio",
+          "phone": "92 986452381",
+          "email": null,
+          "createdAt": "2025-12-29T21:30:55.940Z",
+          "updatedAt": "2025-12-29T21:30:55.940Z"
+        },
+        {
+          "id": "cmjrobcoa0017q6083qdnbydg",
+          "name": "Caio troy",
+          "phone": "92 984711966",
+          "email": null,
+          "createdAt": "2025-12-29T21:31:41.674Z",
+          "updatedAt": "2025-12-29T21:31:41.674Z"
+        },
+        {
+          "id": "cmjrocgyb0018q608jtqxisdh",
+          "name": "Eduardo mustafa",
+          "phone": "92 984037403",
+          "email": null,
+          "createdAt": "2025-12-29T21:32:33.875Z",
+          "updatedAt": "2025-12-29T21:32:33.875Z"
+        },
+        {
+          "id": "cmjrodb7k0019q608bpf4lj0m",
+          "name": "Henrico Queiroz",
+          "phone": "92 994071310",
+          "email": null,
+          "createdAt": "2025-12-29T21:33:13.088Z",
+          "updatedAt": "2025-12-29T21:33:13.088Z"
+        },
+        {
+          "id": "cmjrodv4s001aq608bg5an11h",
+          "name": "Carlos eduardo",
+          "phone": "92 991966238",
+          "email": null,
+          "createdAt": "2025-12-29T21:33:38.889Z",
+          "updatedAt": "2025-12-29T21:33:38.889Z"
+        },
+        {
+          "id": "cmjroed8z001bq608k648pjot",
+          "name": "Edson vilaça",
+          "phone": "92 992768323",
+          "email": null,
+          "createdAt": "2025-12-29T21:34:02.387Z",
+          "updatedAt": "2025-12-29T21:34:02.387Z"
+        },
+        {
+          "id": "cmjrq1s5m001cq608s33ipr9i",
+          "name": "Robson vilaça ",
+          "phone": "92 981139342",
+          "email": null,
+          "createdAt": "2025-12-29T22:20:14.392Z",
+          "updatedAt": "2025-12-29T22:20:14.392Z"
+        },
+        {
+          "id": "cmjrq2b5k001dq6080vwpbs4k",
+          "name": "Luciano contes",
+          "phone": "92 994912494",
+          "email": null,
+          "createdAt": "2025-12-29T22:20:39.032Z",
+          "updatedAt": "2025-12-29T22:20:39.032Z"
+        },
+        {
+          "id": "cmjrq2urp001eq60834kzdu5t",
+          "name": "Bruno Alexander ",
+          "phone": "92 991919064",
+          "email": null,
+          "createdAt": "2025-12-29T22:21:04.452Z",
+          "updatedAt": "2025-12-29T22:21:04.452Z"
+        },
+        {
+          "id": "cmjrq3is9001fq6087ydgf8eq",
+          "name": "Rodrigo coelho ",
+          "phone": "92 984676378",
+          "email": null,
+          "createdAt": "2025-12-29T22:21:35.576Z",
+          "updatedAt": "2025-12-29T22:21:35.576Z"
+        },
+        {
+          "id": "cmjrq41ca001gq6081u7hkhht",
+          "name": "Wesley Fernandes ",
+          "phone": "92 982130247",
+          "email": null,
+          "createdAt": "2025-12-29T22:21:59.625Z",
+          "updatedAt": "2025-12-29T22:21:59.625Z"
+        },
+        {
+          "id": "cmjrq4ple001hq608jb0kuln2",
+          "name": "Little gab",
+          "phone": "92 988360658",
+          "email": null,
+          "createdAt": "2025-12-29T22:22:31.058Z",
+          "updatedAt": "2025-12-29T22:22:31.058Z"
+        },
+        {
+          "id": "cmjrq59gh001iq608kb8wz1m8",
+          "name": "Julio vinicius",
+          "phone": "92 988031499",
+          "email": null,
+          "createdAt": "2025-12-29T22:22:56.800Z",
+          "updatedAt": "2025-12-29T22:22:56.800Z"
+        },
+        {
+          "id": "cmjrq5xjk001jq60818b5dbrt",
+          "name": "Joaozinho grilo",
+          "phone": "21 9972382729",
+          "email": null,
+          "createdAt": "2025-12-29T22:23:28.016Z",
+          "updatedAt": "2025-12-29T22:23:28.016Z"
+        },
+        {
+          "id": "cmjrq6e6g001kq60862c3xh0s",
+          "name": "Leo geber ",
+          "phone": "92 981393463",
+          "email": null,
+          "createdAt": "2025-12-29T22:23:49.576Z",
+          "updatedAt": "2025-12-29T22:23:49.576Z"
+        },
+        {
+          "id": "cmjrq6uk3001lq608ypz3qwuo",
+          "name": "João Victor ",
+          "phone": "92 981177612",
+          "email": null,
+          "createdAt": "2025-12-29T22:24:10.803Z",
+          "updatedAt": "2025-12-29T22:24:10.803Z"
+        }
+      ]
+    },
+    "services": {
+      "count": 9,
+      "data": [
+        {
+          "id": "cmjn98ho30001lb0862tooh19",
+          "name": "Barba",
+          "description": null,
+          "price": 35,
+          "duration": 30,
+          "isActive": true,
+          "createdAt": "2025-12-26T19:18:29.234Z",
+          "updatedAt": "2025-12-26T19:18:29.234Z"
+        },
+        {
+          "id": "cmjir5h4o0002p2082c3n116o",
+          "name": "Corte ",
+          "description": null,
+          "price": 35,
+          "duration": 30,
+          "isActive": true,
+          "createdAt": "2025-12-23T15:41:10.775Z",
+          "updatedAt": "2025-12-27T17:23:48.618Z"
+        },
+        {
+          "id": "cmjokrmnv0004rc09t6cjsur3",
+          "name": "Corte & Barba ",
+          "description": null,
+          "price": 65,
+          "duration": 60,
+          "isActive": true,
+          "createdAt": "2025-12-27T17:29:04.122Z",
+          "updatedAt": "2025-12-27T17:29:04.122Z"
+        },
+        {
+          "id": "cmjolkfaf000erc09d8oj3xgx",
+          "name": "Sobrencelha ",
+          "description": null,
+          "price": 15,
+          "duration": 10,
+          "isActive": true,
+          "createdAt": "2025-12-27T17:51:27.591Z",
+          "updatedAt": "2025-12-27T17:51:27.591Z"
+        },
+        {
+          "id": "cmjollflr000frc09o7fq8afa",
+          "name": "Alinhamento dos fios ",
+          "description": "A partir ",
+          "price": 80,
+          "duration": 60,
+          "isActive": true,
+          "createdAt": "2025-12-27T17:52:14.655Z",
+          "updatedAt": "2025-12-27T17:52:14.655Z"
+        },
+        {
+          "id": "cmjolm87q000grc09ltc2bo7z",
+          "name": "Luzes ",
+          "description": "A partir ",
+          "price": 85,
+          "duration": 60,
+          "isActive": true,
+          "createdAt": "2025-12-27T17:52:51.734Z",
+          "updatedAt": "2025-12-27T17:52:51.734Z"
+        },
+        {
+          "id": "cmjolmpfa000hrc09eehxa74h",
+          "name": "Platinado ",
+          "description": "A partir ",
+          "price": 130,
+          "duration": 60,
+          "isActive": true,
+          "createdAt": "2025-12-27T17:53:14.023Z",
+          "updatedAt": "2025-12-27T17:53:14.023Z"
+        },
+        {
+          "id": "cmjolnird000irc0932v8al0x",
+          "name": "Depilação nasal ",
+          "description": null,
+          "price": 20,
+          "duration": 10,
+          "isActive": true,
+          "createdAt": "2025-12-27T17:53:52.057Z",
+          "updatedAt": "2025-12-27T17:53:52.057Z"
+        },
+        {
+          "id": "cmjolnxg9000jrc099axz8a43",
+          "name": "Depilação orelha ",
+          "description": null,
+          "price": 20,
+          "duration": 10,
+          "isActive": true,
+          "createdAt": "2025-12-27T17:54:11.097Z",
+          "updatedAt": "2025-12-27T17:54:11.097Z"
+        }
+      ]
+    },
+    "products": {
+      "count": 2,
+      "data": [
+        {
+          "id": "cmk4g74ah0000yt8laxozs6ga",
+          "name": "Pomada Modeladora",
+          "description": null,
+          "price": 25,
+          "stock": 10,
+          "unit": "un",
+          "category": "Pomadas",
+          "isActive": true,
+          "createdAt": "2026-01-07T20:05:27.545Z",
+          "updatedAt": "2026-01-07T20:05:27.545Z"
+        },
+        {
+          "id": "cmk4g8d7w0001yt8luafst7b4",
+          "name": "Shampoo Profissional",
+          "description": null,
+          "price": 18.5,
+          "stock": 15,
+          "unit": "un",
+          "category": "Shampoos",
+          "isActive": true,
+          "createdAt": "2026-01-07T20:06:25.772Z",
+          "updatedAt": "2026-01-07T20:06:25.772Z"
+        }
+      ]
+    },
+    "appointments": {
+      "count": 4,
+      "data": [
+        {
+          "id": "cmk4ew4y40001ry081zpx0124",
+          "clientId": "cmjrq5xjk001jq60818b5dbrt",
+          "barberId": "cmjir4szc0001p208m38g3p13",
+          "date": "2026-01-08T21:30:00.000Z",
+          "status": "SCHEDULED",
+          "paymentMethod": "PIX",
+          "totalAmount": 85,
+          "workedHours": 1,
+          "workedHoursSubscription": 0,
+          "isSubscriptionAppointment": false,
+          "observations": null,
+          "onlineBookingId": null,
+          "createdAt": "2026-01-07T19:28:55.564Z",
+          "updatedAt": "2026-01-07T19:28:55.564Z",
+          "client": {
+            "id": "cmjrq5xjk001jq60818b5dbrt",
+            "name": "Joaozinho grilo",
+            "phone": "21 9972382729",
+            "email": null,
+            "createdAt": "2025-12-29T22:23:28.016Z",
+            "updatedAt": "2025-12-29T22:23:28.016Z"
+          },
+          "barber": {
+            "id": "cmjir4szc0001p208m38g3p13",
+            "name": "jhon jhon",
+            "phone": "92984331287",
+            "email": null,
+            "password": null,
+            "commissionRate": 40,
+            "hourlyRate": 0,
+            "isActive": true,
+            "createdAt": "2025-12-23T15:40:39.479Z",
+            "updatedAt": "2025-12-27T17:30:32.063Z"
+          },
+          "services": [
+            {
+              "id": "cmk4ew4y40003ry08hdd1lkbn",
+              "appointmentId": "cmk4ew4y40001ry081zpx0124",
+              "serviceId": "cmjolm87q000grc09ltc2bo7z",
+              "price": 85,
+              "createdAt": "2026-01-07T19:28:55.564Z"
+            }
+          ],
+          "products": []
+        },
+        {
+          "id": "cmk4k2bm00001ob08gwpxgq1i",
+          "clientId": "cmjqgckdw0002mo08o3mk4vpv",
+          "barberId": "cmjir4szc0001p208m38g3p13",
+          "date": "2026-01-08T21:00:00.000Z",
+          "status": "SCHEDULED",
+          "paymentMethod": "PIX",
+          "totalAmount": 105,
+          "workedHours": 1.166666666666667,
+          "workedHoursSubscription": 0,
+          "isSubscriptionAppointment": false,
+          "observations": "",
+          "onlineBookingId": "cmk4ez2160005ry08ophzfbp4",
+          "createdAt": "2026-01-07T21:53:42.216Z",
+          "updatedAt": "2026-01-07T21:53:42.216Z",
+          "client": {
+            "id": "cmjqgckdw0002mo08o3mk4vpv",
+            "name": "Moacy Soares Nonato Filho",
+            "phone": "92981708066",
+            "email": "moacysoares@gmail.com",
+            "createdAt": "2025-12-29T01:00:55.221Z",
+            "updatedAt": "2025-12-29T01:00:55.221Z"
+          },
+          "barber": {
+            "id": "cmjir4szc0001p208m38g3p13",
+            "name": "jhon jhon",
+            "phone": "92984331287",
+            "email": null,
+            "password": null,
+            "commissionRate": 40,
+            "hourlyRate": 0,
+            "isActive": true,
+            "createdAt": "2025-12-23T15:40:39.479Z",
+            "updatedAt": "2025-12-27T17:30:32.063Z"
+          },
+          "services": [
+            {
+              "id": "cmk4k2bm00003ob0898suqi0b",
+              "appointmentId": "cmk4k2bm00001ob08gwpxgq1i",
+              "serviceId": "cmjolm87q000grc09ltc2bo7z",
+              "price": 85,
+              "createdAt": "2026-01-07T21:53:42.216Z"
+            },
+            {
+              "id": "cmk4k2bm00004ob08b77m3j15",
+              "appointmentId": "cmk4k2bm00001ob08gwpxgq1i",
+              "serviceId": "cmjolnird000irc0932v8al0x",
+              "price": 20,
+              "createdAt": "2026-01-07T21:53:42.216Z"
+            }
+          ],
+          "products": []
+        },
+        {
+          "id": "cmk5ukji10001pj08fld66weu",
+          "clientId": "cmjrq4ple001hq608jb0kuln2",
+          "barberId": "cmjoko0qz0003rc09asvby6r9",
+          "date": "2026-01-08T13:30:00.000Z",
+          "status": "COMPLETED",
+          "paymentMethod": "CASH",
+          "totalAmount": 130,
+          "workedHours": 1,
+          "workedHoursSubscription": 0,
+          "isSubscriptionAppointment": false,
+          "observations": null,
+          "onlineBookingId": null,
+          "createdAt": "2026-01-08T19:35:34.585Z",
+          "updatedAt": "2026-01-08T19:36:59.938Z",
+          "client": {
+            "id": "cmjrq4ple001hq608jb0kuln2",
+            "name": "Little gab",
+            "phone": "92 988360658",
+            "email": null,
+            "createdAt": "2025-12-29T22:22:31.058Z",
+            "updatedAt": "2025-12-29T22:22:31.058Z"
+          },
+          "barber": {
+            "id": "cmjoko0qz0003rc09asvby6r9",
+            "name": "Maikon ",
+            "phone": "92991570180",
+            "email": null,
+            "password": null,
+            "commissionRate": 45,
+            "hourlyRate": 0,
+            "isActive": true,
+            "createdAt": "2025-12-27T17:26:15.755Z",
+            "updatedAt": "2025-12-27T20:09:12.939Z"
+          },
+          "services": [
+            {
+              "id": "cmk5ukji10003pj08vgennkcu",
+              "appointmentId": "cmk5ukji10001pj08fld66weu",
+              "serviceId": "cmjolmpfa000hrc09eehxa74h",
+              "price": 130,
+              "createdAt": "2026-01-08T19:35:34.585Z"
+            }
+          ],
+          "products": []
+        },
+        {
+          "id": "cmk5v3arg0009pj087hollecz",
+          "clientId": "cmjqgckdw0002mo08o3mk4vpv",
+          "barberId": "cmjir4szc0001p208m38g3p13",
+          "date": "2026-01-09T13:00:00.000Z",
+          "status": "COMPLETED",
+          "paymentMethod": "CASH",
+          "totalAmount": 150,
+          "workedHours": 2,
+          "workedHoursSubscription": 0,
+          "isSubscriptionAppointment": false,
+          "observations": "",
+          "onlineBookingId": "cmk5v2g4a0007pj08sqq8pvbc",
+          "createdAt": "2026-01-08T19:50:09.725Z",
+          "updatedAt": "2026-01-08T19:51:17.437Z",
+          "client": {
+            "id": "cmjqgckdw0002mo08o3mk4vpv",
+            "name": "Moacy Soares Nonato Filho",
+            "phone": "92981708066",
+            "email": "moacysoares@gmail.com",
+            "createdAt": "2025-12-29T01:00:55.221Z",
+            "updatedAt": "2025-12-29T01:00:55.221Z"
+          },
+          "barber": {
+            "id": "cmjir4szc0001p208m38g3p13",
+            "name": "jhon jhon",
+            "phone": "92984331287",
+            "email": null,
+            "password": null,
+            "commissionRate": 40,
+            "hourlyRate": 0,
+            "isActive": true,
+            "createdAt": "2025-12-23T15:40:39.479Z",
+            "updatedAt": "2025-12-27T17:30:32.063Z"
+          },
+          "services": [
+            {
+              "id": "cmk5v3arg000bpj08bdsz2v15",
+              "appointmentId": "cmk5v3arg0009pj087hollecz",
+              "serviceId": "cmjokrmnv0004rc09t6cjsur3",
+              "price": 65,
+              "createdAt": "2026-01-08T19:50:09.725Z"
+            },
+            {
+              "id": "cmk5v3arg000cpj08g2ksh5hi",
+              "appointmentId": "cmk5v3arg0009pj087hollecz",
+              "serviceId": "cmjolm87q000grc09ltc2bo7z",
+              "price": 85,
+              "createdAt": "2026-01-08T19:50:09.725Z"
+            }
+          ],
+          "products": []
+        }
+      ]
+    },
+    "onlineBookings": {
+      "count": 7,
+      "data": [
+        {
+          "id": "cmk3dmlfm000al308pdbng9fv",
+          "clientId": "cmjqgckdw0002mo08o3mk4vpv",
+          "clientName": "ALVARO SAMPAIO",
+          "clientPhone": "92981708066",
+          "clientEmail": "alvaromanoelsampaio@gmail.com",
+          "serviceId": "cmjolmpfa000hrc09eehxa74h",
+          "barberId": "cmjoko0qz0003rc09asvby6r9",
+          "scheduledDate": "2026-01-08T22:30:00.000Z",
+          "status": "COMPLETED",
+          "isSubscriber": false,
+          "observations": "",
+          "createdAt": "2026-01-07T02:05:44.578Z",
+          "updatedAt": "2026-01-07T17:13:13.725Z",
+          "service": {
+            "id": "cmjolmpfa000hrc09eehxa74h",
+            "name": "Platinado ",
+            "description": "A partir ",
+            "price": 130,
+            "duration": 60,
+            "isActive": true,
+            "createdAt": "2025-12-27T17:53:14.023Z",
+            "updatedAt": "2025-12-27T17:53:14.023Z"
+          },
+          "barber": {
+            "id": "cmjoko0qz0003rc09asvby6r9",
+            "name": "Maikon ",
+            "phone": "92991570180",
+            "email": null,
+            "password": null,
+            "commissionRate": 45,
+            "hourlyRate": 0,
+            "isActive": true,
+            "createdAt": "2025-12-27T17:26:15.755Z",
+            "updatedAt": "2025-12-27T20:09:12.939Z"
+          },
+          "client": {
+            "id": "cmjqgckdw0002mo08o3mk4vpv",
+            "name": "Moacy Soares Nonato Filho",
+            "phone": "92981708066",
+            "email": "moacysoares@gmail.com",
+            "createdAt": "2025-12-29T01:00:55.221Z",
+            "updatedAt": "2025-12-29T01:00:55.221Z"
+          }
+        },
+        {
+          "id": "cmk49e7ys0005my082sl8dlhn",
+          "clientId": "cmjqgckdw0002mo08o3mk4vpv",
+          "clientName": "Moacy Soares Nonato Filho 92981708066",
+          "clientPhone": "92981708066",
+          "clientEmail": "",
+          "serviceId": "cmjn98ho30001lb0862tooh19",
+          "barberId": "cmjir4szc0001p208m38g3p13",
+          "scheduledDate": "2026-01-08T22:30:00.000Z",
+          "status": "COMPLETED",
+          "isSubscriber": false,
+          "observations": "",
+          "createdAt": "2026-01-07T16:55:01.588Z",
+          "updatedAt": "2026-01-07T18:01:51.604Z",
+          "service": {
+            "id": "cmjn98ho30001lb0862tooh19",
+            "name": "Barba",
+            "description": null,
+            "price": 35,
+            "duration": 30,
+            "isActive": true,
+            "createdAt": "2025-12-26T19:18:29.234Z",
+            "updatedAt": "2025-12-26T19:18:29.234Z"
+          },
+          "barber": {
+            "id": "cmjir4szc0001p208m38g3p13",
+            "name": "jhon jhon",
+            "phone": "92984331287",
+            "email": null,
+            "password": null,
+            "commissionRate": 40,
+            "hourlyRate": 0,
+            "isActive": true,
+            "createdAt": "2025-12-23T15:40:39.479Z",
+            "updatedAt": "2025-12-27T17:30:32.063Z"
+          },
+          "client": {
+            "id": "cmjqgckdw0002mo08o3mk4vpv",
+            "name": "Moacy Soares Nonato Filho",
+            "phone": "92981708066",
+            "email": "moacysoares@gmail.com",
+            "createdAt": "2025-12-29T01:00:55.221Z",
+            "updatedAt": "2025-12-29T01:00:55.221Z"
+          }
+        },
+        {
+          "id": "cmk4bmtmq0001ql080ht47o5a",
+          "clientId": "cmjqgckdw0002mo08o3mk4vpv",
+          "clientName": "Moacy Soares Nonato Filho",
+          "clientPhone": "92981708066",
+          "clientEmail": "moacysoares@gmail.com",
+          "serviceId": "cmjolnxg9000jrc099axz8a43",
+          "barberId": "cmjoko0qz0003rc09asvby6r9",
+          "scheduledDate": "2026-01-08T22:00:00.000Z",
+          "status": "COMPLETED",
+          "isSubscriber": false,
+          "observations": "",
+          "createdAt": "2026-01-07T17:57:42.146Z",
+          "updatedAt": "2026-01-07T18:02:04.388Z",
+          "service": {
+            "id": "cmjolnxg9000jrc099axz8a43",
+            "name": "Depilação orelha ",
+            "description": null,
+            "price": 20,
+            "duration": 10,
+            "isActive": true,
+            "createdAt": "2025-12-27T17:54:11.097Z",
+            "updatedAt": "2025-12-27T17:54:11.097Z"
+          },
+          "barber": {
+            "id": "cmjoko0qz0003rc09asvby6r9",
+            "name": "Maikon ",
+            "phone": "92991570180",
+            "email": null,
+            "password": null,
+            "commissionRate": 45,
+            "hourlyRate": 0,
+            "isActive": true,
+            "createdAt": "2025-12-27T17:26:15.755Z",
+            "updatedAt": "2025-12-27T20:09:12.939Z"
+          },
+          "client": {
+            "id": "cmjqgckdw0002mo08o3mk4vpv",
+            "name": "Moacy Soares Nonato Filho",
+            "phone": "92981708066",
+            "email": "moacysoares@gmail.com",
+            "createdAt": "2025-12-29T01:00:55.221Z",
+            "updatedAt": "2025-12-29T01:00:55.221Z"
+          }
+        },
+        {
+          "id": "cmk4ckvej0001s4076euvclaf",
+          "clientId": "cmjqgckdw0002mo08o3mk4vpv",
+          "clientName": "Moacy Soares Nonato Filho",
+          "clientPhone": "92981708066",
+          "clientEmail": "moacysoares@gmail.com",
+          "serviceId": "cmjollflr000frc09o7fq8afa",
+          "barberId": "cmjoko0qz0003rc09asvby6r9",
+          "scheduledDate": "2026-01-07T19:00:00.000Z",
+          "status": "PENDING",
+          "isSubscriber": false,
+          "observations": "",
+          "createdAt": "2026-01-07T18:24:10.747Z",
+          "updatedAt": "2026-01-07T18:24:10.747Z",
+          "service": {
+            "id": "cmjollflr000frc09o7fq8afa",
+            "name": "Alinhamento dos fios ",
+            "description": "A partir ",
+            "price": 80,
+            "duration": 60,
+            "isActive": true,
+            "createdAt": "2025-12-27T17:52:14.655Z",
+            "updatedAt": "2025-12-27T17:52:14.655Z"
+          },
+          "barber": {
+            "id": "cmjoko0qz0003rc09asvby6r9",
+            "name": "Maikon ",
+            "phone": "92991570180",
+            "email": null,
+            "password": null,
+            "commissionRate": 45,
+            "hourlyRate": 0,
+            "isActive": true,
+            "createdAt": "2025-12-27T17:26:15.755Z",
+            "updatedAt": "2025-12-27T20:09:12.939Z"
+          },
+          "client": {
+            "id": "cmjqgckdw0002mo08o3mk4vpv",
+            "name": "Moacy Soares Nonato Filho",
+            "phone": "92981708066",
+            "email": "moacysoares@gmail.com",
+            "createdAt": "2025-12-29T01:00:55.221Z",
+            "updatedAt": "2025-12-29T01:00:55.221Z"
+          }
+        },
+        {
+          "id": "cmk4ez2160005ry08ophzfbp4",
+          "clientId": "cmjqgckdw0002mo08o3mk4vpv",
+          "clientName": "Moacy Soares Nonato Filho",
+          "clientPhone": "92981708066",
+          "clientEmail": "moacysoares@gmail.com",
+          "serviceId": "cmjolm87q000grc09ltc2bo7z",
+          "barberId": "cmjir4szc0001p208m38g3p13",
+          "scheduledDate": "2026-01-08T21:00:00.000Z",
+          "status": "CONFIRMED",
+          "isSubscriber": false,
+          "observations": "",
+          "createdAt": "2026-01-07T19:31:11.754Z",
+          "updatedAt": "2026-01-07T21:53:42.233Z",
+          "service": {
+            "id": "cmjolm87q000grc09ltc2bo7z",
+            "name": "Luzes ",
+            "description": "A partir ",
+            "price": 85,
+            "duration": 60,
+            "isActive": true,
+            "createdAt": "2025-12-27T17:52:51.734Z",
+            "updatedAt": "2025-12-27T17:52:51.734Z"
+          },
+          "barber": {
+            "id": "cmjir4szc0001p208m38g3p13",
+            "name": "jhon jhon",
+            "phone": "92984331287",
+            "email": null,
+            "password": null,
+            "commissionRate": 40,
+            "hourlyRate": 0,
+            "isActive": true,
+            "createdAt": "2025-12-23T15:40:39.479Z",
+            "updatedAt": "2025-12-27T17:30:32.063Z"
+          },
+          "client": {
+            "id": "cmjqgckdw0002mo08o3mk4vpv",
+            "name": "Moacy Soares Nonato Filho",
+            "phone": "92981708066",
+            "email": "moacysoares@gmail.com",
+            "createdAt": "2025-12-29T01:00:55.221Z",
+            "updatedAt": "2025-12-29T01:00:55.221Z"
+          }
+        },
+        {
+          "id": "cmk5v2g4a0007pj08sqq8pvbc",
+          "clientId": "cmjqgckdw0002mo08o3mk4vpv",
+          "clientName": "Moacy Soares Nonato Filho",
+          "clientPhone": "92981708066",
+          "clientEmail": "moacysoares@gmail.com",
+          "serviceId": "cmjolm87q000grc09ltc2bo7z",
+          "barberId": "cmjir4szc0001p208m38g3p13",
+          "scheduledDate": "2026-01-09T13:00:00.000Z",
+          "status": "CONFIRMED",
+          "isSubscriber": false,
+          "observations": "",
+          "createdAt": "2026-01-08T19:49:30.010Z",
+          "updatedAt": "2026-01-08T19:50:09.734Z",
+          "service": {
+            "id": "cmjolm87q000grc09ltc2bo7z",
+            "name": "Luzes ",
+            "description": "A partir ",
+            "price": 85,
+            "duration": 60,
+            "isActive": true,
+            "createdAt": "2025-12-27T17:52:51.734Z",
+            "updatedAt": "2025-12-27T17:52:51.734Z"
+          },
+          "barber": {
+            "id": "cmjir4szc0001p208m38g3p13",
+            "name": "jhon jhon",
+            "phone": "92984331287",
+            "email": null,
+            "password": null,
+            "commissionRate": 40,
+            "hourlyRate": 0,
+            "isActive": true,
+            "createdAt": "2025-12-23T15:40:39.479Z",
+            "updatedAt": "2025-12-27T17:30:32.063Z"
+          },
+          "client": {
+            "id": "cmjqgckdw0002mo08o3mk4vpv",
+            "name": "Moacy Soares Nonato Filho",
+            "phone": "92981708066",
+            "email": "moacysoares@gmail.com",
+            "createdAt": "2025-12-29T01:00:55.221Z",
+            "updatedAt": "2025-12-29T01:00:55.221Z"
+          }
+        },
+        {
+          "id": "cmk5v7gjm000jpj08qmh029p7",
+          "clientId": "cmjrobcoa0017q6083qdnbydg",
+          "clientName": "Caio troy",
+          "clientPhone": "92 984711966",
+          "clientEmail": "",
+          "serviceId": "cmjir5h4o0002p2082c3n116o",
+          "barberId": "cmjir4szc0001p208m38g3p13",
+          "scheduledDate": "2026-01-09T13:30:00.000Z",
+          "status": "PENDING",
+          "isSubscriber": true,
+          "observations": "",
+          "createdAt": "2026-01-08T19:53:23.842Z",
+          "updatedAt": "2026-01-08T19:53:23.842Z",
+          "service": {
+            "id": "cmjir5h4o0002p2082c3n116o",
+            "name": "Corte ",
+            "description": null,
+            "price": 35,
+            "duration": 30,
+            "isActive": true,
+            "createdAt": "2025-12-23T15:41:10.775Z",
+            "updatedAt": "2025-12-27T17:23:48.618Z"
+          },
+          "barber": {
+            "id": "cmjir4szc0001p208m38g3p13",
+            "name": "jhon jhon",
+            "phone": "92984331287",
+            "email": null,
+            "password": null,
+            "commissionRate": 40,
+            "hourlyRate": 0,
+            "isActive": true,
+            "createdAt": "2025-12-23T15:40:39.479Z",
+            "updatedAt": "2025-12-27T17:30:32.063Z"
+          },
+          "client": {
+            "id": "cmjrobcoa0017q6083qdnbydg",
+            "name": "Caio troy",
+            "phone": "92 984711966",
+            "email": null,
+            "createdAt": "2025-12-29T21:31:41.674Z",
+            "updatedAt": "2025-12-29T21:31:41.674Z"
+          }
+        }
+      ]
+    },
+    "commissions": {
+      "count": 3,
+      "data": [
+        {
+          "id": "cmk4k2bmd0006ob08whpunttk",
+          "appointmentId": "cmk4k2bm00001ob08gwpxgq1i",
+          "barberId": "cmjir4szc0001p208m38g3p13",
+          "amount": 42,
+          "status": "PENDING",
+          "paidAt": null,
+          "createdAt": "2026-01-07T21:53:42.229Z",
+          "updatedAt": "2026-01-07T21:53:42.229Z",
+          "barber": {
+            "id": "cmjir4szc0001p208m38g3p13",
+            "name": "jhon jhon",
+            "phone": "92984331287",
+            "email": null,
+            "password": null,
+            "commissionRate": 40,
+            "hourlyRate": 0,
+            "isActive": true,
+            "createdAt": "2025-12-23T15:40:39.479Z",
+            "updatedAt": "2025-12-27T17:30:32.063Z"
+          },
+          "appointment": {
+            "id": "cmk4k2bm00001ob08gwpxgq1i",
+            "clientId": "cmjqgckdw0002mo08o3mk4vpv",
+            "barberId": "cmjir4szc0001p208m38g3p13",
+            "date": "2026-01-08T21:00:00.000Z",
+            "status": "SCHEDULED",
+            "paymentMethod": "PIX",
+            "totalAmount": 105,
+            "workedHours": 1.166666666666667,
+            "workedHoursSubscription": 0,
+            "isSubscriptionAppointment": false,
+            "observations": "",
+            "onlineBookingId": "cmk4ez2160005ry08ophzfbp4",
+            "createdAt": "2026-01-07T21:53:42.216Z",
+            "updatedAt": "2026-01-07T21:53:42.216Z"
+          }
+        },
+        {
+          "id": "cmk5umdcv0005pj085asfvjni",
+          "appointmentId": "cmk5ukji10001pj08fld66weu",
+          "barberId": "cmjoko0qz0003rc09asvby6r9",
+          "amount": 58.5,
+          "status": "PENDING",
+          "paidAt": null,
+          "createdAt": "2026-01-08T19:36:59.935Z",
+          "updatedAt": "2026-01-08T19:36:59.935Z",
+          "barber": {
+            "id": "cmjoko0qz0003rc09asvby6r9",
+            "name": "Maikon ",
+            "phone": "92991570180",
+            "email": null,
+            "password": null,
+            "commissionRate": 45,
+            "hourlyRate": 0,
+            "isActive": true,
+            "createdAt": "2025-12-27T17:26:15.755Z",
+            "updatedAt": "2025-12-27T20:09:12.939Z"
+          },
+          "appointment": {
+            "id": "cmk5ukji10001pj08fld66weu",
+            "clientId": "cmjrq4ple001hq608jb0kuln2",
+            "barberId": "cmjoko0qz0003rc09asvby6r9",
+            "date": "2026-01-08T13:30:00.000Z",
+            "status": "COMPLETED",
+            "paymentMethod": "CASH",
+            "totalAmount": 130,
+            "workedHours": 1,
+            "workedHoursSubscription": 0,
+            "isSubscriptionAppointment": false,
+            "observations": null,
+            "onlineBookingId": null,
+            "createdAt": "2026-01-08T19:35:34.585Z",
+            "updatedAt": "2026-01-08T19:36:59.938Z"
+          }
+        },
+        {
+          "id": "cmk5v3aro000epj088ilifh4m",
+          "appointmentId": "cmk5v3arg0009pj087hollecz",
+          "barberId": "cmjir4szc0001p208m38g3p13",
+          "amount": 60,
+          "status": "PENDING",
+          "paidAt": null,
+          "createdAt": "2026-01-08T19:50:09.732Z",
+          "updatedAt": "2026-01-08T19:50:09.732Z",
+          "barber": {
+            "id": "cmjir4szc0001p208m38g3p13",
+            "name": "jhon jhon",
+            "phone": "92984331287",
+            "email": null,
+            "password": null,
+            "commissionRate": 40,
+            "hourlyRate": 0,
+            "isActive": true,
+            "createdAt": "2025-12-23T15:40:39.479Z",
+            "updatedAt": "2025-12-27T17:30:32.063Z"
+          },
+          "appointment": {
+            "id": "cmk5v3arg0009pj087hollecz",
+            "clientId": "cmjqgckdw0002mo08o3mk4vpv",
+            "barberId": "cmjir4szc0001p208m38g3p13",
+            "date": "2026-01-09T13:00:00.000Z",
+            "status": "COMPLETED",
+            "paymentMethod": "CASH",
+            "totalAmount": 150,
+            "workedHours": 2,
+            "workedHoursSubscription": 0,
+            "isSubscriptionAppointment": false,
+            "observations": "",
+            "onlineBookingId": "cmk5v2g4a0007pj08sqq8pvbc",
+            "createdAt": "2026-01-08T19:50:09.725Z",
+            "updatedAt": "2026-01-08T19:51:17.437Z"
+          }
+        }
+      ]
+    },
+    "accountsPayable": {
+      "count": 0,
+      "data": []
+    },
+    "accountsReceivable": {
+      "count": 8,
+      "data": [
+        {
+          "id": "cmjou031c0000qy08ce5ar9s0",
+          "description": "Assinatura - JhonClub Corte  - Cézar Vilaça",
+          "category": "SUBSCRIPTION",
+          "payer": "Cézar Vilaça",
+          "clientId": null,
+          "phone": null,
+          "amount": 69.9,
+          "dueDate": "2026-01-26T21:47:34.493Z",
+          "paymentDate": null,
+          "status": "PENDING",
+          "paymentMethod": null,
+          "observations": null,
+          "subscriptionId": null,
+          "createdAt": "2025-12-27T21:47:35.137Z",
+          "updatedAt": "2025-12-27T21:47:35.137Z",
+          "subscription": null
+        },
+        {
+          "id": "cmjucfw2z0000tb08fxlnepaz",
+          "description": "Assinatura - Plano corte - João thomas ",
+          "category": "SUBSCRIPTION",
+          "payer": "João thomas ",
+          "clientId": null,
+          "phone": null,
+          "amount": 70,
+          "dueDate": "2026-01-01T18:22:35.212Z",
+          "paymentDate": null,
+          "status": "OVERDUE",
+          "paymentMethod": null,
+          "observations": null,
+          "subscriptionId": null,
+          "createdAt": "2025-12-31T18:22:36.586Z",
+          "updatedAt": "2026-01-03T00:13:17.298Z",
+          "subscription": null
+        },
+        {
+          "id": "cmjucg1a40003tb087w7368xj",
+          "description": "Assinatura - Plano corte - João thomas ",
+          "category": "SUBSCRIPTION",
+          "payer": "João thomas ",
+          "clientId": null,
+          "phone": null,
+          "amount": 70,
+          "dueDate": "2026-01-01T18:22:41.934Z",
+          "paymentDate": null,
+          "status": "OVERDUE",
+          "paymentMethod": null,
+          "observations": null,
+          "subscriptionId": null,
+          "createdAt": "2025-12-31T18:22:43.325Z",
+          "updatedAt": "2026-01-03T00:13:17.298Z",
+          "subscription": null
+        },
+        {
+          "id": "cmjxke1nj0002nu08xu9320sd",
+          "description": "Assinatura - Plano Corte - Caio troy",
+          "category": "SUBSCRIPTION",
+          "payer": "Caio troy",
+          "clientId": null,
+          "phone": null,
+          "amount": 70,
+          "dueDate": "2026-02-02T00:28:26.330Z",
+          "paymentDate": null,
+          "status": "PENDING",
+          "paymentMethod": null,
+          "observations": null,
+          "subscriptionId": null,
+          "createdAt": "2026-01-03T00:28:25.951Z",
+          "updatedAt": "2026-01-03T00:28:25.951Z",
+          "subscription": null
+        },
+        {
+          "id": "cmjxkiv350005nu08bon5eh43",
+          "description": "Assinatura - Plano Corte - Caio troy",
+          "category": "SUBSCRIPTION",
+          "payer": "Caio troy",
+          "clientId": null,
+          "phone": null,
+          "amount": 70,
+          "dueDate": "2026-02-02T00:32:11.084Z",
+          "paymentDate": null,
+          "status": "PENDING",
+          "paymentMethod": null,
+          "observations": null,
+          "subscriptionId": null,
+          "createdAt": "2026-01-03T00:32:10.721Z",
+          "updatedAt": "2026-01-03T00:32:10.721Z",
+          "subscription": null
+        },
+        {
+          "id": "cmk2t3lni0000o1089rucvhfn",
+          "description": "Assinatura - Plano corte  - Gabiel Diniz ",
+          "category": "SUBSCRIPTION",
+          "payer": "Gabiel Diniz ",
+          "clientId": null,
+          "phone": null,
+          "amount": 70,
+          "dueDate": "2026-02-02T16:31:05.284Z",
+          "paymentDate": null,
+          "status": "PENDING",
+          "paymentMethod": null,
+          "observations": null,
+          "subscriptionId": null,
+          "createdAt": "2026-01-06T16:31:06.078Z",
+          "updatedAt": "2026-01-06T16:31:06.078Z",
+          "subscription": null
+        },
+        {
+          "id": "cmk2p5l290000lb08e1zy96v1",
+          "description": "Assinatura - Plano corte e barba - Janderson bahia ",
+          "category": "SUBSCRIPTION",
+          "payer": "Janderson bahia ",
+          "clientId": null,
+          "phone": null,
+          "amount": 130,
+          "dueDate": "2026-01-06T14:40:39.345Z",
+          "paymentDate": null,
+          "status": "OVERDUE",
+          "paymentMethod": null,
+          "observations": null,
+          "subscriptionId": null,
+          "createdAt": "2026-01-06T14:40:40.160Z",
+          "updatedAt": "2026-01-07T00:05:17.364Z",
+          "subscription": null
+        },
+        {
+          "id": "cmk5v5epy000fpj085yr2lrtq",
+          "description": "Assinatura - Plano corte  - Gabiel Diniz ",
+          "category": "SUBSCRIPTION",
+          "payer": "Gabiel Diniz ",
+          "clientId": null,
+          "phone": null,
+          "amount": 70,
+          "dueDate": "2026-02-02T19:51:46.808Z",
+          "paymentDate": null,
+          "status": "PENDING",
+          "paymentMethod": null,
+          "observations": null,
+          "subscriptionId": null,
+          "createdAt": "2026-01-08T19:51:48.166Z",
+          "updatedAt": "2026-01-08T19:51:48.166Z",
+          "subscription": null
+        }
+      ]
+    },
+    "subscriptions": {
+      "count": 44,
+      "data": [
+        {
+          "id": "cmjol6tho0007rc09qf9804rm",
+          "clientId": "cmjol2dyc0005rc09169224xt",
+          "planName": "JhonClub Corte ",
+          "amount": 69.9,
+          "billingDay": 26,
+          "status": "ACTIVE",
+          "startDate": "2025-12-27T17:40:52.813Z",
+          "endDate": null,
+          "observations": "",
+          "servicesIncluded": "Corte \npezinho",
+          "usageLimit": null,
+          "createdAt": "2025-12-27T17:40:52.813Z",
+          "updatedAt": "2025-12-27T17:40:52.813Z",
+          "client": {
+            "id": "cmjol2dyc0005rc09169224xt",
+            "name": "Cézar Vilaça",
+            "phone": "92995078981",
+            "email": null,
+            "createdAt": "2025-12-27T17:37:26.052Z",
+            "updatedAt": "2025-12-27T17:37:26.052Z"
+          }
+        },
+        {
+          "id": "cmjrj7aox0001mu08ouqs63du",
+          "clientId": "cmjoxvtge0009qy08qq2t7uf6",
+          "planName": "Corte e barba",
+          "amount": 130,
+          "billingDay": 24,
+          "status": "ACTIVE",
+          "startDate": "2025-12-29T19:08:34.400Z",
+          "endDate": null,
+          "observations": "",
+          "servicesIncluded": "",
+          "usageLimit": null,
+          "createdAt": "2025-12-29T19:08:34.400Z",
+          "updatedAt": "2025-12-29T19:08:34.400Z",
+          "client": {
+            "id": "cmjoxvtge0009qy08qq2t7uf6",
+            "name": "Guilherme Pereira",
+            "phone": "92 986222253",
+            "email": null,
+            "createdAt": "2025-12-27T23:36:14.557Z",
+            "updatedAt": "2025-12-27T23:36:14.557Z"
+          }
+        },
+        {
+          "id": "cmjrj8j4e0003mu087l596tc1",
+          "clientId": "cmjoxwzam000aqy08lfdm1pp7",
+          "planName": "Plano corte",
+          "amount": 70,
+          "billingDay": 24,
+          "status": "ACTIVE",
+          "startDate": "2025-12-29T19:09:31.983Z",
+          "endDate": null,
+          "observations": "",
+          "servicesIncluded": "",
+          "usageLimit": null,
+          "createdAt": "2025-12-29T19:09:31.983Z",
+          "updatedAt": "2025-12-29T19:09:31.983Z",
+          "client": {
+            "id": "cmjoxwzam000aqy08lfdm1pp7",
+            "name": "Gabriel ferreira",
+            "phone": "92 995163062",
+            "email": null,
+            "createdAt": "2025-12-27T23:37:08.782Z",
+            "updatedAt": "2025-12-27T23:37:08.782Z"
+          }
+        },
+        {
+          "id": "cmjrjbf1p0005mu08pm29tplb",
+          "clientId": "cmjoxyadf000bqy08d34gjslj",
+          "planName": "Plano corte",
+          "amount": 70,
+          "billingDay": 20,
+          "status": "ACTIVE",
+          "startDate": "2025-12-29T19:11:46.669Z",
+          "endDate": null,
+          "observations": "",
+          "servicesIncluded": "",
+          "usageLimit": null,
+          "createdAt": "2025-12-29T19:11:46.669Z",
+          "updatedAt": "2025-12-29T19:11:46.669Z",
+          "client": {
+            "id": "cmjoxyadf000bqy08d34gjslj",
+            "name": "Rodrigo Fernandes ",
+            "phone": "92 985263066",
+            "email": null,
+            "createdAt": "2025-12-27T23:38:09.795Z",
+            "updatedAt": "2025-12-27T23:38:09.795Z"
+          }
+        },
+        {
+          "id": "cmjrjcfyg0007mu08285eh3io",
+          "clientId": "cmjoxz2ao000cqy089uy9ropz",
+          "planName": "Plano corte e barba",
+          "amount": 130,
+          "billingDay": 19,
+          "status": "ACTIVE",
+          "startDate": "2025-12-29T19:12:34.504Z",
+          "endDate": null,
+          "observations": "",
+          "servicesIncluded": "",
+          "usageLimit": null,
+          "createdAt": "2025-12-29T19:12:34.504Z",
+          "updatedAt": "2025-12-29T19:12:34.504Z",
+          "client": {
+            "id": "cmjoxz2ao000cqy089uy9ropz",
+            "name": "Matheus campos ",
+            "phone": "92 984578428",
+            "email": null,
+            "createdAt": "2025-12-27T23:38:45.984Z",
+            "updatedAt": "2025-12-27T23:38:45.984Z"
+          }
+        },
+        {
+          "id": "cmjrjd5rn0009mu08v1lpcw84",
+          "clientId": "cmjoxzqta000dqy088bu4lmc1",
+          "planName": "Plano corte ",
+          "amount": 70,
+          "billingDay": 17,
+          "status": "ACTIVE",
+          "startDate": "2025-12-29T19:13:07.955Z",
+          "endDate": null,
+          "observations": "",
+          "servicesIncluded": "",
+          "usageLimit": null,
+          "createdAt": "2025-12-29T19:13:07.955Z",
+          "updatedAt": "2025-12-29T19:13:07.955Z",
+          "client": {
+            "id": "cmjoxzqta000dqy088bu4lmc1",
+            "name": "Leandro Oliveira dos santos",
+            "phone": "92 993857798",
+            "email": null,
+            "createdAt": "2025-12-27T23:39:17.758Z",
+            "updatedAt": "2025-12-27T23:39:17.758Z"
+          }
+        },
+        {
+          "id": "cmjrjekp5000bmu08ryhtw87r",
+          "clientId": "cmjoy0dkb000eqy08jxtac5jp",
+          "planName": "Plano corte e barba",
+          "amount": 130,
+          "billingDay": 17,
+          "status": "ACTIVE",
+          "startDate": "2025-12-29T19:14:13.962Z",
+          "endDate": null,
+          "observations": "",
+          "servicesIncluded": "",
+          "usageLimit": null,
+          "createdAt": "2025-12-29T19:14:13.962Z",
+          "updatedAt": "2025-12-29T19:14:13.962Z",
+          "client": {
+            "id": "cmjoy0dkb000eqy08jxtac5jp",
+            "name": "Jonhe castro",
+            "phone": "92 982517974",
+            "email": null,
+            "createdAt": "2025-12-27T23:39:47.243Z",
+            "updatedAt": "2025-12-27T23:39:47.243Z"
+          }
+        },
+        {
+          "id": "cmjrjfmlo000dmu08g0ltbcj8",
+          "clientId": "cmjoy121s000fqy085g3xbsqp",
+          "planName": "Plano corte",
+          "amount": 70,
+          "billingDay": 16,
+          "status": "ACTIVE",
+          "startDate": "2025-12-29T19:15:03.084Z",
+          "endDate": null,
+          "observations": "",
+          "servicesIncluded": "",
+          "usageLimit": null,
+          "createdAt": "2025-12-29T19:15:03.084Z",
+          "updatedAt": "2025-12-29T19:15:03.084Z",
+          "client": {
+            "id": "cmjoy121s000fqy085g3xbsqp",
+            "name": "Alex nascimento ",
+            "phone": "92 985439626",
+            "email": null,
+            "createdAt": "2025-12-27T23:40:18.960Z",
+            "updatedAt": "2025-12-27T23:40:18.960Z"
+          }
+        },
+        {
+          "id": "cmjrjg4hc000fmu081i1sut4f",
+          "clientId": "cmjoy1l9l000gqy08u6uj4axd",
+          "planName": "Plano corte",
+          "amount": 70,
+          "billingDay": 15,
+          "status": "ACTIVE",
+          "startDate": "2025-12-29T19:15:26.256Z",
+          "endDate": null,
+          "observations": "",
+          "servicesIncluded": "",
+          "usageLimit": null,
+          "createdAt": "2025-12-29T19:15:26.256Z",
+          "updatedAt": "2025-12-29T19:15:26.256Z",
+          "client": {
+            "id": "cmjoy1l9l000gqy08u6uj4axd",
+            "name": "Gustavo Alberto ",
+            "phone": "92 982615592",
+            "email": null,
+            "createdAt": "2025-12-27T23:40:43.881Z",
+            "updatedAt": "2025-12-27T23:40:43.881Z"
+          }
+        },
+        {
+          "id": "cmjrjgmoo000hmu08hgwpvi8h",
+          "clientId": "cmjoy248r000hqy08dv3bpfb1",
+          "planName": "Plano corte",
+          "amount": 70,
+          "billingDay": 15,
+          "status": "ACTIVE",
+          "startDate": "2025-12-29T19:15:49.848Z",
+          "endDate": null,
+          "observations": "",
+          "servicesIncluded": "",
+          "usageLimit": null,
+          "createdAt": "2025-12-29T19:15:49.848Z",
+          "updatedAt": "2025-12-29T19:15:49.848Z",
+          "client": {
+            "id": "cmjoy248r000hqy08dv3bpfb1",
+            "name": "Bruce lennon",
+            "phone": "92 994275607",
+            "email": null,
+            "createdAt": "2025-12-27T23:41:08.475Z",
+            "updatedAt": "2025-12-27T23:41:08.475Z"
+          }
+        },
+        {
+          "id": "cmjrjl8xl000jmu08khj03jcj",
+          "clientId": "cmjoy2pln000iqy084blzstlu",
+          "planName": "Plano corte",
+          "amount": 70,
+          "billingDay": 13,
+          "status": "ACTIVE",
+          "startDate": "2025-12-29T19:19:25.306Z",
+          "endDate": null,
+          "observations": "",
+          "servicesIncluded": "",
+          "usageLimit": null,
+          "createdAt": "2025-12-29T19:19:25.306Z",
+          "updatedAt": "2025-12-29T19:19:25.306Z",
+          "client": {
+            "id": "cmjoy2pln000iqy084blzstlu",
+            "name": "José Gabriel ",
+            "phone": "92 982234562",
+            "email": null,
+            "createdAt": "2025-12-27T23:41:36.155Z",
+            "updatedAt": "2025-12-27T23:41:36.155Z"
+          }
+        },
+        {
+          "id": "cmjrjm2l4000lmu08b0iqczaj",
+          "clientId": "cmjoy3bis000jqy086sb68w34",
+          "planName": "Plano corte",
+          "amount": 70,
+          "billingDay": 11,
+          "status": "ACTIVE",
+          "startDate": "2025-12-29T19:20:03.737Z",
+          "endDate": null,
+          "observations": "",
+          "servicesIncluded": "",
+          "usageLimit": null,
+          "createdAt": "2025-12-29T19:20:03.737Z",
+          "updatedAt": "2025-12-29T19:20:03.737Z",
+          "client": {
+            "id": "cmjoy3bis000jqy086sb68w34",
+            "name": "Diego Josafá ",
+            "phone": "92 999441831",
+            "email": null,
+            "createdAt": "2025-12-27T23:42:04.565Z",
+            "updatedAt": "2025-12-27T23:42:04.565Z"
+          }
+        },
+        {
+          "id": "cmjrjmpb9000nmu08exb3fm6o",
+          "clientId": "cmjoy45f3000kqy082q2z4emt",
+          "planName": "Plano corte",
+          "amount": 70,
+          "billingDay": 6,
+          "status": "ACTIVE",
+          "startDate": "2025-12-29T19:20:33.189Z",
+          "endDate": null,
+          "observations": "",
+          "servicesIncluded": "",
+          "usageLimit": null,
+          "createdAt": "2025-12-29T19:20:33.189Z",
+          "updatedAt": "2025-12-29T19:20:33.189Z",
+          "client": {
+            "id": "cmjoy45f3000kqy082q2z4emt",
+            "name": "Luigi Albuquerque ",
+            "phone": "92 999800318",
+            "email": null,
+            "createdAt": "2025-12-27T23:42:43.311Z",
+            "updatedAt": "2025-12-27T23:42:43.311Z"
+          }
+        },
+        {
+          "id": "cmjrjndp6000pmu08g905x92o",
+          "clientId": "cmjoy4ri1000lqy08ozysnw7w",
+          "planName": "Plano corte e barba",
+          "amount": 130,
+          "billingDay": 6,
+          "status": "ACTIVE",
+          "startDate": "2025-12-29T19:21:04.794Z",
+          "endDate": null,
+          "observations": "",
+          "servicesIncluded": "",
+          "usageLimit": null,
+          "createdAt": "2025-12-29T19:21:04.794Z",
+          "updatedAt": "2025-12-29T19:21:04.794Z",
+          "client": {
+            "id": "cmjoy4ri1000lqy08ozysnw7w",
+            "name": "Joab melo ",
+            "phone": "92 996075352",
+            "email": null,
+            "createdAt": "2025-12-27T23:43:11.929Z",
+            "updatedAt": "2025-12-27T23:43:11.929Z"
+          }
+        },
+        {
+          "id": "cmjrjnr7w000rmu08lo4e16ej",
+          "clientId": "cmjoy55bt000mqy08uenhbr62",
+          "planName": "Plano corte",
+          "amount": 70,
+          "billingDay": 6,
+          "status": "ACTIVE",
+          "startDate": "2025-12-29T19:21:22.316Z",
+          "endDate": null,
+          "observations": "",
+          "servicesIncluded": "",
+          "usageLimit": null,
+          "createdAt": "2025-12-29T19:21:22.316Z",
+          "updatedAt": "2025-12-29T19:21:22.316Z",
+          "client": {
+            "id": "cmjoy55bt000mqy08uenhbr62",
+            "name": "Carol binda ",
+            "phone": "92 984715646",
+            "email": null,
+            "createdAt": "2025-12-27T23:43:29.849Z",
+            "updatedAt": "2025-12-27T23:43:29.849Z"
+          }
+        },
+        {
+          "id": "cmjrjok43000tmu08bw53wrb1",
+          "clientId": "cmjoy5ud8000nqy08aqqplpyg",
+          "planName": "Plano corte e barba",
+          "amount": 130,
+          "billingDay": 6,
+          "status": "ACTIVE",
+          "startDate": "2025-12-29T19:21:59.764Z",
+          "endDate": null,
+          "observations": "",
+          "servicesIncluded": "",
+          "usageLimit": null,
+          "createdAt": "2025-12-29T19:21:59.764Z",
+          "updatedAt": "2025-12-29T19:21:59.764Z",
+          "client": {
+            "id": "cmjoy5ud8000nqy08aqqplpyg",
+            "name": "Janderson bahia ",
+            "phone": "92 981494741",
+            "email": null,
+            "createdAt": "2025-12-27T23:44:02.300Z",
+            "updatedAt": "2025-12-27T23:44:02.300Z"
+          }
+        },
+        {
+          "id": "cmjrjpc92000vmu08bhf9y0ou",
+          "clientId": "cmjoy66jr000oqy084p6drdsb",
+          "planName": "Plano corte",
+          "amount": 70,
+          "billingDay": 1,
+          "status": "ACTIVE",
+          "startDate": "2025-12-29T19:22:36.231Z",
+          "endDate": null,
+          "observations": "",
+          "servicesIncluded": "",
+          "usageLimit": null,
+          "createdAt": "2025-12-29T19:22:36.231Z",
+          "updatedAt": "2025-12-29T19:22:36.231Z",
+          "client": {
+            "id": "cmjoy66jr000oqy084p6drdsb",
+            "name": "Marcio cliente",
+            "phone": "92 981201341",
+            "email": null,
+            "createdAt": "2025-12-27T23:44:18.087Z",
+            "updatedAt": "2025-12-27T23:44:18.087Z"
+          }
+        },
+        {
+          "id": "cmjrjptnv000xmu083w66uhit",
+          "clientId": "cmjoy6nly000pqy08ajfefka4",
+          "planName": "Plano corte e barba",
+          "amount": 130,
+          "billingDay": 1,
+          "status": "ACTIVE",
+          "startDate": "2025-12-29T19:22:58.796Z",
+          "endDate": null,
+          "observations": "",
+          "servicesIncluded": "",
+          "usageLimit": null,
+          "createdAt": "2025-12-29T19:22:58.796Z",
+          "updatedAt": "2025-12-29T19:22:58.796Z",
+          "client": {
+            "id": "cmjoy6nly000pqy08ajfefka4",
+            "name": "Diogo gabriel",
+            "phone": "92 992989889",
+            "email": null,
+            "createdAt": "2025-12-27T23:44:40.198Z",
+            "updatedAt": "2025-12-27T23:44:40.198Z"
+          }
+        },
+        {
+          "id": "cmjrjqm02000zmu08osjhnuix",
+          "clientId": "cmjoy77pj000qqy08ajqo618s",
+          "planName": "Plano corte",
+          "amount": 70,
+          "billingDay": 28,
+          "status": "ACTIVE",
+          "startDate": "2025-12-29T19:23:35.522Z",
+          "endDate": null,
+          "observations": "",
+          "servicesIncluded": "",
+          "usageLimit": null,
+          "createdAt": "2025-12-29T19:23:35.522Z",
+          "updatedAt": "2025-12-29T19:23:35.522Z",
+          "client": {
+            "id": "cmjoy77pj000qqy08ajqo618s",
+            "name": "Luan bayman",
+            "phone": "92 992599815",
+            "email": null,
+            "createdAt": "2025-12-27T23:45:06.247Z",
+            "updatedAt": "2025-12-27T23:45:06.247Z"
+          }
+        },
+        {
+          "id": "cmjrjrah60011mu08a5yujabw",
+          "clientId": "cmjoy83wf000rqy08biz5fb8i",
+          "planName": "Plano corte",
+          "amount": 70,
+          "billingDay": 27,
+          "status": "ACTIVE",
+          "startDate": "2025-12-29T19:24:07.243Z",
+          "endDate": null,
+          "observations": "",
+          "servicesIncluded": "",
+          "usageLimit": null,
+          "createdAt": "2025-12-29T19:24:07.243Z",
+          "updatedAt": "2025-12-29T19:24:07.243Z",
+          "client": {
+            "id": "cmjoy83wf000rqy08biz5fb8i",
+            "name": "Elder da Costa Araújo ",
+            "phone": "92 994650686",
+            "email": null,
+            "createdAt": "2025-12-27T23:45:47.950Z",
+            "updatedAt": "2025-12-27T23:45:47.950Z"
+          }
+        },
+        {
+          "id": "cmjrjs3490013mu08ryskhm2y",
+          "clientId": "cmjoy8l7a000sqy08f1b706yd",
+          "planName": "Plano corte",
+          "amount": 45,
+          "billingDay": 24,
+          "status": "ACTIVE",
+          "startDate": "2025-12-29T19:24:44.362Z",
+          "endDate": null,
+          "observations": "",
+          "servicesIncluded": "",
+          "usageLimit": null,
+          "createdAt": "2025-12-29T19:24:44.362Z",
+          "updatedAt": "2025-12-29T19:24:44.362Z",
+          "client": {
+            "id": "cmjoy8l7a000sqy08f1b706yd",
+            "name": "Kael bandeira",
+            "phone": "92 986031991",
+            "email": null,
+            "createdAt": "2025-12-27T23:46:10.390Z",
+            "updatedAt": "2025-12-27T23:46:10.390Z"
+          }
+        },
+        {
+          "id": "cmjrju1tj0015mu081ved041b",
+          "clientId": "cmjoy96lm000tqy08b9pl4mbl",
+          "planName": "Plano corte",
+          "amount": 70,
+          "billingDay": 24,
+          "status": "ACTIVE",
+          "startDate": "2025-12-29T19:26:15.992Z",
+          "endDate": null,
+          "observations": "",
+          "servicesIncluded": "",
+          "usageLimit": null,
+          "createdAt": "2025-12-29T19:26:15.992Z",
+          "updatedAt": "2025-12-29T19:26:15.992Z",
+          "client": {
+            "id": "cmjoy96lm000tqy08b9pl4mbl",
+            "name": "Darc Sales ",
+            "phone": "92 992371995",
+            "email": null,
+            "createdAt": "2025-12-27T23:46:38.122Z",
+            "updatedAt": "2025-12-27T23:46:38.122Z"
+          }
+        },
+        {
+          "id": "cmjrjuw290017mu08rqdifq8q",
+          "clientId": "cmjoy9lzc000uqy08a829bsy3",
+          "planName": "Plano corte e barba",
+          "amount": 130,
+          "billingDay": 22,
+          "status": "ACTIVE",
+          "startDate": "2025-12-29T19:26:55.186Z",
+          "endDate": null,
+          "observations": "",
+          "servicesIncluded": "",
+          "usageLimit": null,
+          "createdAt": "2025-12-29T19:26:55.186Z",
+          "updatedAt": "2025-12-29T19:26:55.186Z",
+          "client": {
+            "id": "cmjoy9lzc000uqy08a829bsy3",
+            "name": "Tiago mota",
+            "phone": "92 991934121",
+            "email": null,
+            "createdAt": "2025-12-27T23:46:58.056Z",
+            "updatedAt": "2025-12-27T23:46:58.056Z"
+          }
+        },
+        {
+          "id": "cmjrjw9py0019mu08gbdsose9",
+          "clientId": "cmjoya3v3000vqy089gefqwhl",
+          "planName": "Plano corte",
+          "amount": 70,
+          "billingDay": 15,
+          "status": "ACTIVE",
+          "startDate": "2025-12-29T19:27:59.543Z",
+          "endDate": null,
+          "observations": "",
+          "servicesIncluded": "",
+          "usageLimit": null,
+          "createdAt": "2025-12-29T19:27:59.543Z",
+          "updatedAt": "2025-12-29T19:27:59.543Z",
+          "client": {
+            "id": "cmjoya3v3000vqy089gefqwhl",
+            "name": "Nilson matos",
+            "phone": "92 992987788",
+            "email": null,
+            "createdAt": "2025-12-27T23:47:21.231Z",
+            "updatedAt": "2025-12-27T23:47:21.231Z"
+          }
+        },
+        {
+          "id": "cmjrjxqnu001bmu086g6xib3r",
+          "clientId": "cmjoyajr1000wqy08mmxw6wgc",
+          "planName": "Plano corte e barba",
+          "amount": 130,
+          "billingDay": 15,
+          "status": "ACTIVE",
+          "startDate": "2025-12-29T19:29:08.154Z",
+          "endDate": null,
+          "observations": "",
+          "servicesIncluded": "",
+          "usageLimit": null,
+          "createdAt": "2025-12-29T19:29:08.154Z",
+          "updatedAt": "2025-12-29T19:29:08.154Z",
+          "client": {
+            "id": "cmjoyajr1000wqy08mmxw6wgc",
+            "name": "Leo motors",
+            "phone": "92 974007676",
+            "email": null,
+            "createdAt": "2025-12-27T23:47:41.821Z",
+            "updatedAt": "2025-12-27T23:47:41.821Z"
+          }
+        },
+        {
+          "id": "cmjrjz8ya001dmu08c3pxmrtt",
+          "clientId": "cmjoyawbk000xqy08dswme974",
+          "planName": "Plano corte",
+          "amount": 70,
+          "billingDay": 1,
+          "status": "ACTIVE",
+          "startDate": "2025-12-29T19:30:18.514Z",
+          "endDate": null,
+          "observations": "",
+          "servicesIncluded": "",
+          "usageLimit": null,
+          "createdAt": "2025-12-29T19:30:18.514Z",
+          "updatedAt": "2025-12-29T19:30:18.514Z",
+          "client": {
+            "id": "cmjoyawbk000xqy08dswme974",
+            "name": "João thomas ",
+            "phone": "92 992507155",
+            "email": null,
+            "createdAt": "2025-12-27T23:47:58.112Z",
+            "updatedAt": "2025-12-27T23:47:58.112Z"
+          }
+        },
+        {
+          "id": "cmjrk0gm8001fmu083cju2r6p",
+          "clientId": "cmjoybd2n000yqy08ki2mlgor",
+          "planName": "Plano corte",
+          "amount": 70,
+          "billingDay": 29,
+          "status": "ACTIVE",
+          "startDate": "2025-12-29T19:31:15.105Z",
+          "endDate": null,
+          "observations": "",
+          "servicesIncluded": "",
+          "usageLimit": null,
+          "createdAt": "2025-12-29T19:31:15.105Z",
+          "updatedAt": "2025-12-29T19:31:15.105Z",
+          "client": {
+            "id": "cmjoybd2n000yqy08ki2mlgor",
+            "name": "Leandro cruz ",
+            "phone": "92 992443213",
+            "email": null,
+            "createdAt": "2025-12-27T23:48:19.824Z",
+            "updatedAt": "2025-12-27T23:48:19.824Z"
+          }
+        },
+        {
+          "id": "cmjrnfvyi0001q608gm398bna",
+          "clientId": "cmjoybun1000zqy08tjzc1ab7",
+          "planName": "Plano corte",
+          "amount": 70,
+          "billingDay": 27,
+          "status": "ACTIVE",
+          "startDate": "2025-12-29T21:07:13.674Z",
+          "endDate": null,
+          "observations": "",
+          "servicesIncluded": "",
+          "usageLimit": null,
+          "createdAt": "2025-12-29T21:07:13.674Z",
+          "updatedAt": "2025-12-29T21:07:13.674Z",
+          "client": {
+            "id": "cmjoybun1000zqy08tjzc1ab7",
+            "name": "Eric Vinícius ",
+            "phone": "92 981749895",
+            "email": null,
+            "createdAt": "2025-12-27T23:48:42.589Z",
+            "updatedAt": "2025-12-27T23:48:42.589Z"
+          }
+        },
+        {
+          "id": "cmjrngh6z0003q608hrza0n57",
+          "clientId": "cmjoyclct0010qy088zdcznro",
+          "planName": "Plano corte e barba",
+          "amount": 130,
+          "billingDay": 21,
+          "status": "ACTIVE",
+          "startDate": "2025-12-29T21:07:41.196Z",
+          "endDate": null,
+          "observations": "",
+          "servicesIncluded": "",
+          "usageLimit": null,
+          "createdAt": "2025-12-29T21:07:41.196Z",
+          "updatedAt": "2025-12-29T21:07:41.196Z",
+          "client": {
+            "id": "cmjoyclct0010qy088zdcznro",
+            "name": "Leonardo saraiva ",
+            "phone": "92 981703116",
+            "email": null,
+            "createdAt": "2025-12-27T23:49:17.213Z",
+            "updatedAt": "2025-12-27T23:49:17.213Z"
+          }
+        },
+        {
+          "id": "cmjrnh2cn0005q608cqvz4f2j",
+          "clientId": "cmjoyd59a0011qy08a7vgbcf1",
+          "planName": "Plano corte",
+          "amount": 70,
+          "billingDay": 10,
+          "status": "ACTIVE",
+          "startDate": "2025-12-29T21:08:08.616Z",
+          "endDate": null,
+          "observations": "",
+          "servicesIncluded": "",
+          "usageLimit": null,
+          "createdAt": "2025-12-29T21:08:08.616Z",
+          "updatedAt": "2025-12-29T21:08:08.616Z",
+          "client": {
+            "id": "cmjoyd59a0011qy08a7vgbcf1",
+            "name": "Sandro hygor",
+            "phone": "92 981379389",
+            "email": null,
+            "createdAt": "2025-12-27T23:49:43.006Z",
+            "updatedAt": "2025-12-27T23:49:43.006Z"
+          }
+        },
+        {
+          "id": "cmjrnhqou0007q6084x9bdfqv",
+          "clientId": "cmjoydl930012qy08law3ogsj",
+          "planName": "Plano corte e barba",
+          "amount": 130,
+          "billingDay": 15,
+          "status": "ACTIVE",
+          "startDate": "2025-12-29T21:08:40.158Z",
+          "endDate": null,
+          "observations": "",
+          "servicesIncluded": "",
+          "usageLimit": null,
+          "createdAt": "2025-12-29T21:08:40.158Z",
+          "updatedAt": "2025-12-29T21:08:40.158Z",
+          "client": {
+            "id": "cmjoydl930012qy08law3ogsj",
+            "name": "Andre Menezes ",
+            "phone": "92 993431200",
+            "email": null,
+            "createdAt": "2025-12-27T23:50:03.735Z",
+            "updatedAt": "2025-12-27T23:50:03.735Z"
+          }
+        },
+        {
+          "id": "cmjrnjct50009q6082c14npb2",
+          "clientId": "cmjoyeegy0013qy08pdopbd3a",
+          "planName": "Plano corte",
+          "amount": 70,
+          "billingDay": 10,
+          "status": "ACTIVE",
+          "startDate": "2025-12-29T21:09:55.482Z",
+          "endDate": null,
+          "observations": "",
+          "servicesIncluded": "",
+          "usageLimit": null,
+          "createdAt": "2025-12-29T21:09:55.482Z",
+          "updatedAt": "2025-12-29T21:09:55.482Z",
+          "client": {
+            "id": "cmjoyeegy0013qy08pdopbd3a",
+            "name": "Renan Souza ",
+            "phone": "92 982764159",
+            "email": null,
+            "createdAt": "2025-12-27T23:50:41.602Z",
+            "updatedAt": "2025-12-27T23:50:41.602Z"
+          }
+        },
+        {
+          "id": "cmjrnl37i000bq608a4vrv236",
+          "clientId": "cmjoyex5r0014qy08szh78ugu",
+          "planName": "Plano corte e barba",
+          "amount": 130,
+          "billingDay": 9,
+          "status": "ACTIVE",
+          "startDate": "2025-12-29T21:11:16.351Z",
+          "endDate": null,
+          "observations": "",
+          "servicesIncluded": "",
+          "usageLimit": null,
+          "createdAt": "2025-12-29T21:11:16.351Z",
+          "updatedAt": "2025-12-29T21:11:16.351Z",
+          "client": {
+            "id": "cmjoyex5r0014qy08szh78ugu",
+            "name": "Caio italo",
+            "phone": "92 994608642",
+            "email": null,
+            "createdAt": "2025-12-27T23:51:05.807Z",
+            "updatedAt": "2025-12-27T23:51:05.807Z"
+          }
+        },
+        {
+          "id": "cmjrnlq2w000dq6087bk8rfn9",
+          "clientId": "cmjoyfhlz0015qy085tdz4x7t",
+          "planName": "Plano corte",
+          "amount": 70,
+          "billingDay": 9,
+          "status": "ACTIVE",
+          "startDate": "2025-12-29T21:11:45.992Z",
+          "endDate": null,
+          "observations": "",
+          "servicesIncluded": "",
+          "usageLimit": null,
+          "createdAt": "2025-12-29T21:11:45.992Z",
+          "updatedAt": "2025-12-29T21:11:45.992Z",
+          "client": {
+            "id": "cmjoyfhlz0015qy085tdz4x7t",
+            "name": "Philippe feitosa",
+            "phone": "92 991926556",
+            "email": null,
+            "createdAt": "2025-12-27T23:51:32.327Z",
+            "updatedAt": "2025-12-27T23:51:32.327Z"
+          }
+        },
+        {
+          "id": "cmjrnmh0j000fq608un2hd1hk",
+          "clientId": "cmjoyfwe10016qy08o5w5quix",
+          "planName": "Plano corte",
+          "amount": 70,
+          "billingDay": 4,
+          "status": "ACTIVE",
+          "startDate": "2025-12-29T21:12:20.900Z",
+          "endDate": null,
+          "observations": "",
+          "servicesIncluded": "",
+          "usageLimit": null,
+          "createdAt": "2025-12-29T21:12:20.900Z",
+          "updatedAt": "2025-12-29T21:12:20.900Z",
+          "client": {
+            "id": "cmjoyfwe10016qy08o5w5quix",
+            "name": "Hugo Bessa ",
+            "phone": "92 993744680",
+            "email": null,
+            "createdAt": "2025-12-27T23:51:51.481Z",
+            "updatedAt": "2025-12-27T23:51:51.481Z"
+          }
+        },
+        {
+          "id": "cmjrnnllj000hq6082p7natpa",
+          "clientId": "cmjoygk720017qy08k7x80fiq",
+          "planName": "Plano corte",
+          "amount": 70,
+          "billingDay": 4,
+          "status": "ACTIVE",
+          "startDate": "2025-12-29T21:13:13.496Z",
+          "endDate": null,
+          "observations": "",
+          "servicesIncluded": "",
+          "usageLimit": null,
+          "createdAt": "2025-12-29T21:13:13.496Z",
+          "updatedAt": "2025-12-29T21:13:13.496Z",
+          "client": {
+            "id": "cmjoygk720017qy08k7x80fiq",
+            "name": "Julio flavio",
+            "phone": "97 984498118",
+            "email": null,
+            "createdAt": "2025-12-27T23:52:22.334Z",
+            "updatedAt": "2025-12-27T23:52:22.334Z"
+          }
+        },
+        {
+          "id": "cmjrnnzpt000jq608gchm1hh4",
+          "clientId": "cmjoyh3sw0018qy08ver57jvl",
+          "planName": "Plano corte",
+          "amount": 70,
+          "billingDay": 10,
+          "status": "ACTIVE",
+          "startDate": "2025-12-29T21:13:31.793Z",
+          "endDate": null,
+          "observations": "",
+          "servicesIncluded": "",
+          "usageLimit": null,
+          "createdAt": "2025-12-29T21:13:31.793Z",
+          "updatedAt": "2025-12-29T21:13:31.793Z",
+          "client": {
+            "id": "cmjoyh3sw0018qy08ver57jvl",
+            "name": "SAYMON rick",
+            "phone": "92 988413829",
+            "email": null,
+            "createdAt": "2025-12-27T23:52:47.744Z",
+            "updatedAt": "2025-12-27T23:52:47.744Z"
+          }
+        },
+        {
+          "id": "cmjrnp0s9000lq608nubjum2k",
+          "clientId": "cmjoyhnw30019qy082l4d6uh1",
+          "planName": "Plano corte",
+          "amount": 70,
+          "billingDay": 2,
+          "status": "ACTIVE",
+          "startDate": "2025-12-29T21:14:19.833Z",
+          "endDate": null,
+          "observations": "",
+          "servicesIncluded": "",
+          "usageLimit": null,
+          "createdAt": "2025-12-29T21:14:19.833Z",
+          "updatedAt": "2025-12-29T21:14:19.833Z",
+          "client": {
+            "id": "cmjoyhnw30019qy082l4d6uh1",
+            "name": "Daniel brito",
+            "phone": "92 984742651",
+            "email": null,
+            "createdAt": "2025-12-27T23:53:13.779Z",
+            "updatedAt": "2025-12-27T23:53:13.779Z"
+          }
+        },
+        {
+          "id": "cmjrnpvqn000nq608yg8l6e2b",
+          "clientId": "cmjoyi6i2001aqy08yirmjhcv",
+          "planName": "Plano corte ",
+          "amount": 70,
+          "billingDay": 26,
+          "status": "ACTIVE",
+          "startDate": "2025-12-29T21:14:59.952Z",
+          "endDate": null,
+          "observations": "",
+          "servicesIncluded": "",
+          "usageLimit": null,
+          "createdAt": "2025-12-29T21:14:59.952Z",
+          "updatedAt": "2025-12-29T21:14:59.952Z",
+          "client": {
+            "id": "cmjoyi6i2001aqy08yirmjhcv",
+            "name": "marlison",
+            "phone": "92 991226357",
+            "email": null,
+            "createdAt": "2025-12-27T23:53:37.898Z",
+            "updatedAt": "2025-12-27T23:53:37.898Z"
+          }
+        },
+        {
+          "id": "cmjrnuzx6000pq6089ypa9cz9",
+          "clientId": "cmjoyivon001bqy083clqj37e",
+          "planName": "Plano  corte e barba",
+          "amount": 130,
+          "billingDay": 19,
+          "status": "ACTIVE",
+          "startDate": "2025-12-29T21:18:58.650Z",
+          "endDate": null,
+          "observations": "",
+          "servicesIncluded": "",
+          "usageLimit": null,
+          "createdAt": "2025-12-29T21:18:58.650Z",
+          "updatedAt": "2025-12-29T21:18:58.650Z",
+          "client": {
+            "id": "cmjoyivon001bqy083clqj37e",
+            "name": "Romario rodrigues ",
+            "phone": "92 991161006",
+            "email": null,
+            "createdAt": "2025-12-27T23:54:10.535Z",
+            "updatedAt": "2025-12-27T23:54:10.535Z"
+          }
+        },
+        {
+          "id": "cmjrnvplu000rq608n90jorjf",
+          "clientId": "cmjoyjh7u001cqy081a7s7e99",
+          "planName": "Plano corte e barba",
+          "amount": 130,
+          "billingDay": 20,
+          "status": "ACTIVE",
+          "startDate": "2025-12-29T21:19:31.938Z",
+          "endDate": null,
+          "observations": "",
+          "servicesIncluded": "",
+          "usageLimit": null,
+          "createdAt": "2025-12-29T21:19:31.938Z",
+          "updatedAt": "2025-12-29T21:19:31.938Z",
+          "client": {
+            "id": "cmjoyjh7u001cqy081a7s7e99",
+            "name": "Eduardo Torres ",
+            "phone": "92 999767247",
+            "email": null,
+            "createdAt": "2025-12-27T23:54:38.442Z",
+            "updatedAt": "2025-12-27T23:54:38.442Z"
+          }
+        },
+        {
+          "id": "cmjrnwh28000tq608a69xul80",
+          "clientId": "cmjoyk19v001dqy08wq1ilcbi",
+          "planName": "Plano corte ",
+          "amount": 70,
+          "billingDay": 12,
+          "status": "ACTIVE",
+          "startDate": "2025-12-29T21:20:07.521Z",
+          "endDate": null,
+          "observations": "",
+          "servicesIncluded": "",
+          "usageLimit": null,
+          "createdAt": "2025-12-29T21:20:07.521Z",
+          "updatedAt": "2025-12-29T21:20:07.521Z",
+          "client": {
+            "id": "cmjoyk19v001dqy08wq1ilcbi",
+            "name": "Alexson brito",
+            "phone": "92 992514577",
+            "email": null,
+            "createdAt": "2025-12-27T23:55:04.435Z",
+            "updatedAt": "2025-12-27T23:55:04.435Z"
+          }
+        },
+        {
+          "id": "cmjxkduxt0001nu08lk65j6cv",
+          "clientId": "cmjrobcoa0017q6083qdnbydg",
+          "planName": "Plano Corte",
+          "amount": 70,
+          "billingDay": 1,
+          "status": "ACTIVE",
+          "startDate": "2026-01-03T00:28:17.250Z",
+          "endDate": null,
+          "observations": "",
+          "servicesIncluded": "",
+          "usageLimit": null,
+          "createdAt": "2026-01-03T00:28:17.250Z",
+          "updatedAt": "2026-01-03T00:28:17.250Z",
+          "client": {
+            "id": "cmjrobcoa0017q6083qdnbydg",
+            "name": "Caio troy",
+            "phone": "92 984711966",
+            "email": null,
+            "createdAt": "2025-12-29T21:31:41.674Z",
+            "updatedAt": "2025-12-29T21:31:41.674Z"
+          }
+        },
+        {
+          "id": "cmjxl0wn2000bnu08lv66v81b",
+          "clientId": "cmjro1uqv000wq608lgqd3jcd",
+          "planName": "Plano corte ",
+          "amount": 70,
+          "billingDay": 2,
+          "status": "ACTIVE",
+          "startDate": "2026-01-03T00:46:12.542Z",
+          "endDate": null,
+          "observations": "",
+          "servicesIncluded": "",
+          "usageLimit": null,
+          "createdAt": "2026-01-03T00:46:12.542Z",
+          "updatedAt": "2026-01-06T17:32:15.663Z",
+          "client": {
+            "id": "cmjro1uqv000wq608lgqd3jcd",
+            "name": "Gabiel Diniz ",
+            "phone": "92 984123783",
+            "email": null,
+            "createdAt": "2025-12-29T21:24:18.535Z",
+            "updatedAt": "2025-12-29T21:24:18.535Z"
+          }
+        }
+      ]
+    },
+    "subscriptionUsages": {
+      "count": 0,
+      "data": []
+    },
+    "paymentLinks": {
+      "count": 8,
+      "data": [
+        {
+          "id": "cmjou03b70002qy087d27akfd",
+          "accountReceivableId": "cmjou031c0000qy08ce5ar9s0",
+          "linkUrl": "https://jhonjhon-adm.abacusai.app/pagamento/e23xubdtp0c",
+          "generatedBy": "cmjip3cze0001xeoplrmyvdh0",
+          "sentAt": "2025-12-27T21:47:52.098Z",
+          "expiresAt": "2026-01-03T21:47:35.490Z",
+          "status": "sent",
+          "observations": null,
+          "createdAt": "2025-12-27T21:47:35.491Z",
+          "updatedAt": "2025-12-27T21:47:52.734Z",
+          "accountReceivable": {
+            "id": "cmjou031c0000qy08ce5ar9s0",
+            "description": "Assinatura - JhonClub Corte  - Cézar Vilaça",
+            "category": "SUBSCRIPTION",
+            "payer": "Cézar Vilaça",
+            "clientId": null,
+            "phone": null,
+            "amount": 69.9,
+            "dueDate": "2026-01-26T21:47:34.493Z",
+            "paymentDate": null,
+            "status": "PENDING",
+            "paymentMethod": null,
+            "observations": null,
+            "subscriptionId": null,
+            "createdAt": "2025-12-27T21:47:35.137Z",
+            "updatedAt": "2025-12-27T21:47:35.137Z"
+          }
+        },
+        {
+          "id": "cmjucfwb30002tb08gsfq17wt",
+          "accountReceivableId": "cmjucfw2z0000tb08fxlnepaz",
+          "linkUrl": "https://jhonjhon-adm.abacusai.app/pagamento/fgnotyuew6s",
+          "generatedBy": "cmjiq5eqo0000xe3snhnnva0i",
+          "sentAt": null,
+          "expiresAt": "2026-01-07T18:22:36.879Z",
+          "status": "generated",
+          "observations": null,
+          "createdAt": "2025-12-31T18:22:36.880Z",
+          "updatedAt": "2025-12-31T18:22:36.880Z",
+          "accountReceivable": {
+            "id": "cmjucfw2z0000tb08fxlnepaz",
+            "description": "Assinatura - Plano corte - João thomas ",
+            "category": "SUBSCRIPTION",
+            "payer": "João thomas ",
+            "clientId": null,
+            "phone": null,
+            "amount": 70,
+            "dueDate": "2026-01-01T18:22:35.212Z",
+            "paymentDate": null,
+            "status": "OVERDUE",
+            "paymentMethod": null,
+            "observations": null,
+            "subscriptionId": null,
+            "createdAt": "2025-12-31T18:22:36.586Z",
+            "updatedAt": "2026-01-03T00:13:17.298Z"
+          }
+        },
+        {
+          "id": "cmjucg1io0005tb085o2pgfiv",
+          "accountReceivableId": "cmjucg1a40003tb087w7368xj",
+          "linkUrl": "https://jhonjhon-adm.abacusai.app/pagamento/u0f6uz0mcok",
+          "generatedBy": "cmjiq5eqo0000xe3snhnnva0i",
+          "sentAt": "2025-12-31T18:22:43.575Z",
+          "expiresAt": "2026-01-07T18:22:43.632Z",
+          "status": "sent",
+          "observations": null,
+          "createdAt": "2025-12-31T18:22:43.633Z",
+          "updatedAt": "2025-12-31T18:22:44.944Z",
+          "accountReceivable": {
+            "id": "cmjucg1a40003tb087w7368xj",
+            "description": "Assinatura - Plano corte - João thomas ",
+            "category": "SUBSCRIPTION",
+            "payer": "João thomas ",
+            "clientId": null,
+            "phone": null,
+            "amount": 70,
+            "dueDate": "2026-01-01T18:22:41.934Z",
+            "paymentDate": null,
+            "status": "OVERDUE",
+            "paymentMethod": null,
+            "observations": null,
+            "subscriptionId": null,
+            "createdAt": "2025-12-31T18:22:43.325Z",
+            "updatedAt": "2026-01-03T00:13:17.298Z"
+          }
+        },
+        {
+          "id": "cmjxke1x30004nu08us57nrxz",
+          "accountReceivableId": "cmjxke1nj0002nu08xu9320sd",
+          "linkUrl": "https://jhonjhon-adm.abacusai.app/pagamento/c1cm4r1cttw",
+          "generatedBy": "cmjiq5eqo0000xe3snhnnva0i",
+          "sentAt": null,
+          "expiresAt": "2026-01-10T00:28:26.295Z",
+          "status": "generated",
+          "observations": null,
+          "createdAt": "2026-01-03T00:28:26.295Z",
+          "updatedAt": "2026-01-03T00:28:26.295Z",
+          "accountReceivable": {
+            "id": "cmjxke1nj0002nu08xu9320sd",
+            "description": "Assinatura - Plano Corte - Caio troy",
+            "category": "SUBSCRIPTION",
+            "payer": "Caio troy",
+            "clientId": null,
+            "phone": null,
+            "amount": 70,
+            "dueDate": "2026-02-02T00:28:26.330Z",
+            "paymentDate": null,
+            "status": "PENDING",
+            "paymentMethod": null,
+            "observations": null,
+            "subscriptionId": null,
+            "createdAt": "2026-01-03T00:28:25.951Z",
+            "updatedAt": "2026-01-03T00:28:25.951Z"
+          }
+        },
+        {
+          "id": "cmjxkivcv0007nu08em4zn0xk",
+          "accountReceivableId": "cmjxkiv350005nu08bon5eh43",
+          "linkUrl": "https://jhonjhon-adm.abacusai.app/pagamento/lumj67z7xt",
+          "generatedBy": "cmjiq5eqo0000xe3snhnnva0i",
+          "sentAt": "2026-01-03T00:32:21.504Z",
+          "expiresAt": "2026-01-10T00:32:11.071Z",
+          "status": "sent",
+          "observations": null,
+          "createdAt": "2026-01-03T00:32:11.072Z",
+          "updatedAt": "2026-01-03T00:32:21.146Z",
+          "accountReceivable": {
+            "id": "cmjxkiv350005nu08bon5eh43",
+            "description": "Assinatura - Plano Corte - Caio troy",
+            "category": "SUBSCRIPTION",
+            "payer": "Caio troy",
+            "clientId": null,
+            "phone": null,
+            "amount": 70,
+            "dueDate": "2026-02-02T00:32:11.084Z",
+            "paymentDate": null,
+            "status": "PENDING",
+            "paymentMethod": null,
+            "observations": null,
+            "subscriptionId": null,
+            "createdAt": "2026-01-03T00:32:10.721Z",
+            "updatedAt": "2026-01-03T00:32:10.721Z"
+          }
+        },
+        {
+          "id": "cmk2p5lb70002lb08tsbe47w1",
+          "accountReceivableId": "cmk2p5l290000lb08e1zy96v1",
+          "linkUrl": "https://jhonjhon-adm.abacusai.app/pagamento/qfwkshqmo6f",
+          "generatedBy": "cmjiq5eqo0000xe3snhnnva0i",
+          "sentAt": "2026-01-06T14:40:49.698Z",
+          "expiresAt": "2026-01-13T14:40:40.482Z",
+          "status": "sent",
+          "observations": null,
+          "createdAt": "2026-01-06T14:40:40.483Z",
+          "updatedAt": "2026-01-06T14:40:50.437Z",
+          "accountReceivable": {
+            "id": "cmk2p5l290000lb08e1zy96v1",
+            "description": "Assinatura - Plano corte e barba - Janderson bahia ",
+            "category": "SUBSCRIPTION",
+            "payer": "Janderson bahia ",
+            "clientId": null,
+            "phone": null,
+            "amount": 130,
+            "dueDate": "2026-01-06T14:40:39.345Z",
+            "paymentDate": null,
+            "status": "OVERDUE",
+            "paymentMethod": null,
+            "observations": null,
+            "subscriptionId": null,
+            "createdAt": "2026-01-06T14:40:40.160Z",
+            "updatedAt": "2026-01-07T00:05:17.364Z"
+          }
+        },
+        {
+          "id": "cmk2t3lvp0002o108xwqme8ar",
+          "accountReceivableId": "cmk2t3lni0000o1089rucvhfn",
+          "linkUrl": "https://jhonjhon-adm.abacusai.app/pagamento/yh6lvhqzgm",
+          "generatedBy": "cmjiq5eqo0000xe3snhnnva0i",
+          "sentAt": null,
+          "expiresAt": "2026-01-13T16:31:06.373Z",
+          "status": "generated",
+          "observations": null,
+          "createdAt": "2026-01-06T16:31:06.374Z",
+          "updatedAt": "2026-01-06T16:31:06.374Z",
+          "accountReceivable": {
+            "id": "cmk2t3lni0000o1089rucvhfn",
+            "description": "Assinatura - Plano corte  - Gabiel Diniz ",
+            "category": "SUBSCRIPTION",
+            "payer": "Gabiel Diniz ",
+            "clientId": null,
+            "phone": null,
+            "amount": 70,
+            "dueDate": "2026-02-02T16:31:05.284Z",
+            "paymentDate": null,
+            "status": "PENDING",
+            "paymentMethod": null,
+            "observations": null,
+            "subscriptionId": null,
+            "createdAt": "2026-01-06T16:31:06.078Z",
+            "updatedAt": "2026-01-06T16:31:06.078Z"
+          }
+        },
+        {
+          "id": "cmk5v5f1c000hpj08apl85s4n",
+          "accountReceivableId": "cmk5v5epy000fpj085yr2lrtq",
+          "linkUrl": "https://jhonjhon-adm.abacusai.app/pagamento/w3q51mh2xog",
+          "generatedBy": "cmjiq5eqo0000xe3snhnnva0i",
+          "sentAt": null,
+          "expiresAt": "2026-01-15T19:51:48.576Z",
+          "status": "generated",
+          "observations": null,
+          "createdAt": "2026-01-08T19:51:48.577Z",
+          "updatedAt": "2026-01-08T19:51:48.577Z",
+          "accountReceivable": {
+            "id": "cmk5v5epy000fpj085yr2lrtq",
+            "description": "Assinatura - Plano corte  - Gabiel Diniz ",
+            "category": "SUBSCRIPTION",
+            "payer": "Gabiel Diniz ",
+            "clientId": null,
+            "phone": null,
+            "amount": 70,
+            "dueDate": "2026-02-02T19:51:46.808Z",
+            "paymentDate": null,
+            "status": "PENDING",
+            "paymentMethod": null,
+            "observations": null,
+            "subscriptionId": null,
+            "createdAt": "2026-01-08T19:51:48.166Z",
+            "updatedAt": "2026-01-08T19:51:48.166Z"
+          }
+        }
+      ]
+    },
+    "cashRegisters": {
+      "count": 1,
+      "data": [
+        {
+          "id": "cmk3al4yv0005y2dque884xik",
+          "openedBy": "cmjiq5eqo0000xe3snhnnva0i",
+          "openedAt": "2026-01-07T00:40:37.736Z",
+          "closedAt": null,
+          "initialAmount": 0,
+          "finalAmount": null,
+          "expectedAmount": null,
+          "difference": null,
+          "status": "OPEN",
+          "createdAt": "2026-01-07T00:40:37.736Z",
+          "updatedAt": "2026-01-07T00:40:37.736Z"
+        }
+      ]
+    },
+    "cashMovements": {
+      "count": 0,
+      "data": []
+    },
+    "bookingSettings": {
+      "count": 1,
+      "data": [
+        {
+          "id": "cmjndvvwt0001upx9xtp4kgs4",
+          "schedule": {
+            "friday": {
+              "slots": [
+                "09:00",
+                "09:30",
+                "10:00",
+                "10:30",
+                "11:00",
+                "11:30",
+                "12:00",
+                "12:30",
+                "13:00",
+                "13:30",
+                "14:00",
+                "14:30",
+                "15:00",
+                "15:30",
+                "16:00",
+                "16:30",
+                "17:00",
+                "17:30",
+                "18:00",
+                "18:30",
+                "19:00"
+              ],
+              "enabled": true
+            },
+            "monday": {
+              "slots": [
+                "09:00",
+                "09:30",
+                "10:00",
+                "10:30",
+                "11:00",
+                "11:30",
+                "12:00",
+                "12:30",
+                "13:00",
+                "13:30",
+                "14:00",
+                "14:30",
+                "15:00",
+                "15:30",
+                "16:00",
+                "16:30",
+                "17:00",
+                "17:30",
+                "18:00",
+                "18:30",
+                "19:00"
+              ],
+              "enabled": true
+            },
+            "sunday": {
+              "slots": [],
+              "enabled": false
+            },
+            "tuesday": {
+              "slots": [
+                "09:00",
+                "09:30",
+                "10:00",
+                "10:30",
+                "11:00",
+                "11:30",
+                "12:00",
+                "12:30",
+                "13:00",
+                "13:30",
+                "14:00",
+                "14:30",
+                "15:00",
+                "15:30",
+                "16:00",
+                "16:30",
+                "17:00",
+                "17:30",
+                "18:00",
+                "18:30",
+                "19:00"
+              ],
+              "enabled": true
+            },
+            "saturday": {
+              "slots": [
+                "09:00",
+                "09:30",
+                "10:00",
+                "10:30",
+                "11:00",
+                "11:30",
+                "12:00",
+                "12:30",
+                "13:00",
+                "13:30",
+                "14:00",
+                "14:30",
+                "15:00",
+                "15:30",
+                "16:00",
+                "16:30",
+                "17:00",
+                "17:30",
+                "18:00",
+                "18:30",
+                "19:00"
+              ],
+              "enabled": true
+            },
+            "thursday": {
+              "slots": [
+                "09:00",
+                "09:30",
+                "10:00",
+                "10:30",
+                "11:00",
+                "11:30",
+                "12:00",
+                "12:30",
+                "13:00",
+                "13:30",
+                "14:00",
+                "14:30",
+                "15:00",
+                "15:30",
+                "16:00",
+                "16:30",
+                "17:00",
+                "17:30",
+                "18:00",
+                "18:30",
+                "19:00"
+              ],
+              "enabled": true
+            },
+            "wednesday": {
+              "slots": [
+                "09:00",
+                "09:30",
+                "10:00",
+                "10:30",
+                "11:00",
+                "11:30",
+                "12:00",
+                "12:30",
+                "13:00",
+                "13:30",
+                "14:00",
+                "14:30",
+                "15:00",
+                "15:30",
+                "16:00",
+                "16:30",
+                "17:00",
+                "17:30",
+                "18:00",
+                "18:30",
+                "19:00"
+              ],
+              "enabled": true
+            }
+          },
+          "serviceIds": [
+            "cmjir5h4o0002p2082c3n116o",
+            "cmjn98ho30001lb0862tooh19",
+            "cmjokrmnv0004rc09t6cjsur3",
+            "cmjolkfaf000erc09d8oj3xgx",
+            "cmjollflr000frc09o7fq8afa",
+            "cmjolm87q000grc09ltc2bo7z",
+            "cmjolmpfa000hrc09eehxa74h",
+            "cmjolnird000irc0932v8al0x",
+            "cmjolnxg9000jrc099axz8a43"
+          ],
+          "barberIds": [
+            "cmjir4szc0001p208m38g3p13",
+            "cmjokmsma0002rc09qso1ymbp",
+            "cmjoko0qz0003rc09asvby6r9"
+          ],
+          "slotDuration": 30,
+          "advanceBookingDays": 7,
+          "minimumNotice": 1,
+          "createdAt": "2025-12-26T21:28:39.246Z",
+          "updatedAt": "2025-12-27T17:54:38.704Z"
+        }
+      ]
+    },
+    "scheduleBlocks": {
+      "count": 0,
+      "data": []
+    },
+    "productSales": {
+      "count": 0,
+      "data": []
+    }
+  }
+}
