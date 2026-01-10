@@ -54,9 +54,9 @@ export async function GET(request: NextRequest) {
     });
 
     const commissionsData = barbers.map(barber => {
-      const barberCommissions = commissions.filter(c => c.barberId === barber.id);
+      const barberCommissions = commissions.filter(c => c.barberId === barber.id && c.appointment);
       const totalAppointments = barberCommissions.length;
-      const totalRevenue = barberCommissions.reduce((sum, c) => sum + Number(c.appointment.totalAmount), 0);
+      const totalRevenue = barberCommissions.reduce((sum, c) => sum + (c.appointment ? Number(c.appointment.totalAmount) : 0), 0);
       const totalCommission = barberCommissions.reduce((sum, c) => sum + Number(c.amount), 0);
       const paidCommission = barberCommissions
         .filter(c => c.status === "PAID")
