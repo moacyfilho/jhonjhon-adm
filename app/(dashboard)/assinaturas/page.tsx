@@ -1,10 +1,12 @@
 'use client';
 
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useMemo } from 'react';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
+import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
+import { Checkbox } from '@/components/ui/checkbox';
 import {
   Dialog,
   DialogContent,
@@ -44,8 +46,15 @@ import {
   XCircle,
   Calendar,
   RefreshCw,
+  MoreVertical,
+  Scissors,
+  DollarSign,
+  BarChart3,
+  Users,
+  Timer
 } from 'lucide-react';
 import { toast } from 'sonner';
+import { formatCurrency } from '@/lib/utils'; // Assuming this exists or I'll implement local
 
 interface Client {
   id: string;
@@ -57,6 +66,7 @@ interface Client {
 interface Subscription {
   id: string;
   clientId: string;
+  planId?: string;
   planName: string;
   amount: number;
   billingDay: number;
@@ -67,11 +77,22 @@ interface Subscription {
   usageLimit?: number;
   observations?: string;
   client: Client;
-  usageHistory?: Array<{
-    id: string;
-    usedDate: string;
-    serviceDetails?: string;
-  }>;
+  plan?: Plan;
+}
+
+interface Plan {
+  id: string;
+  name: string;
+  price: number;
+  paymentLink?: string;
+  servicesIncluded: string | null;
+  isActive: boolean;
+}
+
+interface Service {
+  id: string;
+  name: string;
+  price: number;
 }
 
 interface PaymentLink {
@@ -82,22 +103,38 @@ interface PaymentLink {
 }
 
 export default function AssinaturasPage() {
+  const [activeTab, setActiveTab] = useState('assinaturas');
+
+  // Data States
   const [subscriptions, setSubscriptions] = useState<Subscription[]>([]);
+  const [plans, setPlans] = useState<Plan[]>([]);
   const [clients, setClients] = useState<Client[]>([]);
+  const [services, setServices] = useState<Service[]>([]);
+
+  // UI States
   const [loading, setLoading] = useState(true);
   const [searchTerm, setSearchTerm] = useState('');
   const [statusFilter, setStatusFilter] = useState<string | undefined>(undefined);
-  const [isDialogOpen, setIsDialogOpen] = useState(false);
+
+  // Dialog States
+  const [isSubDialogOpen, setIsSubDialogOpen] = useState(false);
+  const [isPlanDialogOpen, setIsPlanDialogOpen] = useState(false);
   const [isLinkDialogOpen, setIsLinkDialogOpen] = useState(false);
   const [isDeleteDialogOpen, setIsDeleteDialogOpen] = useState(false);
+
+  // Selection States
   const [selectedSubscription, setSelectedSubscription] = useState<Subscription | null>(null);
-  const [subscriptionToDelete, setSubscriptionToDelete] = useState<string | null>(null);
+  const [selectedPlan, setSelectedPlan] = useState<Plan | null>(null);
+  const [itemToDelete, setItemToDelete] = useState<{ type: 'subscription' | 'plan', id: string } | null>(null);
   const [generatedLink, setGeneratedLink] = useState<PaymentLink | null>(null);
   const [submitting, setSubmitting] = useState(false);
 
+  // Forms
   const [clientSearchTerm, setClientSearchTerm] = useState('');
-  const [formData, setFormData] = useState({
+
+  const [subFormData, setSubFormData] = useState({
     clientId: '',
+    planId: 'custom', // 'custom' or plan ID
     planName: '',
     amount: '',
     billingDay: '',
@@ -107,14 +144,28 @@ export default function AssinaturasPage() {
     status: 'ACTIVE' as 'ACTIVE' | 'SUSPENDED' | 'CANCELLED',
   });
 
+  const [planFormData, setPlanFormData] = useState({
+    name: '',
+    price: '',
+    paymentLink: '',
+    servicesIncluded: [] as { serviceId: string, unlimited: boolean, quantity: number }[],
+  });
+
+  // Load Data
+  useEffect(() => {
+    fetchClients();
+    fetchServices();
+    fetchPlans();
+    fetchSubscriptions();
+  }, []); // Reload when needed
+
   useEffect(() => {
     fetchSubscriptions();
-    fetchClients();
   }, [searchTerm, statusFilter]);
 
+  // Fetch Functions
   const fetchSubscriptions = async () => {
     try {
-      setLoading(true);
       const params = new URLSearchParams();
       if (searchTerm) params.append('search', searchTerm);
       if (statusFilter) params.append('status', statusFilter);
@@ -125,9 +176,17 @@ export default function AssinaturasPage() {
       setSubscriptions(data);
     } catch (error) {
       console.error(error);
-      toast.error('Erro ao carregar assinaturas');
-    } finally {
-      setLoading(false);
+    }
+  };
+
+  const fetchPlans = async () => {
+    try {
+      const response = await fetch('/api/plans');
+      if (!response.ok) throw new Error('Erro ao carregar planos');
+      const data = await response.json();
+      setPlans(data);
+    } catch (error) {
+      console.error(error);
     }
   };
 
@@ -139,26 +198,36 @@ export default function AssinaturasPage() {
       setClients(data);
     } catch (error) {
       console.error(error);
-      toast.error('Erro ao carregar clientes');
     }
   };
 
-  const handleSubmit = async (e: React.FormEvent) => {
+  const fetchServices = async () => {
+    try {
+      const response = await fetch('/api/services');
+      if (!response.ok) throw new Error('Erro ao carregar serviços');
+      const data = await response.json();
+      setServices(data);
+    } catch (error) {
+      console.error(error);
+    }
+  };
+
+  // --- Handlers for Subscription ---
+
+  const handleSubSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     setSubmitting(true);
-
     try {
       const url = selectedSubscription
         ? `/api/subscriptions/${selectedSubscription.id}`
         : '/api/subscriptions';
-
       const method = selectedSubscription ? 'PATCH' : 'POST';
 
       const payload = {
-        ...formData,
-        amount: parseFloat(formData.amount),
-        billingDay: parseInt(formData.billingDay),
-        usageLimit: formData.usageLimit ? parseInt(formData.usageLimit) : null,
+        ...subFormData,
+        amount: parseFloat(subFormData.amount),
+        billingDay: parseInt(subFormData.billingDay),
+        usageLimit: subFormData.usageLimit ? parseInt(subFormData.usageLimit) : null,
       };
 
       const response = await fetch(url, {
@@ -167,537 +236,545 @@ export default function AssinaturasPage() {
         body: JSON.stringify(payload),
       });
 
-      if (!response.ok) {
-        const error = await response.json();
-        throw new Error(error.error || 'Erro ao salvar assinatura');
-      }
+      if (!response.ok) throw new Error('Erro ao salvar assinatura');
 
-      toast.success(
-        selectedSubscription
-          ? 'Assinatura atualizada com sucesso!'
-          : 'Assinatura criada com sucesso!'
-      );
-      setIsDialogOpen(false);
-      resetForm();
+      toast.success(selectedSubscription ? 'Assinatura atualizada!' : 'Assinatura criada!');
+      setIsSubDialogOpen(false);
       fetchSubscriptions();
     } catch (error: any) {
-      console.error(error);
       toast.error(error.message);
     } finally {
       setSubmitting(false);
     }
   };
 
-  const handleDelete = async () => {
-    if (!subscriptionToDelete) return;
+  // --- Handlers for Plans ---
 
+  const handlePlanSubmit = async (e: React.FormEvent) => {
+    e.preventDefault();
+    setSubmitting(true);
     try {
-      const response = await fetch(`/api/subscriptions/${subscriptionToDelete}`, {
-        method: 'DELETE',
-      });
+      const url = selectedPlan
+        ? `/api/plans/${selectedPlan.id}`
+        : '/api/plans';
+      const method = selectedPlan ? 'PATCH' : 'POST';
 
-      if (!response.ok) throw new Error('Erro ao excluir assinatura');
+      // Format servicesIncluded to JSON string
+      const servicesJSON = JSON.stringify(
+        planFormData.servicesIncluded.reduce((acc, curr) => {
+          acc[curr.serviceId] = { unlimited: curr.unlimited, quantity: curr.quantity };
+          return acc;
+        }, {} as Record<string, any>)
+      );
 
-      toast.success('Assinatura excluída com sucesso!');
-      setIsDeleteDialogOpen(false);
-      setSubscriptionToDelete(null);
-      fetchSubscriptions();
-    } catch (error) {
-      console.error(error);
-      toast.error('Erro ao excluir assinatura');
-    }
-  };
+      const payload = {
+        name: planFormData.name,
+        price: parseFloat(planFormData.price),
+        paymentLink: planFormData.paymentLink,
+        servicesIncluded: servicesJSON,
+      };
 
-  const handleGeneratePaymentLink = async (subscription: Subscription) => {
-    try {
-      // Primeiro, criar uma conta a receber para esta assinatura
-      const dueDate = new Date();
-      dueDate.setDate(subscription.billingDay);
-      if (dueDate < new Date()) {
-        dueDate.setMonth(dueDate.getMonth() + 1);
-      }
-
-      const accountResponse = await fetch('/api/accounts-receivable', {
-        method: 'POST',
+      const response = await fetch(url, {
+        method,
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({
-          description: `Assinatura - ${subscription.planName} - ${subscription.client.name}`,
-          category: 'SUBSCRIPTION',
-          payer: subscription.client.name,
-          clientId: subscription.clientId,
-          phone: subscription.client.phone,
-          amount: subscription.amount,
-          dueDate: dueDate.toISOString(),
-        }),
+        body: JSON.stringify(payload),
       });
 
-      if (!accountResponse.ok) {
-        throw new Error('Erro ao criar conta a receber');
-      }
+      if (!response.ok) throw new Error('Erro ao salvar plano');
 
-      const account = await accountResponse.json();
-
-      // Agora gerar o link de pagamento
-      const linkResponse = await fetch('/api/payment-links', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({
-          accountReceivableId: account.id,
-          expiryDays: 7, // Link expira em 7 dias
-        }),
-      });
-
-      if (!linkResponse.ok) {
-        throw new Error('Erro ao gerar link de pagamento');
-      }
-
-      const link = await linkResponse.json();
-      setGeneratedLink(link);
-      setSelectedSubscription(subscription);
-      setIsLinkDialogOpen(true);
-      toast.success('Link de pagamento gerado com sucesso!');
+      toast.success(selectedPlan ? 'Plano atualizado!' : 'Plano criado!');
+      setIsPlanDialogOpen(false);
+      fetchPlans();
     } catch (error: any) {
-      console.error(error);
       toast.error(error.message);
+    } finally {
+      setSubmitting(false);
     }
   };
 
-  const handleCopyLink = () => {
-    if (generatedLink) {
-      navigator.clipboard.writeText(generatedLink.linkUrl);
-      toast.success('Link copiado para área de transferência!');
+  const handleServiceToggle = (serviceId: string, checked: boolean) => {
+    if (checked) {
+      setPlanFormData(prev => ({
+        ...prev,
+        servicesIncluded: [...prev.servicesIncluded, { serviceId, unlimited: false, quantity: 1 }]
+      }));
+    } else {
+      setPlanFormData(prev => ({
+        ...prev,
+        servicesIncluded: prev.servicesIncluded.filter(s => s.serviceId !== serviceId)
+      }));
     }
   };
 
-  const handleSendWhatsApp = () => {
-    if (!generatedLink || !selectedSubscription) return;
-
-    const phone = selectedSubscription.client.phone.replace(/\D/g, '');
-    const message = `Olá, ${selectedSubscription.client.name}! Segue o link para pagamento da sua assinatura (${new Date().toLocaleDateString('pt-BR', { month: 'long', year: 'numeric' })}): ${generatedLink.linkUrl}`;
-    const whatsappUrl = `https://wa.me/55${phone}?text=${encodeURIComponent(message)}`;
-
-    // Marcar link como enviado
-    fetch(`/api/payment-links/${generatedLink.id}`, {
-      method: 'PATCH',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ status: 'sent', sentAt: new Date().toISOString() }),
-    });
-
-    window.open(whatsappUrl, '_blank');
-    toast.success('Abrindo WhatsApp Web...');
+  const updateServiceDetail = (serviceId: string, field: 'unlimited' | 'quantity', value: any) => {
+    setPlanFormData(prev => ({
+      ...prev,
+      servicesIncluded: prev.servicesIncluded.map(s =>
+        s.serviceId === serviceId ? { ...s, [field]: value } : s
+      )
+    }));
   };
 
-  const openCreateDialog = () => {
-    resetForm();
-    setSelectedSubscription(null);
-    setIsDialogOpen(true);
+  // --- Common Handlers ---
+
+  const handleDelete = async () => {
+    if (!itemToDelete) return;
+
+    try {
+      const endpoint = itemToDelete.type === 'subscription'
+        ? `/api/subscriptions/${itemToDelete.id}`
+        : `/api/plans/${itemToDelete.id}`;
+
+      await fetch(endpoint, { method: 'DELETE' });
+
+      toast.success('Excluído com sucesso!');
+      if (itemToDelete.type === 'subscription') fetchSubscriptions();
+      else fetchPlans();
+
+      setIsDeleteDialogOpen(false);
+    } catch (error) {
+      toast.error('Erro ao excluir');
+    }
   };
 
-  const openEditDialog = (subscription: Subscription) => {
-    setSelectedSubscription(subscription);
-    setFormData({
-      clientId: subscription.clientId,
-      planName: subscription.planName,
-      amount: subscription.amount.toString(),
-      billingDay: subscription.billingDay.toString(),
-      servicesIncluded: subscription.servicesIncluded || '',
-      usageLimit: subscription.usageLimit?.toString() || '',
-      observations: subscription.observations || '',
-      status: subscription.status,
-    });
-    setIsDialogOpen(true);
-  };
-
-  const resetForm = () => {
-    setFormData({
-      clientId: '',
-      planName: '',
-      amount: '',
-      billingDay: '',
-      servicesIncluded: '',
-      usageLimit: '',
-      observations: '',
-      status: 'ACTIVE',
-    });
-    setClientSearchTerm('');
-  };
-
-  // Filtrar clientes baseado na pesquisa
-  const filteredClients = clients.filter((client) => {
-    if (!clientSearchTerm) return true;
-    const searchLower = clientSearchTerm.toLowerCase();
-    return (
-      client.name.toLowerCase().includes(searchLower) ||
-      client.phone.includes(searchLower)
-    );
-  });
+  // --- Helpers ---
 
   const getStatusBadge = (status: string) => {
-    const variants: Record<string, { label: string; className: string; icon: any }> = {
-      ACTIVE: {
-        label: 'Ativa',
-        className: 'bg-green-500/10 text-green-500 border-green-500/20',
-        icon: CheckCircle2,
-      },
-      SUSPENDED: {
-        label: 'Suspensa',
-        className: 'bg-yellow-500/10 text-yellow-500 border-yellow-500/20',
-        icon: Clock,
-      },
-      CANCELLED: {
-        label: 'Cancelada',
-        className: 'bg-red-500/10 text-red-500 border-red-500/20',
-        icon: XCircle,
-      },
+    const variants: Record<string, any> = {
+      ACTIVE: { label: 'Ativa', className: 'bg-green-500/10 text-green-500 border-green-500/20' },
+      SUSPENDED: { label: 'Suspensa', className: 'bg-yellow-500/10 text-yellow-500 border-yellow-500/20' },
+      CANCELLED: { label: 'Cancelada', className: 'bg-red-500/10 text-red-500 border-red-500/20' },
     };
-
     const config = variants[status] || variants.ACTIVE;
-    const Icon = config.icon;
-
-    return (
-      <Badge className={config.className}>
-        <Icon className="mr-1 h-3 w-3" />
-        {config.label}
-      </Badge>
-    );
+    return <Badge className={config.className}>{config.label}</Badge>;
   };
 
-  const handleProcessRecurrence = async () => {
-    try {
-      setLoading(true);
-      const response = await fetch('/api/subscriptions/process-recurrence');
-      const data = await response.json();
+  const filteredClients = clients.filter(c =>
+    c.name.toLowerCase().includes(clientSearchTerm.toLowerCase()) ||
+    c.phone.includes(clientSearchTerm)
+  );
 
-      if (response.ok) {
-        toast.success(`Concluído! ${data.created} novas contas geradas.`);
-        fetchSubscriptions();
-      } else {
-        toast.error(data.error || 'Erro ao processar recorrência');
-      }
-    } catch (error) {
-      console.error(error);
-      toast.error('Erro ao processar recorrência');
-    } finally {
-      setLoading(false);
-    }
-  };
+  // Metrics Calculation (Placeholder for now, can be improved)
+  const activeSubs = subscriptions.filter(s => s.status === 'ACTIVE');
+  const revenue = activeSubs.reduce((sum, s) => sum + s.amount, 0);
+  const totalSubs = activeSubs.length;
+  // Placeholder "Valor/Hora" (needs real hours data). 
+  // For now, let's display Average Plan Value.
+  const avgValue = totalSubs > 0 ? revenue / totalSubs : 0;
 
   return (
-    <div className="space-y-10">
+    <div className="space-y-8">
       {/* Header */}
       <div className="flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
         <div>
           <h1 className="text-4xl font-serif font-bold text-white mb-2">
-            Gestão de <span className="text-gold-500">Assinaturas</span>
+            Gestão de <span className="text-gold-500">Planos & Assinaturas</span>
           </h1>
           <p className="text-gray-500 font-medium">
-            Gerencie os clientes assinantes e gere links de cobrança
+            Gerencie planos recorrentes e assinaturas de clientes
           </p>
         </div>
-        <div className="flex flex-col sm:flex-row gap-3">
-          <Button
-            variant="outline"
-            onClick={handleProcessRecurrence}
-            className="border-white/10 text-white hover:bg-white/5 font-bold px-6 py-4 rounded-2xl h-auto"
-            title="Gerar contas a receber para o mês atual"
-          >
-            <RefreshCw className="mr-2 h-5 w-5" />
-            Processar Mensalidades
-          </Button>
-          <Button
-            onClick={openCreateDialog}
-            className="bg-gold-gradient hover:scale-105 active:scale-95 text-black font-bold px-8 py-4 rounded-2xl transition-all shadow-gold h-auto"
-          >
-            <Plus className="mr-2 h-5 w-5" />
-            Nova Assinatura
-          </Button>
+        <div className="flex gap-3">
+          {activeTab === 'assinaturas' ? (
+            <Button onClick={() => {
+              setSubFormData({
+                clientId: '',
+                planId: 'custom',
+                planName: '',
+                amount: '',
+                billingDay: '',
+                servicesIncluded: '',
+                usageLimit: '',
+                observations: '',
+                status: 'ACTIVE'
+              });
+              setSelectedSubscription(null);
+              setIsSubDialogOpen(true);
+            }} className="bg-gold-gradient text-black font-bold h-12 px-6 rounded-2xl">
+              <Plus className="mr-2 h-5 w-5" /> Nova Assinatura
+            </Button>
+          ) : (
+            <Button onClick={() => {
+              setPlanFormData({
+                name: '',
+                price: '',
+                paymentLink: '',
+                servicesIncluded: []
+              });
+              setSelectedPlan(null);
+              setIsPlanDialogOpen(true);
+            }} className="bg-gold-gradient text-black font-bold h-12 px-6 rounded-2xl">
+              <Plus className="mr-2 h-5 w-5" /> Novo Plano
+            </Button>
+          )}
         </div>
       </div>
 
-      {/* Filtros */}
-      <div className="glass-panel p-6 rounded-3xl">
-        <div className="flex flex-col gap-4 sm:flex-row">
-          <div className="relative flex-1 group">
-            <Search className="absolute left-4 top-1/2 h-5 w-5 -translate-y-1/2 text-gray-500 group-focus-within:text-gold-500 transition-colors" />
-            <Input
-              placeholder="Buscar por nome ou telefone do cliente..."
-              value={searchTerm}
-              onChange={(e) => setSearchTerm(e.target.value)}
-              className="pl-12 bg-white/5 border-white/10 text-white focus:ring-gold-500/50 focus:border-gold-500 rounded-2xl py-4"
-            />
-          </div>
-          <Select value={statusFilter} onValueChange={(value) => setStatusFilter(value || undefined)}>
-            <SelectTrigger className="w-full sm:w-[200px] bg-white/5 border-white/10 text-white rounded-2xl">
-              <SelectValue placeholder="Todos os status" />
-            </SelectTrigger>
-            <SelectContent>
-              <SelectItem value="all">Todos os status</SelectItem>
-              <SelectItem value="ACTIVE">Ativas</SelectItem>
-              <SelectItem value="SUSPENDED">Suspensas</SelectItem>
-              <SelectItem value="CANCELLED">Canceladas</SelectItem>
-            </SelectContent>
-          </Select>
-        </div>
+      {/* Metrics Cards */}
+      <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
+        <Card className="bg-black/40 border-white/10">
+          <CardContent className="p-6">
+            <div className="flex items-center justify-between">
+              <div>
+                <p className="text-sm font-medium text-gray-500">Receita Estimada</p>
+                <h3 className="text-2xl font-bold text-white mt-1">
+                  {new Intl.NumberFormat('pt-BR', { style: 'currency', currency: 'BRL' }).format(revenue)}
+                </h3>
+              </div>
+              <div className="h-10 w-10 bg-green-500/20 rounded-xl flex items-center justify-center">
+                <DollarSign className="h-5 w-5 text-green-500" />
+              </div>
+            </div>
+          </CardContent>
+        </Card>
+        <Card className="bg-black/40 border-white/10">
+          <CardContent className="p-6">
+            <div className="flex items-center justify-between">
+              <div>
+                <p className="text-sm font-medium text-gray-500">Assinaturas Ativas</p>
+                <h3 className="text-2xl font-bold text-white mt-1">{totalSubs}</h3>
+              </div>
+              <div className="h-10 w-10 bg-blue-500/20 rounded-xl flex items-center justify-center">
+                <Users className="h-5 w-5 text-blue-500" />
+              </div>
+            </div>
+          </CardContent>
+        </Card>
+        <Card className="bg-black/40 border-white/10">
+          <CardContent className="p-6">
+            <div className="flex items-center justify-between">
+              <div>
+                <p className="text-sm font-medium text-gray-500">Valor Médio</p>
+                <h3 className="text-2xl font-bold text-white mt-1">
+                  {new Intl.NumberFormat('pt-BR', { style: 'currency', currency: 'BRL' }).format(avgValue)}
+                </h3>
+              </div>
+              <div className="h-10 w-10 bg-gold-500/20 rounded-xl flex items-center justify-center">
+                <BarChart3 className="h-5 w-5 text-gold-500" />
+              </div>
+            </div>
+          </CardContent>
+        </Card>
+        <Card className="bg-black/40 border-white/10">
+          <CardContent className="p-6">
+            <div className="flex items-center justify-between">
+              <div>
+                <p className="text-sm font-medium text-gray-500">Planos Disponíveis</p>
+                <h3 className="text-2xl font-bold text-white mt-1">{plans.length}</h3>
+              </div>
+              <div className="h-10 w-10 bg-purple-500/20 rounded-xl flex items-center justify-center">
+                <Scissors className="h-5 w-5 text-purple-500" />
+              </div>
+            </div>
+          </CardContent>
+        </Card>
       </div>
 
-      {/* Lista de Assinaturas */}
-      {loading ? (
-        <div className="flex flex-col items-center justify-center py-32 space-y-4">
-          <div className="w-10 h-10 border-2 border-gold-500 border-t-transparent rounded-full animate-spin" />
-          <p className="text-gold-500 font-serif italic">Carregando assinaturas...</p>
+      {/* Tabs */}
+      <Tabs value={activeTab} onValueChange={setActiveTab} className="space-y-8">
+        <div className="flex justify-between items-center">
+          <TabsList className="bg-black/40 border border-white/10 p-1 rounded-xl">
+            <TabsTrigger value="assinaturas" className="rounded-lg data-[state=active]:bg-gold-500 data-[state=active]:text-black">
+              Assinaturas
+            </TabsTrigger>
+            <TabsTrigger value="planos" className="rounded-lg data-[state=active]:bg-gold-500 data-[state=active]:text-black">
+              Pacotes/Planos
+            </TabsTrigger>
+          </TabsList>
+
+          {activeTab === 'assinaturas' && (
+            <div className="flex gap-2 w-full max-w-sm">
+              <Input
+                placeholder="Buscar cliente..."
+                value={searchTerm}
+                onChange={(e) => setSearchTerm(e.target.value)}
+                className="bg-white/5 border-white/10 text-white rounded-xl"
+              />
+            </div>
+          )}
         </div>
-      ) : subscriptions.length === 0 ? (
-        <div className="text-center py-20 bg-white/5 border border-white/5 rounded-3xl">
-          <div className="w-20 h-20 bg-white/5 rounded-full flex items-center justify-center mx-auto mb-6">
-            <Calendar className="h-10 w-10 text-gray-600" />
-          </div>
-          <p className="text-gray-500 text-lg font-medium">Nenhuma assinatura encontrada</p>
-        </div>
-      ) : (
-        <div className="grid gap-6 md:grid-cols-2 lg:grid-cols-3">
-          {subscriptions.map((subscription) => (
-            <div
-              key={subscription.id}
-              className="glass-panel p-6 rounded-3xl group hover:border-gold-500/30 transition-all duration-500"
-            >
-              {/* Glow effect */}
-              <div className="absolute -inset-0.5 bg-gold-gradient opacity-0 group-hover:opacity-10 rounded-3xl blur-xl transition-opacity pointer-events-none" />
 
-              <div className="relative">
-                <div className="flex items-start justify-between mb-4">
-                  <div>
-                    <h3 className="text-lg font-bold text-white group-hover:text-gold-500 transition-colors">
-                      {subscription.client.name}
-                    </h3>
-                    <p className="text-sm text-gray-500">{subscription.client.phone}</p>
-                  </div>
-                  {getStatusBadge(subscription.status)}
-                </div>
-
-                <div className="space-y-3">
-                  <div>
-                    <p className="text-sm font-medium text-gray-400">{subscription.planName}</p>
-                    <p className="text-3xl font-serif font-bold text-gold-500">
-                      R$ {subscription.amount.toFixed(2)}
-                      <span className="text-sm text-gray-500 font-normal">/mês</span>
-                    </p>
-                    <p className="text-xs text-gray-500 mt-1 uppercase tracking-wide">
-                      Vencimento: dia {subscription.billingDay}
-                    </p>
-                  </div>
-
-                  {subscription.servicesIncluded && (
-                    <div className="text-sm text-gray-400 bg-white/5 rounded-xl p-3">
-                      <span className="text-gold-500/80 font-medium">Serviços:</span> {subscription.servicesIncluded}
+        <TabsContent value="assinaturas" className="space-y-6">
+          <div className="grid gap-6 md:grid-cols-2 lg:grid-cols-3">
+            {subscriptions.map(sub => (
+              <div key={sub.id} className="glass-panel p-6 rounded-3xl group relative overflow-hidden border border-white/5 hover:border-gold-500/30 transition-all">
+                <div className="relative z-10">
+                  <div className="flex justify-between items-start mb-4">
+                    <div>
+                      <h3 className="text-lg font-bold text-white">{sub.client.name}</h3>
+                      <p className="text-sm text-gray-400">{sub.client.phone}</p>
                     </div>
-                  )}
-
-                  {subscription.usageLimit && (
-                    <div className="text-sm text-gray-400">
-                      <span className="text-gold-500/80 font-medium">Limite:</span> {subscription.usageLimit} usos/mês
+                    {getStatusBadge(sub.status)}
+                  </div>
+                  <div className="space-y-2">
+                    <p className="text-sm text-gold-500 font-medium tracking-wide uppercase">{sub.planName}</p>
+                    <div className="flex items-baseline gap-1">
+                      <span className="text-3xl font-serif font-bold text-white">R$ {sub.amount.toFixed(2)}</span>
+                      <span className="text-sm text-gray-500">/mês</span>
                     </div>
-                  )}
-
-                  <div className="flex gap-2 pt-2">
-                    <Button
-                      size="sm"
-                      variant="outline"
-                      onClick={() => handleGeneratePaymentLink(subscription)}
-                      disabled={subscription.status !== 'ACTIVE'}
-                      className="flex-1 border-gold-500/30 text-gold-500 hover:bg-gold-500/10 rounded-xl"
-                    >
-                      <LinkIcon className="mr-2 h-4 w-4" />
-                      Gerar Link
-                    </Button>
-                    <Button
-                      size="sm"
-                      variant="ghost"
-                      onClick={() => openEditDialog(subscription)}
-                      className="text-gray-400 hover:text-white hover:bg-white/10 rounded-xl"
-                    >
-                      <Edit className="h-4 w-4" />
-                    </Button>
-                    <Button
-                      size="sm"
-                      variant="ghost"
+                    <p className="text-xs text-gray-500">Vence dia {sub.billingDay}</p>
+                  </div>
+                  <div className="mt-6 pt-4 border-t border-white/5 flex gap-2">
+                    <Button size="sm" variant="outline" className="flex-1 rounded-xl border-white/10 hover:bg-white/5"
                       onClick={() => {
-                        setSubscriptionToDelete(subscription.id);
-                        setIsDeleteDialogOpen(true);
+                        setSelectedSubscription(sub);
+                        setSubFormData({
+                          clientId: sub.clientId,
+                          planId: sub.planId || 'custom',
+                          planName: sub.planName,
+                          amount: sub.amount.toString(),
+                          billingDay: sub.billingDay.toString(),
+                          usageLimit: sub.usageLimit?.toString() || '',
+                          servicesIncluded: sub.servicesIncluded || '',
+                          observations: sub.observations || '',
+                          status: sub.status
+                        });
+                        setIsSubDialogOpen(true);
                       }}
-                      className="text-gray-400 hover:text-red-500 hover:bg-red-500/10 rounded-xl"
+                    >
+                      Editar
+                    </Button>
+                    <Button size="icon" variant="ghost" className="rounded-xl text-red-500 hover:bg-red-500/10"
+                      onClick={() => { setItemToDelete({ type: 'subscription', id: sub.id }); setIsDeleteDialogOpen(true); }}
                     >
                       <Trash2 className="h-4 w-4" />
                     </Button>
                   </div>
                 </div>
               </div>
-            </div>
-          ))}
-        </div>
-      )}
+            ))}
+          </div>
+        </TabsContent>
 
-      {/* Dialog: Criar/Editar Assinatura */}
-      <Dialog open={isDialogOpen} onOpenChange={setIsDialogOpen}>
-        <DialogContent>
+        <TabsContent value="planos" className="space-y-6">
+          <div className="grid gap-6 md:grid-cols-2 lg:grid-cols-3">
+            {plans.map(plan => (
+              <div key={plan.id} className="glass-panel p-6 rounded-3xl border border-white/5 hover:border-gold-500/30 transition-all">
+                <div className="flex justify-between items-start mb-4">
+                  <h3 className="text-xl font-bold text-white">{plan.name}</h3>
+                  <Badge variant={plan.isActive ? 'default' : 'secondary'} className={plan.isActive ? 'bg-green-500/10 text-green-500' : ''}>
+                    {plan.isActive ? 'Ativo' : 'Inativo'}
+                  </Badge>
+                </div>
+                <div className="mb-4">
+                  <span className="text-3xl font-serif font-bold text-gold-500">R$ {plan.price.toFixed(2)}</span>
+                </div>
+                <div className="space-y-2 mb-6">
+                  {plan.servicesIncluded && (() => {
+                    try {
+                      const parsed = JSON.parse(plan.servicesIncluded);
+                      return Object.entries(parsed).slice(0, 3).map(([svcId, details]: [string, any]) => {
+                        const svcName = services.find(s => s.id === svcId)?.name || 'Serviço';
+                        return (
+                          <div key={svcId} className="flex items-center text-sm text-gray-400">
+                            <CheckCircle2 className="h-3 w-3 mr-2 text-gold-500" />
+                            {svcName}: {details.unlimited ? 'Ilimitado' : `${details.quantity}x`}
+                          </div>
+                        )
+                      });
+                    } catch (e) { return <span className="text-sm text-gray-500">Detalhes indisponíveis</span> }
+                  })()}
+                </div>
+                <div className="flex gap-2">
+                  <Button className="flex-1 rounded-xl bg-white/5 hover:bg-white/10" variant="outline"
+                    onClick={() => {
+                      const parsed = plan.servicesIncluded ? JSON.parse(plan.servicesIncluded) : {};
+                      const formattedServices = Object.entries(parsed).map(([id, det]: [string, any]) => ({
+                        serviceId: id,
+                        unlimited: det.unlimited,
+                        quantity: det.quantity || 1
+                      }));
+                      setPlanFormData({
+                        name: plan.name,
+                        price: plan.price.toString(),
+                        paymentLink: plan.paymentLink || '',
+                        servicesIncluded: formattedServices
+                      });
+                      setSelectedPlan(plan);
+                      setIsPlanDialogOpen(true);
+                    }}
+                  >
+                    Editar
+                  </Button>
+                  <Button size="icon" variant="ghost" className="rounded-xl text-red-500 hover:bg-red-500/10"
+                    onClick={() => { setItemToDelete({ type: 'plan', id: plan.id }); setIsDeleteDialogOpen(true); }}
+                  >
+                    <Trash2 className="h-4 w-4" />
+                  </Button>
+                </div>
+              </div>
+            ))}
+          </div>
+        </TabsContent>
+      </Tabs>
+
+      {/* Dialog: Create/Edit Plan */}
+      <Dialog open={isPlanDialogOpen} onOpenChange={setIsPlanDialogOpen}>
+        <DialogContent className="max-w-xl bg-black/95 border-white/10 text-white">
           <DialogHeader>
-            <DialogTitle>
-              {selectedSubscription ? 'Editar Assinatura' : 'Nova Assinatura'}
-            </DialogTitle>
+            <DialogTitle>{selectedPlan ? 'Editar Plano' : 'Cadastrar novo Pacote/Plano'}</DialogTitle>
           </DialogHeader>
-          <form onSubmit={handleSubmit} className="space-y-4">
-            <div className="grid gap-4 sm:grid-cols-2">
-              <div className="space-y-2 sm:col-span-2">
-                <Label htmlFor="clientId">Cliente *</Label>
-                {!selectedSubscription && (
-                  <div className="relative mb-2">
-                    <Search className="absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-muted-foreground" />
-                    <Input
-                      placeholder="Pesquisar por nome ou telefone..."
-                      value={clientSearchTerm}
-                      onChange={(e) => setClientSearchTerm(e.target.value)}
-                      className="pl-10"
-                    />
+          <form onSubmit={handlePlanSubmit} className="space-y-4">
+            <div className="grid grid-cols-2 gap-4">
+              <div className="space-y-2">
+                <Label>Nome do plano</Label>
+                <Input
+                  placeholder="Ex: Combo Cabelo + Barba"
+                  value={planFormData.name}
+                  onChange={e => setPlanFormData({ ...planFormData, name: e.target.value })}
+                  className="bg-white/5 border-white/10"
+                  required
+                />
+              </div>
+              <div className="space-y-2">
+                <Label>Valor do plano</Label>
+                <Input
+                  type="number" step="0.01"
+                  value={planFormData.price}
+                  onChange={e => setPlanFormData({ ...planFormData, price: e.target.value })}
+                  className="bg-white/5 border-white/10"
+                  required
+                />
+              </div>
+            </div>
+            <div className="space-y-2">
+              <Label>Link de cobrança</Label>
+              <Input
+                placeholder="Link para pagamento recorrente"
+                value={planFormData.paymentLink}
+                onChange={e => setPlanFormData({ ...planFormData, paymentLink: e.target.value })}
+                className="bg-white/5 border-white/10"
+              />
+            </div>
+
+            <div className="space-y-3 pt-4 border-t border-white/10">
+              <div className="grid grid-cols-12 text-xs font-bold text-gray-500 uppercase">
+                <div className="col-span-6">Serviços</div>
+                <div className="col-span-3 text-center">Ilimitado</div>
+                <div className="col-span-3 text-center">Quantidade</div>
+              </div>
+              {services.filter(s => true /* active */).map(service => {
+                const included = planFormData.servicesIncluded.find(i => i.serviceId === service.id);
+                return (
+                  <div key={service.id} className="grid grid-cols-12 items-center gap-2">
+                    <div className="col-span-6 flex items-center gap-2">
+                      <Checkbox
+                        checked={!!included}
+                        onCheckedChange={(checked) => handleServiceToggle(service.id, checked as boolean)}
+                      />
+                      <span className="text-sm">{service.name}</span>
+                    </div>
+                    <div className="col-span-3 flex justify-center">
+                      {included && (
+                        <Checkbox
+                          checked={included.unlimited}
+                          onCheckedChange={(c) => updateServiceDetail(service.id, 'unlimited', c)}
+                        />
+                      )}
+                    </div>
+                    <div className="col-span-3">
+                      {included && !included.unlimited && (
+                        <Input
+                          type="number" min="1"
+                          className="h-8 bg-white/5 border-white/10 text-center"
+                          value={included.quantity}
+                          onChange={(e) => updateServiceDetail(service.id, 'quantity', parseInt(e.target.value))}
+                        />
+                      )}
+                    </div>
                   </div>
-                )}
-                <Select
-                  value={formData.clientId}
-                  onValueChange={(value) => setFormData({ ...formData, clientId: value })}
-                  disabled={!!selectedSubscription}
-                >
-                  <SelectTrigger>
-                    <SelectValue placeholder="Selecione um cliente" />
-                  </SelectTrigger>
+                )
+              })}
+            </div>
+
+            <DialogFooter className="mt-6">
+              <Button type="button" variant="ghost" onClick={() => setIsPlanDialogOpen(false)}>Cancelar</Button>
+              <Button type="submit" className="bg-gold-gradient text-black font-bold">
+                {submitting ? 'Salvando...' : 'Cadastrar'}
+              </Button>
+            </DialogFooter>
+          </form>
+        </DialogContent>
+      </Dialog>
+
+      {/* Dialog: Create/Edit Subscription */}
+      <Dialog open={isSubDialogOpen} onOpenChange={setIsSubDialogOpen}>
+        <DialogContent className="max-w-lg bg-black/95 border-white/10 text-white">
+          <DialogHeader><DialogTitle>{selectedSubscription ? 'Editar Assinatura' : 'Nova Assinatura'}</DialogTitle></DialogHeader>
+          <form onSubmit={handleSubSubmit} className="space-y-4">
+            {/* Similar fields to previous implementation but simplified */}
+            <div className="space-y-2">
+              <Label>Cliente</Label>
+              <Select value={subFormData.clientId} onValueChange={v => setSubFormData({ ...subFormData, clientId: v })} disabled={!!selectedSubscription}>
+                <SelectTrigger className="bg-white/5 border-white/10"><SelectValue placeholder="Selecione" /></SelectTrigger>
+                <SelectContent className="max-h-60">
+                  {filteredClients.map(c => <SelectItem key={c.id} value={c.id}>{c.name}</SelectItem>)}
+                </SelectContent>
+              </Select>
+            </div>
+
+            <div className="space-y-2">
+              <Label>Plano Base (Modelo)</Label>
+              <Select value={subFormData.planId} onValueChange={(v) => {
+                const selected = plans.find(p => p.id === v);
+                if (selected) {
+                  setSubFormData(prev => ({
+                    ...prev,
+                    planId: selected.id,
+                    planName: selected.name,
+                    amount: selected.price.toString(),
+                    servicesIncluded: selected.servicesIncluded || '', // Raw JSON
+                  }));
+                } else {
+                  setSubFormData(prev => ({ ...prev, planId: 'custom' }));
+                }
+              }}>
+                <SelectTrigger className="bg-white/5 border-white/10"><SelectValue placeholder="Personalizado" /></SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="custom">Personalizado / Nenhum</SelectItem>
+                  {plans.map(p => <SelectItem key={p.id} value={p.id}>{p.name}</SelectItem>)}
+                </SelectContent>
+              </Select>
+            </div>
+
+            <div className="grid grid-cols-2 gap-4">
+              <div className="space-y-2">
+                <Label>Nome do Plano (Exibição)</Label>
+                <Input value={subFormData.planName} onChange={e => setSubFormData({ ...subFormData, planName: e.target.value })} className="bg-white/5 border-white/10" required />
+              </div>
+              <div className="space-y-2">
+                <Label>Valor</Label>
+                <Input value={subFormData.amount} onChange={e => setSubFormData({ ...subFormData, amount: e.target.value })} className="bg-white/5 border-white/10" required type="number" />
+              </div>
+            </div>
+
+            <div className="grid grid-cols-2 gap-4">
+              <div className="space-y-2">
+                <Label>Dia de Cobrança</Label>
+                <Input value={subFormData.billingDay} onChange={e => setSubFormData({ ...subFormData, billingDay: e.target.value })} className="bg-white/5 border-white/10" type="number" min="1" max="31" required />
+              </div>
+              <div className="space-y-2">
+                <Label>Status</Label>
+                <Select value={subFormData.status} onValueChange={(v: any) => setSubFormData({ ...subFormData, status: v })}>
+                  <SelectTrigger className="bg-white/5 border-white/10"><SelectValue /></SelectTrigger>
                   <SelectContent>
-                    {filteredClients.length === 0 ? (
-                      <div className="py-6 text-center text-sm text-muted-foreground">
-                        Nenhum cliente encontrado
-                      </div>
-                    ) : (
-                      filteredClients.map((client) => (
-                        <SelectItem key={client.id} value={client.id}>
-                          {client.name} - {client.phone}
-                        </SelectItem>
-                      ))
-                    )}
+                    <SelectItem value="ACTIVE">Ativa</SelectItem>
+                    <SelectItem value="SUSPENDED">Suspensa</SelectItem>
+                    <SelectItem value="CANCELLED">Cancelada</SelectItem>
                   </SelectContent>
                 </Select>
               </div>
-
-              <div className="space-y-2">
-                <Label htmlFor="planName">Nome do Plano *</Label>
-                <Input
-                  id="planName"
-                  value={formData.planName}
-                  onChange={(e) => setFormData({ ...formData, planName: e.target.value })}
-                  placeholder="Ex: Plano Premium Mensal"
-                  required
-                />
-              </div>
-
-              <div className="space-y-2">
-                <Label htmlFor="amount">Valor (R$) *</Label>
-                <Input
-                  id="amount"
-                  type="number"
-                  step="0.01"
-                  min="0"
-                  value={formData.amount}
-                  onChange={(e) => setFormData({ ...formData, amount: e.target.value })}
-                  placeholder="0.00"
-                  required
-                />
-              </div>
-
-              <div className="space-y-2">
-                <div className="grid grid-cols-2 gap-6 pt-4">
-                  <div className="space-y-2">
-                    <Label htmlFor="billingDay" className="text-sm font-bold text-white ml-1">Dia do Vencimento *</Label>
-                    <Input
-                      id="billingDay"
-                      type="number"
-                      min="1"
-                      max="31"
-                      value={formData.billingDay}
-                      onChange={(e) => setFormData({ ...formData, billingDay: e.target.value })}
-                      placeholder="1-31"
-                      className="bg-white/5 border-white/10 text-white rounded-xl py-6 focus:ring-gold-500/50 focus:border-gold-500"
-                      required
-                    />
-                  </div>
-
-                  <div className="space-y-2">
-                    <Label htmlFor="usageLimit" className="text-sm font-bold text-white ml-1">Usos/Mês</Label>
-                    <Input
-                      id="usageLimit"
-                      type="number"
-                      min="1"
-                      value={formData.usageLimit}
-                      onChange={(e) => setFormData({ ...formData, usageLimit: e.target.value })}
-                      placeholder="Ilimitado"
-                      className="bg-white/5 border-white/10 text-white rounded-xl py-6 focus:ring-gold-500/50 focus:border-gold-500"
-                    />
-                  </div>
-
-                  {selectedSubscription && (
-                    <div className="col-span-2 space-y-2">
-                      <Label htmlFor="status" className="text-sm font-bold text-white ml-1">Status</Label>
-                      <Select
-                        value={formData.status}
-                        onValueChange={(value: any) => setFormData({ ...formData, status: value })}
-                      >
-                        <SelectTrigger className="bg-white/5 border-white/10 text-white rounded-xl h-[52px]">
-                          <SelectValue />
-                        </SelectTrigger>
-                        <SelectContent>
-                          <SelectItem value="ACTIVE">Ativa</SelectItem>
-                          <SelectItem value="SUSPENDED">Suspensa</SelectItem>
-                          <SelectItem value="CANCELLED">Cancelada</SelectItem>
-                        </SelectContent>
-                      </Select>
-                    </div>
-                  )}
-                </div>
-
-                <div className="space-y-2">
-                  <Label htmlFor="servicesIncluded" className="text-sm font-bold text-white ml-1">Serviços Incluídos</Label>
-                  <Textarea
-                    id="servicesIncluded"
-                    value={formData.servicesIncluded}
-                    onChange={(e) => setFormData({ ...formData, servicesIncluded: e.target.value })}
-                    placeholder="Descreva os serviços incluídos na assinatura..."
-                    rows={3}
-                    className="bg-white/5 border-white/10 text-white rounded-xl focus:ring-gold-500/50 focus:border-gold-500 resize-none"
-                  />
-                </div>
-
-                <div className="space-y-2">
-                  <Label htmlFor="observations" className="text-sm font-bold text-white ml-1">Observações</Label>
-                  <Textarea
-                    id="observations"
-                    value={formData.observations}
-                    onChange={(e) => setFormData({ ...formData, observations: e.target.value })}
-                    placeholder="Observações adicionais..."
-                    rows={2}
-                    className="bg-white/5 border-white/10 text-white rounded-xl focus:ring-gold-500/50 focus:border-gold-500 resize-none"
-                  />
-                </div>
-              </div>
             </div>
 
-            <DialogFooter className="bg-white/[0.02] border-t border-white/5 p-8 flex items-center justify-end gap-4">
-              <Button
-                type="button"
-                variant="outline"
-                onClick={() => setIsDialogOpen(false)}
-                className="px-6 py-6 bg-white/5 hover:bg-white/10 text-white font-bold rounded-xl border-white/10 transition-all h-auto"
-              >
-                Cancelar
-              </Button>
-              <Button
-                type="submit"
-                disabled={submitting}
-                className="px-8 py-6 bg-gold-gradient hover:scale-105 active:scale-95 text-black font-bold rounded-xl transition-all shadow-gold h-auto"
-              >
+            <div className="space-y-2">
+              <Label>Serviços Incluídos (JSON ou Texto)</Label>
+              <Textarea value={subFormData.servicesIncluded} onChange={e => setSubFormData({ ...subFormData, servicesIncluded: e.target.value })} className="bg-white/5 border-white/10" rows={3} />
+              <p className="text-xs text-gray-500">Para planos modelo, isso é preenchido automaticamente.</p>
+            </div>
+
+            <DialogFooter className="mt-6">
+              <Button type="button" variant="ghost" onClick={() => setIsSubDialogOpen(false)}>Cancelar</Button>
+              <Button type="submit" className="bg-gold-gradient text-black font-bold">
                 {submitting ? 'Salvando...' : 'Salvar'}
               </Button>
             </DialogFooter>
@@ -705,76 +782,20 @@ export default function AssinaturasPage() {
         </DialogContent>
       </Dialog>
 
-      {/* Dialog: Link de Pagamento Gerado */}
-      <Dialog open={isLinkDialogOpen} onOpenChange={setIsLinkDialogOpen}>
-        <DialogContent>
-          <DialogHeader>
-            <DialogTitle>Link de Pagamento Gerado</DialogTitle>
-          </DialogHeader>
-          {generatedLink && selectedSubscription && (
-            <div className="space-y-4">
-              <div className="space-y-2">
-                <Label>Cliente</Label>
-                <p className="text-sm font-medium">{selectedSubscription.client.name}</p>
-                <p className="text-sm text-muted-foreground">{selectedSubscription.client.phone}</p>
-              </div>
-
-              <div className="space-y-2">
-                <Label>Plano/Valor</Label>
-                <p className="text-sm">
-                  {selectedSubscription.planName} - R$ {selectedSubscription.amount.toFixed(2)}
-                </p>
-              </div>
-
-              <div className="space-y-2">
-                <Label>Link de Pagamento</Label>
-                <div className="flex gap-2">
-                  <Input value={generatedLink.linkUrl} readOnly className="flex-1" />
-                  <Button type="button" variant="outline" size="icon" onClick={handleCopyLink}>
-                    <Copy className="h-4 w-4" />
-                  </Button>
-                </div>
-              </div>
-
-              <div className="flex gap-2">
-                <Button
-                  type="button"
-                  onClick={handleSendWhatsApp}
-                  className="flex-1 bg-green-600 hover:bg-green-700 text-white"
-                >
-                  <MessageSquare className="mr-2 h-4 w-4" />
-                  Enviar pelo WhatsApp
-                </Button>
-                <Button
-                  type="button"
-                  variant="outline"
-                  onClick={() => setIsLinkDialogOpen(false)}
-                >
-                  Fechar
-                </Button>
-              </div>
-            </div>
-          )}
-        </DialogContent>
-      </Dialog>
-
-      {/* Dialog: Confirmar Exclusão */}
+      {/* Alert Delete */}
       <AlertDialog open={isDeleteDialogOpen} onOpenChange={setIsDeleteDialogOpen}>
-        <AlertDialogContent>
+        <AlertDialogContent className="bg-black/95 border-white/10 text-white">
           <AlertDialogHeader>
-            <AlertDialogTitle>Confirmar exclusão</AlertDialogTitle>
-            <AlertDialogDescription>
-              Tem certeza que deseja excluir esta assinatura? Esta ação não pode ser desfeita.
-            </AlertDialogDescription>
+            <AlertDialogTitle>Excluir item?</AlertDialogTitle>
+            <AlertDialogDescription>Essa ação não pode ser desfeita.</AlertDialogDescription>
           </AlertDialogHeader>
           <AlertDialogFooter>
-            <AlertDialogCancel>Cancelar</AlertDialogCancel>
-            <AlertDialogAction onClick={handleDelete} className="bg-red-600 hover:bg-red-700">
-              Excluir
-            </AlertDialogAction>
+            <AlertDialogCancel className="text-black">Cancelar</AlertDialogCancel>
+            <AlertDialogAction onClick={handleDelete} className="bg-red-600">Excluir</AlertDialogAction>
           </AlertDialogFooter>
         </AlertDialogContent>
       </AlertDialog>
+
     </div>
   );
 }

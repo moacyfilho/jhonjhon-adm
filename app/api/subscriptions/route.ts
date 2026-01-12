@@ -73,6 +73,7 @@ export async function POST(request: NextRequest) {
     const body = await request.json();
     const {
       clientId,
+      planId,
       planName,
       amount,
       billingDay,
@@ -155,6 +156,7 @@ export async function POST(request: NextRequest) {
       const subscription = await tx.subscription.create({
         data: {
           clientId,
+          planId: planId === 'custom' ? null : planId,
           planName,
           amount,
           billingDay,

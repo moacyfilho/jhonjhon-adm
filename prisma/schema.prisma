@@ -303,6 +303,7 @@ model AccountReceivable {
 model Subscription {
   id                String             @id @default(cuid())
   clientId          String
+  planId            String?            // Opcional: Referência ao plano modelo
   planName          String             // Nome do plano (ex: "Plano Premium Mensal")
   amount            Float              // Valor mensal da assinatura
   billingDay        Int                // Dia do mês para cobrança (1-31)
@@ -315,6 +316,7 @@ model Subscription {
   createdAt         DateTime           @default(now())
   updatedAt         DateTime           @updatedAt
   client            Client             @relation(fields: [clientId], references: [id])
+  plan              Plan?              @relation(fields: [planId], references: [id])
   usageHistory      SubscriptionUsage[]
   accountsReceivable AccountReceivable[] // Contas a receber geradas pela assinatura
 }
@@ -425,4 +427,16 @@ model ScheduleBlock {
   reason      String?  // Motivo opcional (almoço, folga, etc.)
   createdAt   DateTime @default(now())
   updatedAt   DateTime @updatedAt
+}
+
+model Plan {
+  id               String         @id @default(cuid())
+  name             String
+  price            Float
+  paymentLink      String?
+  servicesIncluded String?        // JSON string: { "serviceId": { "unlimited": true, "quantity": 4 } }
+  isActive         Boolean        @default(true)
+  createdAt        DateTime       @default(now())
+  updatedAt        DateTime       @updatedAt
+  subscriptions    Subscription[]
 }

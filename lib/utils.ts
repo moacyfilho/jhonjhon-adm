@@ -24,3 +24,10 @@ export function isServiceIncluded(includedStr: string | null | undefined, servic
     normalizedName.includes(term) || term.includes(normalizedName)
   );
 }
+
+export function formatCurrency(value: number): string {
+  return new Intl.NumberFormat('pt-BR', {
+    style: 'currency',
+    currency: 'BRL',
+  }).format(value);
+}
