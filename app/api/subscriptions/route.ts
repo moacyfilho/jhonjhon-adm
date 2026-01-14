@@ -152,7 +152,7 @@ export async function POST(request: NextRequest) {
 
     const nextDueDate = calculateNextDueDate(billingDay);
 
-    let asaasSubscriptionId = null;
+    let asaasSubscriptionId: string | null = null;
 
     // Integração Asaas (se configurado)
     if (process.env.ASAAS_API_KEY) {
