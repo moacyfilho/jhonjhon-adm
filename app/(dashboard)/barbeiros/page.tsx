@@ -71,7 +71,6 @@ export default function BarbersPage() {
     phone: "",
     email: "",
     commissionRate: "50",
-    hourlyRate: "0",
     isActive: true,
   });
 
@@ -104,7 +103,6 @@ export default function BarbersPage() {
       phone: "",
       email: "",
       commissionRate: "50",
-      hourlyRate: "0",
       isActive: true,
     });
     setIsDialogOpen(true);
@@ -117,7 +115,6 @@ export default function BarbersPage() {
       phone: barber.phone,
       email: barber.email || "",
       commissionRate: String(barber.commissionRate),
-      hourlyRate: String((barber as any).hourlyRate || 0),
       isActive: barber.isActive,
     });
     setIsDialogOpen(true);
@@ -544,29 +541,7 @@ export default function BarbersPage() {
                   </p>
                 </div>
 
-                <div>
-                  <label className="block text-sm font-bold text-white mb-2 ml-1">
-                    Valor por Hora (R$) *
-                  </label>
-                  <input
-                    type="number"
-                    min="0"
-                    step="0.01"
-                    value={formData.hourlyRate}
-                    onChange={(e) =>
-                      setFormData({
-                        ...formData,
-                        hourlyRate: e.target.value,
-                      })
-                    }
-                    className="w-full px-4 py-3 bg-white/5 border border-white/10 rounded-xl focus:outline-none focus:ring-2 focus:ring-gold-500/50 focus:border-gold-500 text-white placeholder:text-gray-600 transition-all font-medium"
-                    required
-                    disabled={submitting}
-                  />
-                  <p className="text-xs text-muted-foreground mt-1">
-                    Valor fixo por hora para atendimentos de assinantes
-                  </p>
-                </div>
+
 
                 <div className="flex items-center gap-2">
                   <input
