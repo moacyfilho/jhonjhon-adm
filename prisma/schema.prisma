@@ -162,6 +162,7 @@ model Barber {
   onlineBookings   OnlineBooking[]
   scheduleBlocks   ScheduleBlock[]
   serviceCommissions BarberServiceCommission[]
+  productSales     ProductSale[]
 }
 
 model Service {
@@ -412,9 +413,12 @@ model Product {
   name                 String
   description          String?
   price                Float
+  costPrice            Float?               @default(0)
   stock                Float                @default(0) // Quantidade em estoque
   unit                 String               @default("un") // Unidade: un, kg, L, ml, etc
   category             String?              // Categoria: Pomadas, Shampoos, Acessórios, etc
+  isCommissioned       Boolean              @default(false)
+  commissionPercentage Float?               @default(0)
   isActive             Boolean              @default(true)
   createdAt            DateTime             @default(now())
   updatedAt            DateTime             @updatedAt
@@ -436,6 +440,10 @@ model ProductSale {
   createdAt      DateTime       @default(now())
   updatedAt      DateTime       @updatedAt
   product        Product        @relation(fields: [productId], references: [id])
+  
+  barberId       String?
+  barber         Barber?        @relation(fields: [barberId], references: [id])
+  commissionValue Float?        @default(0)
 }
 
 // Bloqueios de horário por barbeiro

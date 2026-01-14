@@ -19,7 +19,7 @@ export async function PUT(
 
     const { id } = params;
     const data = await request.json();
-    const { name, description, price, stock, unit, category, isActive } = data;
+    const { name, description, price, costPrice, stock, unit, category, isCommissioned, commissionPercentage, isActive } = data;
 
     // Verificar se produto existe
     const existingProduct = await prisma.product.findUnique({
@@ -49,9 +49,12 @@ export async function PUT(
     if (name !== undefined) updateData.name = name;
     if (description !== undefined) updateData.description = description || null;
     if (price !== undefined) updateData.price = parseFloat(price);
+    if (costPrice !== undefined) updateData.costPrice = costPrice ? parseFloat(costPrice) : 0;
     if (stock !== undefined) updateData.stock = parseFloat(stock);
     if (unit !== undefined) updateData.unit = unit;
     if (category !== undefined) updateData.category = category || null;
+    if (isCommissioned !== undefined) updateData.isCommissioned = isCommissioned;
+    if (commissionPercentage !== undefined) updateData.commissionPercentage = commissionPercentage ? parseFloat(commissionPercentage) : 0;
     if (isActive !== undefined) updateData.isActive = isActive;
 
     const product = await prisma.product.update({

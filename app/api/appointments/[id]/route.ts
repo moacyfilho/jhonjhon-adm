@@ -122,6 +122,8 @@ export async function PATCH(
       // Calcular totais e preparar dados dos serviços
       const servicesData = services.map(s => {
         let price = s.price;
+        const originalPrice = s.price; // Mantém o preço original para cálculo de comissão de assinante
+
         if (isSubscriptionAppointment && activeSubscription) {
           // Se o nome do serviço está contido na descrição dos serviços incluídos, é grátis
           const servicesIncluded = activeSubscriptionWithPlan?.servicesIncluded || activeSubscriptionWithPlan?.plan?.servicesIncluded;
@@ -129,16 +131,13 @@ export async function PATCH(
             price = 0;
           }
         } else if (isSubscriptionAppointment && !activeSubscription) {
-          // Se for agendamento de assinante mas não achou a assinatura ativa no momento (ex: expirou)
-          // Mantemos como grátis se já era isSubscriptionAppointment? 
-          // O usuário quer que cobre o que não está na assinatura, então se não tem assinatura, cobra tudo.
-          // Mas para evitar surpresas em agendamentos já marcados como sub, vamos ser cautelosos.
           price = 0;
         }
 
         return {
           id: s.id,
           price,
+          originalPrice, // Exporta o preço original
           duration: s.duration
         };
       });
@@ -184,14 +183,28 @@ export async function PATCH(
       let commissionAmount = 0;
 
       if (barber) {
+        // Comissão de Serviços
         if (isSubscriptionAppointment) {
-          const totalDurationHours = servicesData.reduce((sum, s) => sum + s.duration, 0) / 60;
-          commissionAmount = totalDurationHours * barber.hourlyRate;
+          // Assinantes: 45% do valor original dos serviços
+          const totalOriginalValue = servicesData.reduce((sum, s) => sum + (s.originalPrice || 0), 0);
+          commissionAmount += totalOriginalValue * 0.45;
         } else {
-          commissionAmount = servicesData.reduce((sum, s) => {
+          // Normal: % configurada sobre o valor pago
+          commissionAmount += servicesData.reduce((sum, s) => {
             const rate = getCommissionRate(s.id);
             return sum + (s.price * rate / 100);
           }, 0);
+        }
+
+        // Comissão de Produtos
+        if (mergedProducts.length > 0) {
+          mergedProducts.forEach(item => {
+            const productInfo = products.find(p => p.id === item.productId);
+            if (productInfo?.isCommissioned && productInfo.commissionPercentage) {
+              const itemTotal = item.unitPrice * item.quantity;
+              commissionAmount += itemTotal * (productInfo.commissionPercentage / 100);
+            }
+          });
         }
       }
 
@@ -331,6 +344,11 @@ export async function PATCH(
             service: true,
           },
         },
+        products: {
+          include: {
+            product: true,
+          },
+        },
         commission: true,
       },
     });
@@ -346,10 +364,9 @@ export async function PATCH(
       let commissionAmount = 0;
       if (barber) {
         if (isSubscription) {
-          // Comissão baseada em valor por hora
-          const totalDuration = existingAppointment.services.reduce((sum: number, s: any) => sum + (s.service?.duration || 0), 0);
-          const workedHours = totalDuration / 60;
-          commissionAmount = workedHours * (barber.hourlyRate || 0);
+          // Assinantes: 45% do valor base dos serviços
+          const totalOriginalValue = existingAppointment.services.reduce((sum: number, s: any) => sum + (s.service?.price || 0), 0);
+          commissionAmount = totalOriginalValue * 0.45;
         } else {
           // Comissão baseada em percentual (Customizada ou Padrão)
           const customCommissions = await prisma.barberServiceCommission.findMany({
@@ -361,6 +378,17 @@ export async function PATCH(
             const rate = custom ? custom.percentage : (barber.commissionRate || 0);
             return sum + (s.price * rate / 100);
           }, 0);
+        }
+
+        // Adicionar comissão de produtos
+        if (existingAppointment.products && existingAppointment.products.length > 0) {
+          existingAppointment.products.forEach((item: any) => {
+            const productInfo = item.product;
+            if (productInfo?.isCommissioned && productInfo.commissionPercentage) {
+              const itemTotal = item.unitPrice * item.quantity;
+              commissionAmount += itemTotal * (productInfo.commissionPercentage / 100);
+            }
+          });
         }
       }
 

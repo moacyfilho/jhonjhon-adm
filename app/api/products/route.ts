@@ -69,7 +69,7 @@ export async function POST(request: NextRequest) {
     }
 
     const data = await request.json();
-    const { name, description, price, stock, unit, category } = data;
+    const { name, description, price, costPrice, stock, unit, category, isCommissioned, commissionPercentage } = data;
 
     // Validações
     if (!name || !price) {
@@ -98,9 +98,12 @@ export async function POST(request: NextRequest) {
         name,
         description: description || null,
         price: parseFloat(price),
+        costPrice: costPrice ? parseFloat(costPrice) : 0,
         stock: stock !== undefined ? parseFloat(stock) : 0,
         unit: unit || 'un',
         category: category || null,
+        isCommissioned: isCommissioned || false,
+        commissionPercentage: commissionPercentage ? parseFloat(commissionPercentage) : 0,
         isActive: true,
       },
     });

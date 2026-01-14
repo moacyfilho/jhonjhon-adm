@@ -58,9 +58,12 @@ interface Product {
   name: string;
   description: string | null;
   price: number;
+  costPrice: number | null;
   stock: number;
   unit: string;
   category: string | null;
+  isCommissioned: boolean;
+  commissionPercentage: number | null;
   isActive: boolean;
   _count?: {
     sales: number;
@@ -120,9 +123,12 @@ export default function ProductsPage() {
     name: '',
     description: '',
     price: '',
+    costPrice: '',
     stock: '',
     unit: 'un',
     category: '',
+    isCommissioned: false,
+    commissionPercentage: '',
   });
 
   const [saleFormData, setSaleFormData] = useState<SaleFormData>({
@@ -164,9 +170,12 @@ export default function ProductsPage() {
         name: product.name,
         description: product.description || '',
         price: product.price.toString(),
+        costPrice: product.costPrice?.toString() || '',
         stock: product.stock.toString(),
         unit: product.unit,
         category: product.category || '',
+        isCommissioned: product.isCommissioned,
+        commissionPercentage: product.commissionPercentage?.toString() || '',
       });
     } else {
       setEditingProduct(null);
@@ -174,9 +183,12 @@ export default function ProductsPage() {
         name: '',
         description: '',
         price: '',
+        costPrice: '',
         stock: '0',
         unit: 'un',
         category: '',
+        isCommissioned: false,
+        commissionPercentage: '',
       });
     }
     setDialogOpen(true);
@@ -531,18 +543,33 @@ export default function ProductsPage() {
                 />
               </div>
 
-              <div className="space-y-2">
-                <Label htmlFor="price" className="text-sm font-bold text-white ml-1">Preço (R$) *</Label>
-                <Input
-                  id="price"
-                  type="number"
-                  step="0.01"
-                  min="0"
-                  value={formData.price}
-                  onChange={(e) => setFormData({ ...formData, price: e.target.value })}
-                  placeholder="0.00"
-                  className="bg-white/5 border-white/10 text-white rounded-xl py-6 focus:ring-gold-500/50 focus:border-gold-500"
-                />
+              <div className="grid grid-cols-2 gap-4">
+                <div className="space-y-2">
+                  <Label htmlFor="costPrice" className="text-sm font-bold text-white ml-1">Preço Custo (R$)</Label>
+                  <Input
+                    id="costPrice"
+                    type="number"
+                    step="0.01"
+                    min="0"
+                    value={formData.costPrice}
+                    onChange={(e) => setFormData({ ...formData, costPrice: e.target.value })}
+                    placeholder="0.00"
+                    className="bg-white/5 border-white/10 text-white rounded-xl py-6 focus:ring-gold-500/50 focus:border-gold-500"
+                  />
+                </div>
+                <div className="space-y-2">
+                  <Label htmlFor="price" className="text-sm font-bold text-white ml-1">Preço Venda (R$) *</Label>
+                  <Input
+                    id="price"
+                    type="number"
+                    step="0.01"
+                    min="0"
+                    value={formData.price}
+                    onChange={(e) => setFormData({ ...formData, price: e.target.value })}
+                    placeholder="0.00"
+                    className="bg-white/5 border-white/10 text-white rounded-xl py-6 focus:ring-gold-500/50 focus:border-gold-500"
+                  />
+                </div>
               </div>
 
               <div className="space-y-2">
@@ -595,6 +622,54 @@ export default function ProductsPage() {
                     ))}
                   </SelectContent>
                 </Select>
+              </div>
+
+              {/* Configuração de Comissão */}
+              <div className="grid grid-cols-2 gap-4 items-end pt-2 border-t border-white/5 mt-4">
+                <div className="space-y-2">
+                  <Label className="text-sm font-bold text-white ml-1 block">Produto comissionado?</Label>
+                  <div className="flex bg-white/5 rounded-xl p-1 border border-white/10">
+                    <button
+                      type="button"
+                      onClick={() => setFormData({ ...formData, isCommissioned: true })}
+                      className={`flex-1 py-3 rounded-lg text-sm font-bold transition-all ${formData.isCommissioned ? 'bg-gold-500 text-black shadow-lg' : 'text-gray-400 hover:text-white'}`}
+                    >
+                      Sim
+                    </button>
+                    <button
+                      type="button"
+                      onClick={() => setFormData({ ...formData, isCommissioned: false })}
+                      className={`flex-1 py-3 rounded-lg text-sm font-bold transition-all ${!formData.isCommissioned ? 'bg-red-500/20 text-red-500 border border-red-500/50' : 'text-gray-400 hover:text-white'}`}
+                    >
+                      Não
+                    </button>
+                  </div>
+                </div>
+
+                {formData.isCommissioned ? (
+                  <div className="space-y-2 animate-in fade-in slide-in-from-left-2">
+                    <Label htmlFor="commissionPercentage" className="text-sm font-bold text-white ml-1">% Comissão</Label>
+                    <div className="relative">
+                      <Input
+                        id="commissionPercentage"
+                        type="number"
+                        step="0.1"
+                        min="0"
+                        max="100"
+                        value={formData.commissionPercentage}
+                        onChange={(e) => setFormData({ ...formData, commissionPercentage: e.target.value })}
+                        placeholder="0"
+                        className="bg-white/5 border-white/10 text-white rounded-xl py-6 pr-8 focus:ring-gold-500/50 focus:border-gold-500"
+                      />
+                      <span className="absolute right-4 top-1/2 -translate-y-1/2 text-gray-500 font-bold">%</span>
+                    </div>
+                  </div>
+                ) : (
+                  <div className="space-y-2 opacity-30 pointer-events-none">
+                    <Label className="text-sm font-bold text-white ml-1">% Comissão</Label>
+                    <Input disabled placeholder="-" className="bg-white/5 border-white/10 rounded-xl py-6" />
+                  </div>
+                )}
               </div>
             </div>
           </div>
