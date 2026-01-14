@@ -589,6 +589,17 @@ export default function AgendamentoPage() {
       {/* Footer */}
       <footer className="border-t border-white/5 bg-black py-16">
         <div className="container mx-auto px-6">
+          <div className="flex justify-center mb-8">
+            <a
+              href="https://wa.me/5592985950190"
+              target="_blank"
+              rel="noopener noreferrer"
+              className="flex items-center gap-2 text-white/60 hover:text-green-500 transition-colors bg-white/5 hover:bg-white/10 px-4 py-2 rounded-full border border-white/5"
+            >
+              <Phone className="w-4 h-4" />
+              <span className="text-sm font-bold tracking-wide">WhatsApp: (92) 98595-0190</span>
+            </a>
+          </div>
           <div className="flex flex-col items-center gap-8">
             <div className="relative w-24 h-8 opacity-40 grayscale">
               <Image src="/logo.png" alt="Logo" fill className="object-contain" />
