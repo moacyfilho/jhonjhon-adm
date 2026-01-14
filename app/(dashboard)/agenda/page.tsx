@@ -1616,6 +1616,7 @@ function AppointmentDetailsDialog({
       clientId: appointment.client.id,
       amount: appointment.totalAmount.toString(),
       description: `Atendimento - ${format(new Date(appointment.date), "dd/MM")}`,
+      cpfCnpj: "",
     });
     setGeneratedPix(null);
     setIsPixDialogOpen(true);
