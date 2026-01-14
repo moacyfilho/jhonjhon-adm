@@ -502,8 +502,16 @@ export default function ComissoesPage() {
                   <TableRow className="border-white/5 hover:bg-white/5">
                     <TableCell className="font-medium text-white">Assinatura</TableCell>
                     {barbers.map(barber => (
+                      <TableCell key={barber.id} className="text-center text-gold-500 font-bold text-sm">
+                        45%
+                      </TableCell>
+                    ))}
+                  </TableRow>
+                  <TableRow className="border-white/5 hover:bg-white/5">
+                    <TableCell className="font-medium text-white">Produtos</TableCell>
+                    {barbers.map(barber => (
                       <TableCell key={barber.id} className="text-center text-gray-500 text-sm italic">
-                        Via Hora
+                        Por Produto
                       </TableCell>
                     ))}
                   </TableRow>
