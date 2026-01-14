@@ -67,7 +67,7 @@ export async function PUT(
     }
 
     const body = await request.json();
-    const { name, phone, email, commissionRate, hourlyRate, isActive } = body;
+    const { name, phone, email, commissionRate, hourlyRate, subscriptionCommissionRate, isActive } = body;
 
     if (!name || !phone) {
       return NextResponse.json(
@@ -83,7 +83,8 @@ export async function PUT(
         phone,
         email: email || null,
         commissionRate: parseFloat(commissionRate) || 0,
-        hourlyRate: parseFloat(hourlyRate) || 0,
+        hourlyRate: hourlyRate ? parseFloat(hourlyRate) : 0,
+        subscriptionCommissionRate: subscriptionCommissionRate ? parseFloat(subscriptionCommissionRate) : 45,
         isActive: isActive !== undefined ? isActive : true,
       },
     });

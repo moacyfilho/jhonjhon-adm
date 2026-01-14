@@ -65,7 +65,7 @@ export async function POST(request: NextRequest) {
     }
 
     const body = await request.json();
-    const { name, phone, email, commissionRate, hourlyRate, isActive } = body;
+    const { name, phone, email, commissionRate, hourlyRate, subscriptionCommissionRate, isActive } = body;
 
     if (!name || !phone) {
       return NextResponse.json(
@@ -80,7 +80,8 @@ export async function POST(request: NextRequest) {
         phone,
         email: email || null,
         commissionRate: parseFloat(commissionRate) || 0,
-        hourlyRate: parseFloat(hourlyRate) || 0,
+        hourlyRate: hourlyRate ? parseFloat(hourlyRate) : 0, // Mantém compatibilidade mas pode ser ignorado na UI
+        subscriptionCommissionRate: subscriptionCommissionRate ? parseFloat(subscriptionCommissionRate) : 45,
         isActive: isActive !== undefined ? isActive : true,
       },
     });

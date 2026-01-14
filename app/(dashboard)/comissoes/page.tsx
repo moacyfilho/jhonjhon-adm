@@ -54,6 +54,7 @@ interface Barber {
   name: string;
   image?: string;
   commissionRate: number;
+  subscriptionCommissionRate?: number;
 }
 
 interface Service {
@@ -503,7 +504,7 @@ export default function ComissoesPage() {
                     <TableCell className="font-medium text-white">Assinatura</TableCell>
                     {barbers.map(barber => (
                       <TableCell key={barber.id} className="text-center text-gold-500 font-bold text-sm">
-                        45%
+                        {barber.subscriptionCommissionRate ?? 45}%
                       </TableCell>
                     ))}
                   </TableRow>

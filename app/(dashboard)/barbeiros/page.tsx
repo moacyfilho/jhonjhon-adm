@@ -39,6 +39,7 @@ interface Barber {
   email?: string | null;
   password?: string | null;
   commissionRate: number;
+  subscriptionCommissionRate: number;
   isActive: boolean;
   createdAt: string;
   _count?: {
@@ -71,6 +72,7 @@ export default function BarbersPage() {
     phone: "",
     email: "",
     commissionRate: "50",
+    subscriptionCommissionRate: "45",
     isActive: true,
   });
 
@@ -103,6 +105,7 @@ export default function BarbersPage() {
       phone: "",
       email: "",
       commissionRate: "50",
+      subscriptionCommissionRate: "45",
       isActive: true,
     });
     setIsDialogOpen(true);
@@ -115,6 +118,7 @@ export default function BarbersPage() {
       phone: barber.phone,
       email: barber.email || "",
       commissionRate: String(barber.commissionRate),
+      subscriptionCommissionRate: String(barber.subscriptionCommissionRate || 45),
       isActive: barber.isActive,
     });
     setIsDialogOpen(true);
@@ -538,6 +542,31 @@ export default function BarbersPage() {
                   />
                   <p className="text-xs text-muted-foreground mt-1">
                     Porcentagem sobre serviços normais
+                  </p>
+                </div>
+
+                <div>
+                  <label className="block text-sm font-bold text-white mb-2 ml-1">
+                    Comissão Assinatura (%) *
+                  </label>
+                  <input
+                    type="number"
+                    min="0"
+                    max="100"
+                    step="0.01"
+                    value={formData.subscriptionCommissionRate}
+                    onChange={(e) =>
+                      setFormData({
+                        ...formData,
+                        subscriptionCommissionRate: e.target.value,
+                      })
+                    }
+                    className="w-full px-4 py-3 bg-white/5 border border-white/10 rounded-xl focus:outline-none focus:ring-2 focus:ring-gold-500/50 focus:border-gold-500 text-white placeholder:text-gray-600 transition-all font-medium"
+                    required
+                    disabled={submitting}
+                  />
+                  <p className="text-xs text-muted-foreground mt-1">
+                    Porcentagem sobre serviços de assinantes
                   </p>
                 </div>
 

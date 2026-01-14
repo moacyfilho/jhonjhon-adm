@@ -154,6 +154,7 @@ model Barber {
   password         String?         // Hash da senha para login
   commissionRate   Float           @default(0) // Percentual de comissão (0-100)
   hourlyRate       Float           @default(0) // Valor por hora para comissão de assinantes
+  subscriptionCommissionRate Float           @default(45) // Percentual de comissão para assinantes (0-100)
   isActive         Boolean         @default(true)
   createdAt        DateTime        @default(now())
   updatedAt        DateTime        @updatedAt

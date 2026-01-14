@@ -185,9 +185,10 @@ export async function PATCH(
       if (barber) {
         // Comissão de Serviços
         if (isSubscriptionAppointment) {
-          // Assinantes: 45% do valor original dos serviços
+          // Assinantes: % configurada no barbeiro sobre o valor original dos serviços
+          const subRate = (barber as any).subscriptionCommissionRate ?? 45;
           const totalOriginalValue = servicesData.reduce((sum, s) => sum + (s.originalPrice || 0), 0);
-          commissionAmount += totalOriginalValue * 0.45;
+          commissionAmount += totalOriginalValue * (subRate / 100);
         } else {
           // Normal: % configurada sobre o valor pago
           commissionAmount += servicesData.reduce((sum, s) => {
@@ -364,9 +365,10 @@ export async function PATCH(
       let commissionAmount = 0;
       if (barber) {
         if (isSubscription) {
-          // Assinantes: 45% do valor base dos serviços
+          // Assinantes: % configurada no barbeiro sobre o valor original dos serviços
+          const subRate = (barber as any).subscriptionCommissionRate ?? 45;
           const totalOriginalValue = existingAppointment.services.reduce((sum: number, s: any) => sum + (s.service?.price || 0), 0);
-          commissionAmount = totalOriginalValue * 0.45;
+          commissionAmount = totalOriginalValue * (subRate / 100);
         } else {
           // Comissão baseada em percentual (Customizada ou Padrão)
           const customCommissions = await prisma.barberServiceCommission.findMany({
