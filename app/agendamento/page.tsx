@@ -569,7 +569,7 @@ export default function AgendamentoPage() {
                     <div className="flex items-center gap-2 text-[10px] text-gray-500 font-bold uppercase tracking-widest">
                       <MapPin className="w-3 h-3 text-gold-500" /> Localização
                     </div>
-                    <p className="text-xs text-white/80 leading-relaxed">Rua Jeronimo Ribeiro, 38 - São Raimundo<br />CEP 69.027-100 Manaus - AM</p>
+                    <p className="text-xs text-white/80 leading-relaxed">Rua Jeronimo Ribeiro, 58 - São Raimundo<br />CEP 69.027-100 Manaus - AM</p>
                   </div>
                 </CardContent>
               </Card>
