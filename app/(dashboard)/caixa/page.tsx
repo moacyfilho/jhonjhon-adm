@@ -1,7 +1,7 @@
 "use client";
 
 import { useState, useEffect } from "react";
-import { Wallet, Plus, DollarSign, TrendingUp, TrendingDown, ShoppingCart } from "lucide-react";
+import { Wallet, Plus, DollarSign, TrendingUp, TrendingDown, ShoppingCart, QrCode, Copy, Check } from "lucide-react";
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -57,8 +57,23 @@ export default function CaixaPage() {
     productId: "",
     quantity: "1",
     paymentMethod: "",
+
     observations: "",
   });
+
+  // Pix States
+  const [isPixDialogOpen, setIsPixDialogOpen] = useState(false);
+  const [clients, setClients] = useState<any[]>([]);
+  const [pixData, setPixData] = useState({
+    clientId: "",
+    amount: "",
+    description: "",
+  });
+  const [generatedPix, setGeneratedPix] = useState<{
+    id: string;
+    qrCode: { encodedImage: string; payload: string };
+  } | null>(null);
+  const [copied, setCopied] = useState(false);
 
   useEffect(() => {
     fetchCashRegisters();
@@ -202,6 +217,63 @@ export default function CaixaPage() {
     }
   };
 
+  const fetchClients = async () => {
+    try {
+      const res = await fetch("/api/clients");
+      if (res.ok) {
+        const data = await res.json();
+        setClients(data.sort((a: any, b: any) => a.name.localeCompare(b.name)));
+      }
+    } catch (error) {
+      console.error("Error fetching clients:", error);
+    }
+  };
+
+  const handleOpenPixDialog = () => {
+    fetchClients();
+    setGeneratedPix(null);
+    setPixData({ clientId: "", amount: "", description: "" });
+    setIsPixDialogOpen(true);
+  };
+
+  const handleGeneratePix = async (e: React.FormEvent) => {
+    e.preventDefault();
+    if (!pixData.clientId || !pixData.amount) {
+      toast.error("Preencha cliente e valor");
+      return;
+    }
+
+    try {
+      const res = await fetch("/api/payments/pix", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify(pixData)
+      });
+
+      const data = await res.json();
+
+      if (res.ok) {
+        setGeneratedPix(data);
+        toast.success("Pix gerado com sucesso!");
+      } else {
+        toast.error(data.error || "Erro ao gerar Pix");
+      }
+    } catch (error) {
+      toast.error("Erro na comunicação");
+    }
+  };
+
+
+
+  const copyToClipboard = () => {
+    if (generatedPix?.qrCode?.payload) {
+      navigator.clipboard.writeText(generatedPix.qrCode.payload);
+      setCopied(true);
+      toast.success("Código copiado!");
+      setTimeout(() => setCopied(false), 2000);
+    }
+  };
+
   const handleOpenProductSaleDialog = () => {
     fetchProducts();
     setIsProductSaleDialogOpen(true);
@@ -320,6 +392,14 @@ export default function CaixaPage() {
                 >
                   <ShoppingCart className="w-4 h-4 mr-2" />
                   Venda de Produto
+                </Button>
+                <Button
+                  variant="outline"
+                  onClick={handleOpenPixDialog}
+                  className="border-blue-500/30 text-blue-500 hover:bg-blue-500/10"
+                >
+                  <QrCode className="w-4 h-4 mr-2" />
+                  Gerar Pix
                 </Button>
                 <Button
                   variant="outline"
@@ -862,6 +942,87 @@ export default function CaixaPage() {
               </Button>
             </div>
           </form>
+        </DialogContent>
+      </Dialog>
+
+      {/* Pix Dialog */}
+      <Dialog open={isPixDialogOpen} onOpenChange={setIsPixDialogOpen}>
+        <DialogContent className="sm:max-w-md">
+          <DialogHeader>
+            <DialogTitle>Gerar Cobrança Pix</DialogTitle>
+          </DialogHeader>
+          {!generatedPix ? (
+            <form onSubmit={handleGeneratePix} className="space-y-4">
+              <div>
+                <Label>Cliente</Label>
+                <Select
+                  value={pixData.clientId}
+                  onValueChange={(val) => setPixData({ ...pixData, clientId: val })}
+                >
+                  <SelectTrigger className="bg-white/5 text-white border-white/10">
+                    <SelectValue placeholder="Selecione o Cliente" />
+                  </SelectTrigger>
+                  <SelectContent>
+                    {clients.map(c => (
+                      <SelectItem key={c.id} value={c.id}>{c.name}</SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
+              </div>
+              <div>
+                <Label>Valor (R$)</Label>
+                <Input
+                  type="number"
+                  step="0.01"
+                  value={pixData.amount}
+                  onChange={(e) => setPixData({ ...pixData, amount: e.target.value })}
+                  className="bg-white/5 text-white border-white/10"
+                />
+              </div>
+              <div>
+                <Label>Descrição</Label>
+                <Input
+                  value={pixData.description}
+                  onChange={(e) => setPixData({ ...pixData, description: e.target.value })}
+                  placeholder="Ex: Corte de Cabelo"
+                  className="bg-white/5 text-white border-white/10"
+                />
+              </div>
+              <Button type="submit" className="w-full bg-blue-600 hover:bg-blue-700 font-bold text-white">
+                Gerar QR Code
+              </Button>
+            </form>
+          ) : (
+            <div className="flex flex-col items-center space-y-4 py-4">
+              <div className="bg-white p-2 rounded-lg">
+                {/* eslint-disable-next-line @next/next/no-img-element */}
+                <img
+                  src={`data:image/png;base64,${generatedPix.qrCode.encodedImage}`}
+                  alt="QR Code Pix"
+                  className="w-48 h-48"
+                />
+              </div>
+              <p className="text-white font-bold text-lg">
+                {new Intl.NumberFormat('pt-BR', { style: 'currency', currency: 'BRL' }).format(Number(pixData.amount))}
+              </p>
+              <div className="w-full space-y-2">
+                <Label className="text-gray-400 text-xs uppercase">Copia e Cola</Label>
+                <div className="flex gap-2">
+                  <Input
+                    value={generatedPix.qrCode.payload}
+                    readOnly
+                    className="bg-black/50 border-white/10 text-gray-300 font-mono text-xs"
+                  />
+                  <Button size="icon" onClick={copyToClipboard} variant="outline" className="border-white/10 hover:bg-white/10">
+                    {copied ? <Check className="w-4 h-4 text-green-500" /> : <Copy className="w-4 h-4" />}
+                  </Button>
+                </div>
+              </div>
+              <Button variant="ghost" onClick={() => setIsPixDialogOpen(false)} className="text-gray-400 hover:text-white">
+                Fechar
+              </Button>
+            </div>
+          )}
         </DialogContent>
       </Dialog>
     </div>

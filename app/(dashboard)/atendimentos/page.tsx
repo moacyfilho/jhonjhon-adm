@@ -1,7 +1,7 @@
 "use client";
 
 import { useState, useEffect } from "react";
-import { Plus, Search, Calendar as CalendarIcon, Trash2, Eye, User, Phone, DollarSign, Clock } from "lucide-react";
+import { Plus, Search, Calendar as CalendarIcon, Trash2, Eye, User, Phone, DollarSign, Clock, Check, QrCode, Copy } from "lucide-react";
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Badge } from "@/components/ui/badge";
@@ -21,7 +21,7 @@ import { CardGridSkeleton } from "@/components/ui/table-skeleton";
 import { EmptyState } from "@/components/ui/empty-state";
 import { DateRangePicker } from "@/components/ui/date-range-picker";
 import { DateRange } from "react-day-picker";
-import { AppointmentStepper } from "@/components/appointments/appointment-stepper";
+import { AppointmentForm } from "@/components/appointments/appointment-form";
 
 interface Client {
   id: string;
@@ -82,6 +82,19 @@ export default function AtendimentosPage() {
   const [selectedDate, setSelectedDate] = useState<Date | undefined>(undefined);
   const [dateRange, setDateRange] = useState<DateRange | undefined>(undefined);
 
+  // Pix States
+  const [isPixDialogOpen, setIsPixDialogOpen] = useState(false);
+  const [pixData, setPixData] = useState({
+    clientId: "",
+    amount: "",
+    description: "",
+  });
+  const [generatedPix, setGeneratedPix] = useState<{
+    id: string;
+    qrCode: { encodedImage: string; payload: string };
+  } | null>(null);
+  const [copied, setCopied] = useState(false);
+
 
 
   useEffect(() => {
@@ -105,7 +118,11 @@ export default function AtendimentosPage() {
       const res = await fetch(`/api/appointments?${params.toString()}`);
       const data = await res.json();
       if (Array.isArray(data)) {
-        setAppointments(data);
+        const enhancedData = data.map((appt: any) => ({
+          ...appt,
+          commissionAmount: appt.commission?.amount || appt.commissionAmount || 0,
+        }));
+        setAppointments(enhancedData);
       } else {
         console.error("API response is not an array:", data);
         toast.error("Erro ao carregar dados dos atendimentos");
@@ -168,6 +185,73 @@ export default function AtendimentosPage() {
     }
   };
 
+  const handleOpenPixDialog = () => {
+    if (!selectedAppointment) return;
+    setPixData({
+      clientId: selectedAppointment.client.id,
+      amount: selectedAppointment.totalAmount.toString(),
+      description: `Atendimento - ${format(new Date(selectedAppointment.date), "dd/MM")}`,
+    });
+    setGeneratedPix(null);
+    setIsPixDialogOpen(true);
+  };
+
+  const handleGeneratePix = async (e: React.FormEvent) => {
+    e.preventDefault();
+    if (!pixData.clientId || !pixData.amount) {
+      toast.error("Erro nos dados do Pix");
+      return;
+    }
+
+    try {
+      const res = await fetch("/api/payments/pix", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify(pixData)
+      });
+
+      const data = await res.json();
+
+      if (res.ok) {
+        setGeneratedPix(data);
+        toast.success("Pix gerado com sucesso!");
+      } else {
+        toast.error(data.error || "Erro ao gerar Pix");
+      }
+    } catch (error) {
+      toast.error("Erro na comunicação");
+    }
+  };
+
+  const copyToClipboard = () => {
+    if (generatedPix?.qrCode?.payload) {
+      navigator.clipboard.writeText(generatedPix.qrCode.payload);
+      setCopied(true);
+      toast.success("Código copiado!");
+      setTimeout(() => setCopied(false), 2000);
+    }
+  };
+
+  const handleCompleteAppointment = async (id: string) => {
+    try {
+      const res = await fetch(`/api/appointments/${id}`, {
+        method: "PATCH",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ status: "COMPLETED" }),
+      });
+
+      if (res.ok) {
+        toast.success("Atendimento concluído com sucesso!");
+        setIsViewDialogOpen(false);
+        fetchAppointments();
+      } else {
+        toast.error("Erro ao concluir atendimento");
+      }
+    } catch (error) {
+      toast.error("Erro ao concluir atendimento");
+    }
+  };
+
 
   const formatCurrency = (value: number) => {
     return new Intl.NumberFormat("pt-BR", {
@@ -181,6 +265,12 @@ export default function AtendimentosPage() {
     DEBIT_CARD: "Cartão Débito",
     CREDIT_CARD: "Cartão Crédito",
     PIX: "PIX",
+  };
+
+  const statusLabels: Record<string, string> = {
+    SCHEDULED: "Agendado",
+    COMPLETED: "Concluído",
+    CANCELED: "Cancelado",
   };
 
   return (
@@ -493,11 +583,11 @@ export default function AtendimentosPage() {
 
       {/* Create Dialog */}
       <Dialog open={isDialogOpen} onOpenChange={setIsDialogOpen}>
-        <DialogContent className="max-w-5xl p-0 overflow-hidden bg-black/95 border-gold-500/20 rounded-3xl" aria-describedby={undefined}>
-          <DialogHeader className="sr-only">
-            <DialogTitle>Novo Atendimento</DialogTitle>
+        <DialogContent className="max-w-2xl bg-black/95 border-gold-500/20 rounded-3xl">
+          <DialogHeader>
+            <DialogTitle className="text-xl font-bold text-white mb-4">Novo Atendimento</DialogTitle>
           </DialogHeader>
-          <AppointmentStepper
+          <AppointmentForm
             clients={clients}
             barbers={barbers}
             services={services}
@@ -571,7 +661,7 @@ export default function AtendimentosPage() {
                         : "bg-white/10 text-white"
                     )}
                   >
-                    {selectedAppointment.status === 'COMPLETED' ? '✓ Concluído' : selectedAppointment.status}
+                    {statusLabels[selectedAppointment.status] || selectedAppointment.status}
                   </Badge>
                 </div>
               </div>
@@ -628,9 +718,91 @@ export default function AtendimentosPage() {
                   <p className="text-white text-sm italic opacity-80 leading-relaxed">"{selectedAppointment.notes}"</p>
                 </div>
               )}
+
+              {/* Action Buttons */}
+              {selectedAppointment.status !== 'COMPLETED' && (
+                <div className="grid grid-cols-2 gap-3">
+                  <Button
+                    onClick={handleOpenPixDialog}
+                    className="h-14 bg-blue-500 hover:bg-blue-600 text-white font-bold text-lg rounded-2xl shadow-lg shadow-blue-500/20"
+                  >
+                    <QrCode className="w-6 h-6 mr-2" />
+                    Gerar Pix
+                  </Button>
+                  <Button
+                    onClick={() => handleCompleteAppointment(selectedAppointment.id)}
+                    className="h-14 bg-green-500 hover:bg-green-600 text-white font-bold text-lg rounded-2xl shadow-lg shadow-green-500/20"
+                  >
+                    <Check className="w-6 h-6 mr-2" />
+                    Concluir
+                  </Button>
+                </div>
+              )}
             </div>
           )}
         </DialogContent>      </Dialog>
+
+      {/* Pix Dialog */}
+      <Dialog open={isPixDialogOpen} onOpenChange={setIsPixDialogOpen}>
+        <DialogContent className="sm:max-w-md bg-black/95 border-gold-500/20">
+          <DialogHeader>
+            <DialogTitle className="text-white">Gerar Cobrança Pix</DialogTitle>
+          </DialogHeader>
+          {!generatedPix ? (
+            <form onSubmit={handleGeneratePix} className="space-y-4">
+              <div>
+                <Label className="text-white">Descrição</Label>
+                <Input
+                  value={pixData.description}
+                  onChange={(e) => setPixData({ ...pixData, description: e.target.value })}
+                  className="bg-white/5 text-white border-white/10"
+                />
+              </div>
+              <div>
+                <Label className="text-white">Valor (R$)</Label>
+                <Input
+                  value={pixData.amount}
+                  readOnly
+                  className="bg-white/5 text-white border-white/10 font-bold text-lg"
+                />
+              </div>
+              <Button type="submit" className="w-full bg-blue-600 hover:bg-blue-700 font-bold text-white">
+                Gerar QR Code
+              </Button>
+            </form>
+          ) : (
+            <div className="flex flex-col items-center space-y-4 py-4">
+              <div className="bg-white p-2 rounded-lg">
+                {/* eslint-disable-next-line @next/next/no-img-element */}
+                <img
+                  src={`data:image/png;base64,${generatedPix.qrCode.encodedImage}`}
+                  alt="QR Code Pix"
+                  className="w-48 h-48"
+                />
+              </div>
+              <p className="text-white font-bold text-lg">
+                {new Intl.NumberFormat('pt-BR', { style: 'currency', currency: 'BRL' }).format(Number(pixData.amount))}
+              </p>
+              <div className="w-full space-y-2">
+                <Label className="text-gray-400 text-xs uppercase">Copia e Cola</Label>
+                <div className="flex gap-2">
+                  <Input
+                    value={generatedPix.qrCode.payload}
+                    readOnly
+                    className="bg-black/50 border-white/10 text-gray-300 font-mono text-xs"
+                  />
+                  <Button size="icon" onClick={copyToClipboard} variant="outline" className="border-white/10 hover:bg-white/10">
+                    {copied ? <Check className="w-4 h-4 text-green-500" /> : <Copy className="w-4 h-4" />}
+                  </Button>
+                </div>
+              </div>
+              <Button variant="ghost" onClick={() => setIsPixDialogOpen(false)} className="text-gray-400 hover:text-white">
+                Fechar
+              </Button>
+            </div>
+          )}
+        </DialogContent>
+      </Dialog>
     </div>
   );
 }

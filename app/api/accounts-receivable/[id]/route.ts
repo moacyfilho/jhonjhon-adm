@@ -18,7 +18,7 @@ export async function PUT(
     }
 
     const body = await request.json();
-    const { description, category, payer, amount, dueDate, paymentDate, status, paymentMethod, observations } = body;
+    const { description, category, payer, amount, dueDate, paymentDate, status, paymentMethod, observations, phone } = body;
 
     const updateData: any = {};
 
@@ -29,6 +29,7 @@ export async function PUT(
     if (dueDate !== undefined) updateData.dueDate = new Date(dueDate);
     if (status !== undefined) updateData.status = status;
     if (observations !== undefined) updateData.observations = observations || null;
+    if (phone !== undefined) updateData.phone = phone || null;
 
     // Se estiver marcando como recebido
     if (status === 'PAID') {

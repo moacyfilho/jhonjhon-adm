@@ -195,7 +195,7 @@ export default function AssinaturasPage() {
       const response = await fetch('/api/clients');
       if (!response.ok) throw new Error('Erro ao carregar clientes');
       const data = await response.json();
-      setClients(data);
+      setClients(data.sort((a: Client, b: Client) => a.name.localeCompare(b.name)));
     } catch (error) {
       console.error(error);
     }
@@ -354,13 +354,17 @@ export default function AssinaturasPage() {
     c.phone.includes(clientSearchTerm)
   );
 
-  // Metrics Calculation (Placeholder for now, can be improved)
+  // Metrics Calculation
   const activeSubs = subscriptions.filter(s => s.status === 'ACTIVE');
-  const revenue = activeSubs.reduce((sum, s) => sum + s.amount, 0);
-  const totalSubs = activeSubs.length;
-  // Placeholder "Valor/Hora" (needs real hours data). 
-  // For now, let's display Average Plan Value.
-  const avgValue = totalSubs > 0 ? revenue / totalSubs : 0;
+  // Simulating Paid vs Pending for now (would need real transaction data)
+  const totalRevenue = activeSubs.reduce((sum, s) => sum + s.amount, 0);
+  const paidRevenue = 0; // Placeholder until payment integration
+  const pendingRevenue = totalRevenue - paidRevenue;
+
+  // Placeholders for advanced metrics
+  const hourlyRate = 0;
+  const frequency = 0;
+  const serviceTime = "0h00min";
 
   return (
     <div className="space-y-8">
@@ -411,61 +415,62 @@ export default function AssinaturasPage() {
       </div>
 
       {/* Metrics Cards */}
-      <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
-        <Card className="bg-black/40 border-white/10">
-          <CardContent className="p-6">
-            <div className="flex items-center justify-between">
-              <div>
-                <p className="text-sm font-medium text-gray-500">Receita Estimada</p>
-                <h3 className="text-2xl font-bold text-white mt-1">
-                  {new Intl.NumberFormat('pt-BR', { style: 'currency', currency: 'BRL' }).format(revenue)}
-                </h3>
-              </div>
-              <div className="h-10 w-10 bg-green-500/20 rounded-xl flex items-center justify-center">
-                <DollarSign className="h-5 w-5 text-green-500" />
-              </div>
+      <div className="grid grid-cols-2 lg:grid-cols-6 gap-4">
+        {/* Green - Recebidas */}
+        <Card className="bg-[#4ADE80] border-none text-black">
+          <CardContent className="p-4">
+            <p className="text-sm font-bold opacity-80">Recebidas</p>
+            <h3 className="text-xl font-bold mt-1">
+              {new Intl.NumberFormat('pt-BR', { style: 'currency', currency: 'BRL' }).format(paidRevenue)}
+            </h3>
+          </CardContent>
+        </Card>
+
+        {/* Red - A receber */}
+        <Card className="bg-[#F87171] border-none text-black">
+          <CardContent className="p-4">
+            <p className="text-sm font-bold opacity-80">A receber</p>
+            <h3 className="text-xl font-bold mt-1">
+              {new Intl.NumberFormat('pt-BR', { style: 'currency', currency: 'BRL' }).format(pendingRevenue)}
+            </h3>
+          </CardContent>
+        </Card>
+
+        {/* Gray - Total */}
+        <Card className="bg-[#6B7280] border-none text-white">
+          <CardContent className="p-4">
+            <p className="text-sm font-bold opacity-80">Total</p>
+            <h3 className="text-xl font-bold mt-1">
+              {new Intl.NumberFormat('pt-BR', { style: 'currency', currency: 'BRL' }).format(totalRevenue)}
+            </h3>
+          </CardContent>
+        </Card>
+
+        {/* Yellow - Valor/Hora */}
+        <Card className="bg-[#FACC15] border-none text-black">
+          <CardContent className="p-4">
+            <p className="text-sm font-bold opacity-80">Valor/Hora</p>
+            <h3 className="text-xl font-bold mt-1">
+              {new Intl.NumberFormat('pt-BR', { style: 'currency', currency: 'BRL' }).format(hourlyRate)}
+            </h3>
+          </CardContent>
+        </Card>
+
+        {/* Blue - Frequência */}
+        <Card className="bg-[#38BDF8] border-none text-black">
+          <CardContent className="p-4">
+            <p className="text-sm font-bold opacity-80">Frequência</p>
+            <div className="flex items-baseline gap-1 mt-1">
+              <span className="text-sm font-medium opacity-70">- vezes</span>
             </div>
           </CardContent>
         </Card>
-        <Card className="bg-black/40 border-white/10">
-          <CardContent className="p-6">
-            <div className="flex items-center justify-between">
-              <div>
-                <p className="text-sm font-medium text-gray-500">Assinaturas Ativas</p>
-                <h3 className="text-2xl font-bold text-white mt-1">{totalSubs}</h3>
-              </div>
-              <div className="h-10 w-10 bg-blue-500/20 rounded-xl flex items-center justify-center">
-                <Users className="h-5 w-5 text-blue-500" />
-              </div>
-            </div>
-          </CardContent>
-        </Card>
-        <Card className="bg-black/40 border-white/10">
-          <CardContent className="p-6">
-            <div className="flex items-center justify-between">
-              <div>
-                <p className="text-sm font-medium text-gray-500">Valor Médio</p>
-                <h3 className="text-2xl font-bold text-white mt-1">
-                  {new Intl.NumberFormat('pt-BR', { style: 'currency', currency: 'BRL' }).format(avgValue)}
-                </h3>
-              </div>
-              <div className="h-10 w-10 bg-gold-500/20 rounded-xl flex items-center justify-center">
-                <BarChart3 className="h-5 w-5 text-gold-500" />
-              </div>
-            </div>
-          </CardContent>
-        </Card>
-        <Card className="bg-black/40 border-white/10">
-          <CardContent className="p-6">
-            <div className="flex items-center justify-between">
-              <div>
-                <p className="text-sm font-medium text-gray-500">Planos Disponíveis</p>
-                <h3 className="text-2xl font-bold text-white mt-1">{plans.length}</h3>
-              </div>
-              <div className="h-10 w-10 bg-purple-500/20 rounded-xl flex items-center justify-center">
-                <Scissors className="h-5 w-5 text-purple-500" />
-              </div>
-            </div>
+
+        {/* Light Blue - Atendimento */}
+        <Card className="bg-[#A5F3FC] border-none text-black">
+          <CardContent className="p-4">
+            <p className="text-sm font-bold opacity-80">Atendimento</p>
+            <h3 className="text-md font-bold mt-1">{serviceTime}</h3>
           </CardContent>
         </Card>
       </div>

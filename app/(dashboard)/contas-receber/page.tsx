@@ -97,7 +97,8 @@ const paymentMethodLabels: Record<string, string> = {
 
 export default function ContasReceberPage() {
   const { user } = useUser();
-  const isAdmin = user?.user_metadata?.role === 'ADMIN';
+  const [userRole, setUserRole] = useState<string | null>(null);
+  const isAdmin = userRole === 'ADMIN';
 
   const [accounts, setAccounts] = useState<AccountReceivable[]>([]);
   const [loading, setLoading] = useState(true);
@@ -134,7 +135,20 @@ export default function ContasReceberPage() {
   useEffect(() => {
     fetchAccounts();
     fetchClients();
+    fetchUserRole();
   }, [filterStatus, filterCategory, showOnlySubscriptions]);
+
+  const fetchUserRole = async () => {
+    try {
+      const response = await fetch('/api/me');
+      if (response.ok) {
+        const data = await response.json();
+        setUserRole(data.role);
+      }
+    } catch (error) {
+      console.error('Erro ao buscar permissões:', error);
+    }
+  };
 
   const fetchClients = async () => {
     try {
@@ -734,7 +748,17 @@ export default function ContasReceberPage() {
                 <TableBody>
                   {accounts.map((account) => (
                     <TableRow key={account.id} className="border-white/5 hover:bg-white/5">
-                      <TableCell className="font-bold text-white">{account.description}</TableCell>
+                      <TableCell className="font-bold text-white">
+                        {(() => {
+                          let displayDesc = account.description;
+                          if (account.payer) {
+                            // Remove o nome do pagador do final da descrição se existir (com ou sem hífen/espaço antes)
+                            const regex = new RegExp(`\\s*[-–]?\\s*${account.payer.replace(/[.*+?^${}()|[\]\\]/g, '\\$&')}$`, 'i');
+                            displayDesc = displayDesc.replace(regex, '');
+                          }
+                          return displayDesc;
+                        })()}
+                      </TableCell>
                       <TableCell className="text-gray-400">{categoryLabels[account.category]}</TableCell>
                       <TableCell className="text-gray-400">{account.payer || '-'}</TableCell>
                       <TableCell className="font-bold text-green-500">R$ {account.amount.toFixed(2)}</TableCell>

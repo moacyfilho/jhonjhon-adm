@@ -64,7 +64,7 @@ export async function GET(request: NextRequest) {
 
         // Calcular totais
         const totalHours = appointments.reduce(
-          (sum, apt) => sum + (apt.workedHours || 0),
+          (sum, apt) => sum + (apt.workedHours || 0) + ((apt as any).workedHoursSubscription || 0),
           0
         );
         const totalAppointments = appointments.length;
@@ -91,7 +91,7 @@ export async function GET(request: NextRequest) {
             date: apt.date,
             clientName: apt.client.name,
             services: apt.services.map((s) => s.service.name).join(", "),
-            workedHours: apt.workedHours || 0,
+            workedHours: (apt.workedHours || 0) + ((apt as any).workedHoursSubscription || 0),
             totalAmount: apt.totalAmount,
           })),
         };

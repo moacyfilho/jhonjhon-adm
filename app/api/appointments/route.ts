@@ -278,6 +278,14 @@ export async function POST(request: NextRequest) {
       },
     });
 
+    let activeSubscriptionWithPlan: any = activeSubscription;
+    if (activeSubscription && !activeSubscription.servicesIncluded && activeSubscription.planId) {
+      const plan = await prisma.plan.findUnique({ where: { id: activeSubscription.planId } });
+      if (plan) {
+        activeSubscriptionWithPlan = { ...activeSubscription, plan };
+      }
+    }
+
     const isSubscriptionAppointment = !!activeSubscription;
 
     // Calculate totals
@@ -288,7 +296,8 @@ export async function POST(request: NextRequest) {
 
         if (isSubscriptionAppointment) {
           // Se o nome do serviço está contido na descrição dos serviços incluídos, é grátis
-          if (isServiceIncluded(activeSubscription.servicesIncluded, service?.name || "")) {
+          const servicesIncluded = activeSubscriptionWithPlan?.servicesIncluded || activeSubscriptionWithPlan?.plan?.servicesIncluded;
+          if (isServiceIncluded(servicesIncluded, service?.name || "", service?.id)) {
             price = 0;
           }
         }

@@ -20,6 +20,7 @@ import { cn } from "@/lib/utils";
 // Custom Components
 import { ServiceCardSelection } from './components/service-selection';
 import { BarberSelection } from './components/barber-selection';
+import { PlanSelection } from './components/plan-selection'; // Added PlanSelection
 
 interface Service {
   id: string;
@@ -32,6 +33,14 @@ interface Service {
 interface Barber {
   id: string;
   name: string;
+}
+
+interface Plan {
+  id: string;
+  name: string;
+  price: number;
+  paymentLink?: string | null;
+  servicesIncluded?: string | null;
 }
 
 interface TimeSlot {
@@ -58,6 +67,7 @@ const getBarberPhoto = (barberName: string): string | null => {
 export default function AgendamentoPage() {
   const [currentStep, setCurrentStep] = useState(0);
   const [services, setServices] = useState<Service[]>([]);
+  const [plans, setPlans] = useState<Plan[]>([]); // Added plans state
   const [barbers, setBarbers] = useState<Barber[]>([]);
   const [availableSlots, setAvailableSlots] = useState<TimeSlot[]>([]);
   const [loading, setLoading] = useState(true);
@@ -85,7 +95,7 @@ export default function AgendamentoPage() {
   useEffect(() => {
     const init = async () => {
       setLoading(true);
-      await Promise.all([fetchServices(), fetchBarbers(), fetchSettings()]);
+      await Promise.all([fetchServices(), fetchPlans(), fetchBarbers(), fetchSettings()]); // Fetch plans
       setLoading(false);
     };
     init();
@@ -120,6 +130,18 @@ export default function AgendamentoPage() {
     } catch (error) {
       console.error(error);
       toast.error('Erro ao carregar serviços');
+    }
+  };
+
+  const fetchPlans = async () => {
+    try {
+      const response = await fetch('/api/public/plans');
+      if (!response.ok) throw new Error('Erro ao carregar planos');
+      const data = await response.json();
+      setPlans(data);
+    } catch (error) {
+      console.error(error);
+      // Optional: don't block if plans fail
     }
   };
 
@@ -284,6 +306,13 @@ export default function AgendamentoPage() {
                           selectedId={formData.serviceId}
                           onSelect={(id) => setFormData({ ...formData, serviceId: id })}
                         />
+
+                        {/* Subscription Plans Section */}
+                        {plans.length > 0 && (
+                          <div className="pt-8 border-t border-white/5">
+                            <PlanSelection plans={plans} />
+                          </div>
+                        )}
                       </section>
 
                       <section className={cn("space-y-8 transition-opacity duration-500", !formData.serviceId && "opacity-20 pointer-events-none")}>

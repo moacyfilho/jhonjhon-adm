@@ -109,6 +109,14 @@ export async function PATCH(
         },
       }) : null;
 
+      let activeSubscriptionWithPlan: any = activeSubscription;
+      if (activeSubscription && !activeSubscription.servicesIncluded && activeSubscription.planId) {
+        const plan = await prisma.plan.findUnique({ where: { id: activeSubscription.planId } });
+        if (plan) {
+          activeSubscriptionWithPlan = { ...activeSubscription, plan };
+        }
+      }
+
       const isSubscriptionAppointment = !!activeSubscription || appointment?.isSubscriptionAppointment || false;
 
       // Calcular totais e preparar dados dos serviços
@@ -116,7 +124,8 @@ export async function PATCH(
         let price = s.price;
         if (isSubscriptionAppointment && activeSubscription) {
           // Se o nome do serviço está contido na descrição dos serviços incluídos, é grátis
-          if (isServiceIncluded(activeSubscription.servicesIncluded, s.name)) {
+          const servicesIncluded = activeSubscriptionWithPlan?.servicesIncluded || activeSubscriptionWithPlan?.plan?.servicesIncluded;
+          if (isServiceIncluded(servicesIncluded, s.name, s.id)) {
             price = 0;
           }
         } else if (isSubscriptionAppointment && !activeSubscription) {
@@ -161,10 +170,30 @@ export async function PATCH(
 
       const productsTotal = mergedProducts.reduce((sum, item) => sum + (item.unitPrice * item.quantity), 0);
 
+      // Buscar comissões personalizadas
+      const customCommissions = barber ? await prisma.barberServiceCommission.findMany({
+        where: { barberId: barber.id }
+      }) : [];
+
+      const getCommissionRate = (serviceId: string) => {
+        const custom = customCommissions.find(c => c.serviceId === serviceId);
+        return custom ? custom.percentage : (barber?.commissionRate || 0);
+      };
+
       const totalAmount = servicesTotal + productsTotal;
-      const commissionAmount = barber
-        ? (isSubscriptionAppointment ? (servicesData.reduce((sum, s) => sum + s.duration, 0) / 60 * barber.hourlyRate) : (servicesTotal * barber.commissionRate) / 100)
-        : 0;
+      let commissionAmount = 0;
+
+      if (barber) {
+        if (isSubscriptionAppointment) {
+          const totalDurationHours = servicesData.reduce((sum, s) => sum + s.duration, 0) / 60;
+          commissionAmount = totalDurationHours * barber.hourlyRate;
+        } else {
+          commissionAmount = servicesData.reduce((sum, s) => {
+            const rate = getCommissionRate(s.id);
+            return sum + (s.price * rate / 100);
+          }, 0);
+        }
+      }
 
       // Calculate worked hours based on service durations (convert minutes to hours)
       const totalMinutes = servicesData.reduce((sum, s) => sum + s.duration, 0);
@@ -322,8 +351,16 @@ export async function PATCH(
           const workedHours = totalDuration / 60;
           commissionAmount = workedHours * (barber.hourlyRate || 0);
         } else {
-          // Comissão baseada em percentual
-          commissionAmount = (servicesTotal * (barber.commissionRate || 0)) / 100;
+          // Comissão baseada em percentual (Customizada ou Padrão)
+          const customCommissions = await prisma.barberServiceCommission.findMany({
+            where: { barberId: barber.id }
+          });
+
+          commissionAmount = existingAppointment.services.reduce((sum: number, s: any) => {
+            const custom = customCommissions.find(c => c.serviceId === s.serviceId);
+            const rate = custom ? custom.percentage : (barber.commissionRate || 0);
+            return sum + (s.price * rate / 100);
+          }, 0);
         }
       }
 

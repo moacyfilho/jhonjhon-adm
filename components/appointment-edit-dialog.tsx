@@ -178,7 +178,7 @@ export function AppointmentEditDialog({
         if (active) {
           setSelectedServices(prevServices => prevServices.map(item => {
             const service = getService(item.serviceId);
-            if (service && isServiceIncluded(active.servicesIncluded, service.name)) {
+            if (service && isServiceIncluded(active.servicesIncluded || active.plan?.servicesIncluded, service.name, service.id)) {
               return { ...item, price: 0 };
             }
             return item;
@@ -208,7 +208,7 @@ export function AppointmentEditDialog({
 
     let price = service.price;
     if (activeSubscription) {
-      if (isServiceIncluded(activeSubscription.servicesIncluded, service.name)) {
+      if (isServiceIncluded(activeSubscription.servicesIncluded || activeSubscription.plan?.servicesIncluded, service.name, service.id)) {
         price = 0;
       }
     }

@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { createClient } from '@/utils/supabase/server';
 import { prisma } from '@/lib/db';
+import { asaas } from '@/lib/asaas';
 
 export const dynamic = 'force-dynamic';
 
@@ -42,6 +43,7 @@ export async function GET(request: NextRequest) {
       where,
       include: {
         client: true,
+        plan: true,
         usageHistory: {
           orderBy: { usedDate: 'desc' },
           take: 5,
@@ -150,6 +152,54 @@ export async function POST(request: NextRequest) {
 
     const nextDueDate = calculateNextDueDate(billingDay);
 
+    let asaasSubscriptionId = null;
+
+    // Integração Asaas (se configurado)
+    if (process.env.ASAAS_API_KEY) {
+      try {
+        // 1. Garantir Cliente no Asaas
+        let asaasCustomerId = client.asaasCustomerId;
+        if (!asaasCustomerId) {
+          const asaasCustomer = await asaas.createCustomer({
+            name: client.name,
+            phone: client.phone,
+            mobilePhone: client.phone,
+            externalReference: client.id
+          });
+          asaasCustomerId = asaasCustomer.id;
+          // Atualizar cliente localmente
+          await prisma.client.update({
+            where: { id: client.id },
+            data: { asaasCustomerId }
+          });
+        }
+
+        // 2. Criar Assinatura no Asaas
+        // Formatar data para YYYY-MM-DD
+        const nextDueDateStr = nextDueDate.toISOString().split('T')[0];
+
+        const asaasSub = await asaas.createSubscription({
+          customer: asaasCustomerId!,
+          billingType: 'PIX', // Default to PIX for now, can be parameterized
+          value: parseFloat(amount),
+          nextDueDate: nextDueDateStr,
+          cycle: 'MONTHLY',
+          description: `Assinatura ${planName}`
+        });
+
+        asaasSubscriptionId = asaasSub.id;
+
+      } catch (error) {
+        console.error('Erro na integração Asaas:', error);
+        // Opcional: Retornar erro ou continuar apenas localmente?
+        // Vamos retornar erro para garantir integridade se o usuário espera integração
+        return NextResponse.json(
+          { error: 'Erro ao criar assinatura no Asaas: ' + (error as Error).message },
+          { status: 500 }
+        );
+      }
+    }
+
     // Criar assinatura e conta a receber em uma transação
     const result = await prisma.$transaction(async (tx) => {
       // Criar assinatura
@@ -163,6 +213,7 @@ export async function POST(request: NextRequest) {
           servicesIncluded,
           usageLimit: usageLimit || null,
           observations,
+          asaasSubscriptionId, // Salvar ID do Asaas
         },
         include: {
           client: true,
@@ -172,7 +223,7 @@ export async function POST(request: NextRequest) {
       // Criar conta a receber automaticamente
       const accountReceivable = await tx.accountReceivable.create({
         data: {
-          description: `Assinatura - ${planName}`,
+          description: `${planName}`,
           category: 'SUBSCRIPTION',
           payer: client.name,
           clientId: clientId,

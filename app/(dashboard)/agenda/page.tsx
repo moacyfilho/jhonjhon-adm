@@ -4,7 +4,7 @@ import { useState, useEffect } from 'react';
 import { DndContext, DragEndEvent, DragOverlay, useSensor, useSensors, PointerSensor } from '@dnd-kit/core';
 import { format, addDays, startOfWeek, addWeeks, subWeeks, parse, isSameDay, startOfDay } from 'date-fns';
 import { ptBR } from 'date-fns/locale';
-import { Calendar, ChevronLeft, ChevronRight, Filter, Search, Clock, User, DollarSign, Phone, CheckCircle, XCircle, Edit, Trash2, Globe, ShoppingCart, Plus, Minus, Award, Ban } from 'lucide-react';
+import { Calendar, ChevronLeft, ChevronRight, Filter, Search, Clock, User, DollarSign, Phone, CheckCircle, XCircle, Edit, Trash2, Globe, ShoppingCart, Plus, Minus, Award, Ban, QrCode, Copy } from 'lucide-react';
 import Image from 'next/image';
 import { Button } from '@/components/ui/button';
 import { Card } from '@/components/ui/card';
@@ -486,7 +486,7 @@ export default function AgendaPage() {
           if (isSubscriber) {
             if (subscription) {
               // Tem assinatura real, valida o serviço
-              if (service && isServiceIncluded((subscription as any).servicesIncluded, service.name)) {
+              if (service && isServiceIncluded((subscription as any).servicesIncluded, service.name, service.id)) {
                 price = 0;
               }
             } else if (booking.isSubscriber) {
@@ -539,6 +539,7 @@ export default function AgendaPage() {
       // Combinar ambos os tipos de agendamento e verificar assinantes para os agendamentos normais
       const enhancedAppointments = appointmentsData.map((appt: any) => ({
         ...appt,
+        commissionAmount: appt.commission?.amount || appt.commissionAmount || 0,
         client: {
           ...appt.client,
           isSubscriber: activeSubscriberIds.has(appt.client.id)
@@ -1596,6 +1597,66 @@ function AppointmentDetailsDialog({
   const [selectedPaymentMethod, setSelectedPaymentMethod] = useState(appointment.paymentMethod);
   const [isUpdating, setIsUpdating] = useState(false);
 
+  // Pix Logic
+  const [isPixDialogOpen, setIsPixDialogOpen] = useState(false);
+  const [pixData, setPixData] = useState({
+    clientId: "",
+    amount: "",
+    description: "",
+    cpfCnpj: "",
+  });
+  const [generatedPix, setGeneratedPix] = useState<{
+    id: string;
+    qrCode: { encodedImage: string; payload: string };
+  } | null>(null);
+  const [copied, setCopied] = useState(false);
+
+  const handleOpenPixDialog = () => {
+    setPixData({
+      clientId: appointment.client.id,
+      amount: appointment.totalAmount.toString(),
+      description: `Atendimento - ${format(new Date(appointment.date), "dd/MM")}`,
+    });
+    setGeneratedPix(null);
+    setIsPixDialogOpen(true);
+  };
+
+  const handleGeneratePix = async (e: React.FormEvent) => {
+    e.preventDefault();
+    if (!pixData.clientId || !pixData.amount) {
+      toast.error("Erro nos dados do Pix");
+      return;
+    }
+
+    try {
+      const res = await fetch("/api/payments/pix", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify(pixData)
+      });
+
+      const data = await res.json();
+
+      if (res.ok) {
+        setGeneratedPix(data);
+        toast.success("Pix gerado com sucesso!");
+      } else {
+        toast.error(data.error || "Erro ao gerar Pix");
+      }
+    } catch (error) {
+      toast.error("Erro na comunicação");
+    }
+  };
+
+  const copyToClipboard = () => {
+    if (generatedPix?.qrCode?.payload) {
+      navigator.clipboard.writeText(generatedPix.qrCode.payload);
+      setCopied(true);
+      toast.success("Código copiado!");
+      setTimeout(() => setCopied(false), 2000);
+    }
+  };
+
   const isCompleted = appointment.status === 'COMPLETED';
   const isOnline = appointment.isOnlineBooking;
 
@@ -1792,357 +1853,448 @@ function AppointmentDetailsDialog({
   };
 
   return (
-    <Dialog open={true} onOpenChange={onClose}>
-      <DialogContent>
-        <DialogHeader>
-          <DialogTitle>
-            <div className="flex items-center gap-2 font-serif text-white text-xl">
-              <div className="w-8 h-8 rounded-lg bg-gold-500/10 flex items-center justify-center border border-gold-500/20">
-                <Calendar className="w-4 h-4 text-gold-500" />
-              </div>
-              Detalhes do Agendamento
-              {isOnline && (
-                <Badge variant="outline" className="ml-2 border-blue-500/30 text-blue-400 bg-blue-500/10">
-                  <Globe className="w-3 h-3 mr-1" />
-                  ONLINE
-                </Badge>
-              )}
-            </div>
-          </DialogTitle>
-        </DialogHeader>
-
-        <div className="space-y-6">
-          {/* Cliente */}
-          <div className="bg-white/5 border border-white/10 p-4 rounded-2xl">
-            <div className="flex items-center gap-2 mb-2">
-              <User className="w-4 h-4 text-gold-500" />
-              <span className="text-xs font-bold uppercase tracking-widest text-gray-400">Cliente</span>
-            </div>
-            <p className="text-white font-bold text-lg">{appointment.client.name}</p>
-            <div className="flex items-center gap-2 mt-1">
-              <Phone className="w-3 h-3 text-gold-500/70" />
-              <p className="text-sm text-gray-400 font-medium">{appointment.client.phone}</p>
-            </div>
-          </div>
-
-          {/* Barbeiro e Data */}
-          <div className="grid grid-cols-2 gap-4">
-            <div className="bg-white/5 border border-white/10 p-4 rounded-2xl">
-              <span className="text-xs font-bold uppercase tracking-widest text-gray-400">Barbeiro</span>
-              <p className="text-white font-bold mt-1 text-lg">{appointment.barber.name}</p>
-            </div>
-            <div className="bg-white/5 border border-white/10 p-4 rounded-2xl">
-              <span className="text-xs font-bold uppercase tracking-widest text-gray-400">Data e Hora</span>
-              <p className="text-white font-bold mt-1 text-lg leading-tight">
-                {format(new Date(appointment.date), "dd/MM 'às' HH:mm", { locale: ptBR })}
-              </p>
-            </div>
-          </div>
-
-          {/* Serviços */}
-          <div className="bg-white/5 border border-white/10 p-4 rounded-2xl transition-all">
-            <div className="flex items-center justify-between mb-4">
-              <span className="text-xs font-bold uppercase tracking-widest text-gray-400">Serviços</span>
-              {!isCompleted && !isEditingServices && (
-                <Button
-                  variant="ghost"
-                  size="sm"
-                  onClick={() => setIsEditingServices(true)}
-                  className="h-8 px-3 text-gold-500 hover:text-gold-400 hover:bg-gold-500/10 rounded-lg text-xs font-bold"
-                >
-                  <Edit className="w-3 h-3 mr-2" />
-                  Editar
-                </Button>
-              )}
-            </div>
-
-            {isEditingServices ? (
-              <div className="space-y-4 animate-in fade-in slide-in-from-top-2 duration-300">
-                <div className="max-h-64 overflow-y-auto space-y-2 border border-white/10 rounded-xl p-3 bg-black/20 custom-scrollbar">
-                  {services.map((service) => (
-                    <label
-                      key={service.id}
-                      className={cn(
-                        "flex items-center gap-3 p-3 rounded-xl cursor-pointer border transition-all",
-                        selectedServiceIds.includes(service.id)
-                          ? "bg-gold-500/10 border-gold-500/30"
-                          : "bg-white/5 border-transparent hover:bg-white/10"
-                      )}
-                    >
-                      <input
-                        type="checkbox"
-                        checked={selectedServiceIds.includes(service.id)}
-                        onChange={() => toggleService(service.id)}
-                        className="w-4 h-4 rounded border-white/20 bg-black/50 text-gold-500 focus:ring-gold-500/50"
-                      />
-                      <div className="flex-1">
-                        <p className={cn("font-bold text-sm", selectedServiceIds.includes(service.id) ? "text-white" : "text-gray-300")}>{service.name}</p>
-                        <p className="text-xs text-gray-500 font-medium italic">
-                          {formatCurrency(service.price)} • {service.duration} min
-                        </p>
-                      </div>
-                    </label>
-                  ))}
+    <>
+      <Dialog open={true} onOpenChange={onClose}>
+        <DialogContent>
+          <DialogHeader>
+            <DialogTitle>
+              <div className="flex items-center gap-2 font-serif text-white text-xl">
+                <div className="w-8 h-8 rounded-lg bg-gold-500/10 flex items-center justify-center border border-gold-500/20">
+                  <Calendar className="w-4 h-4 text-gold-500" />
                 </div>
-                {selectedServiceIds.length > 0 && (
-                  <div className="bg-gold-500/5 p-4 rounded-xl border border-gold-500/20">
-                    <div className="flex justify-between items-center">
-                      <span className="text-xs font-bold uppercase tracking-widest text-gold-500">Novo Total</span>
-                      <span className="font-serif font-bold text-gold-500 text-xl">
-                        {formatCurrency(calculateTotal())}
-                      </span>
-                    </div>
-                  </div>
+                Detalhes do Agendamento
+                {isOnline && (
+                  <Badge variant="outline" className="ml-2 border-blue-500/30 text-blue-400 bg-blue-500/10">
+                    <Globe className="w-3 h-3 mr-1" />
+                    ONLINE
+                  </Badge>
                 )}
-                <div className="flex gap-3">
-                  <Button
-                    variant="outline"
-                    onClick={() => {
-                      setIsEditingServices(false);
-                      setSelectedServiceIds(appointment.services.map(s => s.service.id));
-                    }}
-                    className="flex-1 bg-white/5 border-white/10 text-white hover:bg-white/10"
-                  >
-                    Cancelar
-                  </Button>
-                  <Button
-                    onClick={handleSaveServices}
-                    disabled={isUpdating || selectedServiceIds.length === 0}
-                    className="flex-1 bg-gold-gradient text-black font-bold hover:scale-[1.02] active:scale-[0.98] transition-all"
-                  >
-                    {isUpdating ? 'Salvando...' : 'Salvar Alterações'}
-                  </Button>
-                </div>
               </div>
-            ) : (
-              <div className="space-y-2">
-                {appointment.services.map((s) => (
-                  <div key={s.service.id} className="flex justify-between items-center p-3 bg-black/20 rounded-xl border border-white/5">
-                    <span className="text-white font-medium">{s.service.name}</span>
-                    <span className="font-bold text-gold-500 text-sm">
-                      {formatCurrency(s.service.price)}
-                    </span>
-                  </div>
-                ))}
-              </div>
-            )}
-          </div>
+            </DialogTitle>
+          </DialogHeader>
 
-          {/* Produtos */}
-          {isEditingServices && (
-            <div className="bg-white/5 border border-white/10 p-4 rounded-2xl animate-in fade-in slide-in-from-top-2">
+          <div className="space-y-6">
+            {/* Cliente */}
+            <div className="bg-white/5 border border-white/10 p-4 rounded-2xl">
+              <div className="flex items-center gap-2 mb-2">
+                <User className="w-4 h-4 text-gold-500" />
+                <span className="text-xs font-bold uppercase tracking-widest text-gray-400">Cliente</span>
+              </div>
+              <p className="text-white font-bold text-lg">{appointment.client.name}</p>
+              <div className="flex items-center gap-2 mt-1">
+                <Phone className="w-3 h-3 text-gold-500/70" />
+                <p className="text-sm text-gray-400 font-medium">{appointment.client.phone}</p>
+              </div>
+            </div>
+
+            {/* Barbeiro e Data */}
+            <div className="grid grid-cols-2 gap-4">
+              <div className="bg-white/5 border border-white/10 p-4 rounded-2xl">
+                <span className="text-xs font-bold uppercase tracking-widest text-gray-400">Barbeiro</span>
+                <p className="text-white font-bold mt-1 text-lg">{appointment.barber.name}</p>
+              </div>
+              <div className="bg-white/5 border border-white/10 p-4 rounded-2xl">
+                <span className="text-xs font-bold uppercase tracking-widest text-gray-400">Data e Hora</span>
+                <p className="text-white font-bold mt-1 text-lg leading-tight">
+                  {format(new Date(appointment.date), "dd/MM 'às' HH:mm", { locale: ptBR })}
+                </p>
+              </div>
+            </div>
+
+            {/* Serviços */}
+            <div className="bg-white/5 border border-white/10 p-4 rounded-2xl transition-all">
               <div className="flex items-center justify-between mb-4">
-                <span className="text-xs font-bold uppercase tracking-widest text-gray-400">Produtos (Opcional)</span>
-              </div>
-
-              <div className="space-y-4">
-                {/* Adicionar Produto */}
-                <div className="flex gap-2">
-                  <Select onValueChange={(value) => addProduct(value)}>
-                    <SelectTrigger className="flex-1 bg-white/5 border-white/10 text-white rounded-xl h-12">
-                      <SelectValue placeholder="Adicionar produto..." />
-                    </SelectTrigger>
-                    <SelectContent>
-                      {products
-                        .filter(p => !selectedProducts.find(sp => sp.productId === p.id))
-                        .map(product => (
-                          <SelectItem key={product.id} value={product.id}>
-                            {product.name} - {formatCurrency(product.price)}
-                          </SelectItem>
-                        ))}
-                    </SelectContent>
-                  </Select>
-                </div>
-
-                {/* Lista de Produtos Selecionados */}
-                {selectedProducts.length > 0 && (
-                  <div className="space-y-2">
-                    {selectedProducts.map(item => {
-                      const product = getProduct(item.productId);
-                      if (!product) return null;
-                      return (
-                        <div key={item.productId} className="bg-white/5 p-3 rounded-xl border border-white/10 flex items-center justify-between">
-                          <div className="flex-1">
-                            <p className="font-bold text-white text-sm">{product.name}</p>
-                            <p className="text-xs text-gray-500">
-                              {formatCurrency(item.unitPrice)} × {item.quantity} = <span className="text-gold-500 font-bold">{formatCurrency(item.unitPrice * item.quantity)}</span>
-                            </p>
-                          </div>
-                          <div className="flex items-center gap-2">
-                            <Input
-                              type="number"
-                              value={item.quantity}
-                              onChange={(e) =>
-                                updateProductQuantity(item.productId, parseInt(e.target.value) || 0)
-                              }
-                              className="w-14 h-8 text-sm bg-black/20 border-white/10 text-white text-center p-1 rounded-lg"
-                              min="1"
-                            />
-                            <Button
-                              size="icon"
-                              variant="ghost"
-                              className="h-8 w-8 text-gray-500 hover:text-red-500 hover:bg-red-500/10 rounded-lg"
-                              onClick={() => removeProduct(item.productId)}
-                            >
-                              <Trash2 className="w-4 h-4" />
-                            </Button>
-                          </div>
-                        </div>
-                      );
-                    })}
-                  </div>
-                )}
-              </div>
-            </div>
-          )}
-
-          {/* Totais */}
-          <div className="bg-gold-500/5 border border-gold-500/20 p-6 rounded-2xl space-y-3">
-            <div className="flex justify-between items-center">
-              <span className="text-gray-400 font-medium">Valor Total:</span>
-              <span className="font-serif font-bold text-gold-500 text-3xl">
-                {isEditingServices ? formatCurrency(calculateTotal()) : formatCurrency(appointment.totalAmount)}
-              </span>
-            </div>
-            <div className="flex justify-between items-center text-sm pt-3 border-t border-gold-500/10">
-              <span className="text-gray-500 text-xs uppercase tracking-widest font-bold">Comissão do Barbeiro:</span>
-              <span className="font-bold text-white/50">
-                {formatCurrency(appointment.commissionAmount)}
-              </span>
-            </div>
-          </div>
-
-          {/* Status e Pagamento */}
-          <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-            <div className="bg-white/5 border border-white/10 p-4 rounded-2xl">
-              <span className="text-xs font-bold uppercase tracking-widest text-gray-400 block mb-2">Status</span>
-              <Badge
-                className={cn(
-                  "px-3 py-1 text-sm",
-                  isCompleted
-                    ? "bg-green-500/20 text-green-500 border-green-500/30"
-                    : "bg-white/10 text-white border-white/10"
-                )}
-              >
-                {isCompleted ? '✓ Concluído' : 'Agendado'}
-              </Badge>
-            </div>
-
-            <div className="bg-white/5 border border-white/10 p-4 rounded-2xl">
-              <div className="flex items-center justify-between mb-2">
-                <span className="text-xs font-bold uppercase tracking-widest text-gray-400">Pagamento</span>
-                {!isCompleted && !isEditingPayment && (
+                <span className="text-xs font-bold uppercase tracking-widest text-gray-400">Serviços</span>
+                {!isCompleted && !isEditingServices && (
                   <Button
                     variant="ghost"
                     size="sm"
-                    onClick={() => setIsEditingPayment(true)}
-                    className="h-6 w-6 p-0 text-gold-500 hover:text-gold-400 hover:bg-gold-500/10 rounded"
+                    onClick={() => setIsEditingServices(true)}
+                    className="h-8 px-3 text-gold-500 hover:text-gold-400 hover:bg-gold-500/10 rounded-lg text-xs font-bold"
                   >
-                    <Edit className="w-3 h-3" />
+                    <Edit className="w-3 h-3 mr-2" />
+                    Editar
                   </Button>
                 )}
               </div>
 
-              {isEditingPayment ? (
-                <div className="space-y-3 animate-in fade-in">
-                  <Select value={selectedPaymentMethod} onValueChange={setSelectedPaymentMethod}>
-                    <SelectTrigger className="bg-white/5 border-white/10 text-white rounded-xl h-10 text-sm">
-                      <SelectValue />
-                    </SelectTrigger>
-                    <SelectContent>
-                      {Object.entries(paymentMethodLabels).map(([value, label]) => (
-                        <SelectItem key={value} value={value}>
-                          {label}
-                        </SelectItem>
-                      ))}
-                    </SelectContent>
-                  </Select>
-                  <div className="flex gap-2">
+              {isEditingServices ? (
+                <div className="space-y-4 animate-in fade-in slide-in-from-top-2 duration-300">
+                  <div className="max-h-64 overflow-y-auto space-y-2 border border-white/10 rounded-xl p-3 bg-black/20 custom-scrollbar">
+                    {services.map((service) => (
+                      <label
+                        key={service.id}
+                        className={cn(
+                          "flex items-center gap-3 p-3 rounded-xl cursor-pointer border transition-all",
+                          selectedServiceIds.includes(service.id)
+                            ? "bg-gold-500/10 border-gold-500/30"
+                            : "bg-white/5 border-transparent hover:bg-white/10"
+                        )}
+                      >
+                        <input
+                          type="checkbox"
+                          checked={selectedServiceIds.includes(service.id)}
+                          onChange={() => toggleService(service.id)}
+                          className="w-4 h-4 rounded border-white/20 bg-black/50 text-gold-500 focus:ring-gold-500/50"
+                        />
+                        <div className="flex-1">
+                          <p className={cn("font-bold text-sm", selectedServiceIds.includes(service.id) ? "text-white" : "text-gray-300")}>{service.name}</p>
+                          <p className="text-xs text-gray-500 font-medium italic">
+                            {formatCurrency(service.price)} • {service.duration} min
+                          </p>
+                        </div>
+                      </label>
+                    ))}
+                  </div>
+                  {selectedServiceIds.length > 0 && (
+                    <div className="bg-gold-500/5 p-4 rounded-xl border border-gold-500/20">
+                      <div className="flex justify-between items-center">
+                        <span className="text-xs font-bold uppercase tracking-widest text-gold-500">Novo Total</span>
+                        <span className="font-serif font-bold text-gold-500 text-xl">
+                          {formatCurrency(calculateTotal())}
+                        </span>
+                      </div>
+                    </div>
+                  )}
+                  <div className="flex gap-3">
                     <Button
                       variant="outline"
-                      size="sm"
                       onClick={() => {
-                        setIsEditingPayment(false);
-                        setSelectedPaymentMethod(appointment.paymentMethod);
+                        setIsEditingServices(false);
+                        setSelectedServiceIds(appointment.services.map(s => s.service.id));
                       }}
-                      className="flex-1 h-8 text-xs bg-white/5 border-white/10 text-white hover:bg-white/10"
+                      className="flex-1 bg-white/5 border-white/10 text-white hover:bg-white/10"
                     >
-                      X
+                      Cancelar
                     </Button>
                     <Button
-                      size="sm"
-                      onClick={handleSavePaymentMethod}
-                      disabled={isUpdating}
-                      className="flex-1 h-8 text-xs bg-gold-gradient text-black font-bold"
+                      onClick={handleSaveServices}
+                      disabled={isUpdating || selectedServiceIds.length === 0}
+                      className="flex-1 bg-gold-gradient text-black font-bold hover:scale-[1.02] active:scale-[0.98] transition-all"
                     >
-                      Salvar
+                      {isUpdating ? 'Salvando...' : 'Salvar Alterações'}
                     </Button>
                   </div>
                 </div>
               ) : (
-                <Badge variant="outline" className="text-sm py-1 px-3 border-white/20 text-white bg-white/5 font-medium">
-                  {paymentMethodLabels[appointment.paymentMethod]}
-                </Badge>
+                <div className="space-y-2">
+                  {appointment.services.map((s) => (
+                    <div key={s.service.id} className="flex justify-between items-center p-3 bg-black/20 rounded-xl border border-white/5">
+                      <span className="text-white font-medium">{s.service.name}</span>
+                      <span className="font-bold text-gold-500 text-sm">
+                        {formatCurrency(s.service.price)}
+                      </span>
+                    </div>
+                  ))}
+                </div>
               )}
             </div>
-          </div>
 
-          {/* Observações */}
-          {appointment.notes && (
-            <div className="bg-white/5 border border-white/10 p-4 rounded-2xl">
-              <span className="text-xs font-bold uppercase tracking-widest text-gray-400 block mb-2">Observações</span>
-              <p className="text-gray-300 text-sm italic leading-relaxed">"{appointment.notes}"</p>
-            </div>
-          )}
+            {/* Produtos */}
+            {isEditingServices && (
+              <div className="bg-white/5 border border-white/10 p-4 rounded-2xl animate-in fade-in slide-in-from-top-2">
+                <div className="flex items-center justify-between mb-4">
+                  <span className="text-xs font-bold uppercase tracking-widest text-gray-400">Produtos (Opcional)</span>
+                </div>
 
-          {/* Alerta para agendamentos online */}
-          {isOnline && (
-            <div className="bg-blue-500/10 border border-blue-500/20 rounded-2xl p-4">
-              <div className="flex items-start gap-3">
-                <Globe className="w-5 h-5 text-blue-400 mt-0.5" />
-                <div className="text-sm text-blue-200/80">
-                  <p className="font-bold text-blue-400 mb-1">Agendamento Online</p>
-                  <p>Este agendamento foi criado através da página pública. Gerencie com cuidado.</p>
+                <div className="space-y-4">
+                  {/* Adicionar Produto */}
+                  <div className="flex gap-2">
+                    <Select onValueChange={(value) => addProduct(value)}>
+                      <SelectTrigger className="flex-1 bg-white/5 border-white/10 text-white rounded-xl h-12">
+                        <SelectValue placeholder="Adicionar produto..." />
+                      </SelectTrigger>
+                      <SelectContent>
+                        {products
+                          .filter(p => !selectedProducts.find(sp => sp.productId === p.id))
+                          .map(product => (
+                            <SelectItem key={product.id} value={product.id}>
+                              {product.name} - {formatCurrency(product.price)}
+                            </SelectItem>
+                          ))}
+                      </SelectContent>
+                    </Select>
+                  </div>
+
+                  {/* Lista de Produtos Selecionados */}
+                  {selectedProducts.length > 0 && (
+                    <div className="space-y-2">
+                      {selectedProducts.map(item => {
+                        const product = getProduct(item.productId);
+                        if (!product) return null;
+                        return (
+                          <div key={item.productId} className="bg-white/5 p-3 rounded-xl border border-white/10 flex items-center justify-between">
+                            <div className="flex-1">
+                              <p className="font-bold text-white text-sm">{product.name}</p>
+                              <p className="text-xs text-gray-500">
+                                {formatCurrency(item.unitPrice)} × {item.quantity} = <span className="text-gold-500 font-bold">{formatCurrency(item.unitPrice * item.quantity)}</span>
+                              </p>
+                            </div>
+                            <div className="flex items-center gap-2">
+                              <Input
+                                type="number"
+                                value={item.quantity}
+                                onChange={(e) =>
+                                  updateProductQuantity(item.productId, parseInt(e.target.value) || 0)
+                                }
+                                className="w-14 h-8 text-sm bg-black/20 border-white/10 text-white text-center p-1 rounded-lg"
+                                min="1"
+                              />
+                              <Button
+                                size="icon"
+                                variant="ghost"
+                                className="h-8 w-8 text-gray-500 hover:text-red-500 hover:bg-red-500/10 rounded-lg"
+                                onClick={() => removeProduct(item.productId)}
+                              >
+                                <Trash2 className="w-4 h-4" />
+                              </Button>
+                            </div>
+                          </div>
+                        );
+                      })}
+                    </div>
+                  )}
                 </div>
               </div>
+            )}
+
+            {/* Totais */}
+            <div className="bg-gold-500/5 border border-gold-500/20 p-6 rounded-2xl space-y-3">
+              <div className="flex justify-between items-center">
+                <span className="text-gray-400 font-medium">Valor Total:</span>
+                <span className="font-serif font-bold text-gold-500 text-3xl">
+                  {isEditingServices ? formatCurrency(calculateTotal()) : formatCurrency(appointment.totalAmount)}
+                </span>
+              </div>
+              <div className="flex justify-between items-center text-sm pt-3 border-t border-gold-500/10">
+                <span className="text-gray-500 text-xs uppercase tracking-widest font-bold">Comissão do Barbeiro:</span>
+                <span className="font-bold text-white/50">
+                  {formatCurrency(appointment.commissionAmount || 0)}
+                </span>
+              </div>
+            </div>
+
+            {/* Status e Pagamento */}
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+              <div className="bg-white/5 border border-white/10 p-4 rounded-2xl">
+                <span className="text-xs font-bold uppercase tracking-widest text-gray-400 block mb-2">Status</span>
+                <Badge
+                  className={cn(
+                    "px-3 py-1 text-sm",
+                    isCompleted
+                      ? "bg-green-500/20 text-green-500 border-green-500/30"
+                      : "bg-white/10 text-white border-white/10"
+                  )}
+                >
+                  {isCompleted ? '✓ Concluído' : 'Agendado'}
+                </Badge>
+              </div>
+
+              <div className="bg-white/5 border border-white/10 p-4 rounded-2xl">
+                <div className="flex items-center justify-between mb-2">
+                  <span className="text-xs font-bold uppercase tracking-widest text-gray-400">Pagamento</span>
+                  {!isCompleted && !isEditingPayment && (
+                    <Button
+                      variant="ghost"
+                      size="sm"
+                      onClick={() => setIsEditingPayment(true)}
+                      className="h-6 w-6 p-0 text-gold-500 hover:text-gold-400 hover:bg-gold-500/10 rounded"
+                    >
+                      <Edit className="w-3 h-3" />
+                    </Button>
+                  )}
+                </div>
+
+                {isEditingPayment ? (
+                  <div className="space-y-3 animate-in fade-in">
+                    <Select value={selectedPaymentMethod} onValueChange={setSelectedPaymentMethod}>
+                      <SelectTrigger className="bg-white/5 border-white/10 text-white rounded-xl h-10 text-sm">
+                        <SelectValue />
+                      </SelectTrigger>
+                      <SelectContent>
+                        {Object.entries(paymentMethodLabels).map(([value, label]) => (
+                          <SelectItem key={value} value={value}>
+                            {label}
+                          </SelectItem>
+                        ))}
+                      </SelectContent>
+                    </Select>
+                    <div className="flex gap-2">
+                      <Button
+                        variant="outline"
+                        size="sm"
+                        onClick={() => {
+                          setIsEditingPayment(false);
+                          setSelectedPaymentMethod(appointment.paymentMethod);
+                        }}
+                        className="flex-1 h-8 text-xs bg-white/5 border-white/10 text-white hover:bg-white/10"
+                      >
+                        X
+                      </Button>
+                      <Button
+                        size="sm"
+                        onClick={handleSavePaymentMethod}
+                        disabled={isUpdating}
+                        className="flex-1 h-8 text-xs bg-gold-gradient text-black font-bold"
+                      >
+                        Salvar
+                      </Button>
+                    </div>
+                  </div>
+                ) : (
+                  <Badge variant="outline" className="text-sm py-1 px-3 border-white/20 text-white bg-white/5 font-medium">
+                    {paymentMethodLabels[appointment.paymentMethod]}
+                  </Badge>
+                )}
+              </div>
+            </div>
+
+            {/* Observações */}
+            {appointment.notes && (
+              <div className="bg-white/5 border border-white/10 p-4 rounded-2xl">
+                <span className="text-xs font-bold uppercase tracking-widest text-gray-400 block mb-2">Observações</span>
+                <p className="text-gray-300 text-sm italic leading-relaxed">"{appointment.notes}"</p>
+              </div>
+            )}
+
+            {/* Alerta para agendamentos online */}
+            {isOnline && (
+              <div className="bg-blue-500/10 border border-blue-500/20 rounded-2xl p-4">
+                <div className="flex items-start gap-3">
+                  <Globe className="w-5 h-5 text-blue-400 mt-0.5" />
+                  <div className="text-sm text-blue-200/80">
+                    <p className="font-bold text-blue-400 mb-1">Agendamento Online</p>
+                    <p>Este agendamento foi criado através da página pública. Gerencie com cuidado.</p>
+                  </div>
+                </div>
+              </div>
+            )}
+          </div>
+
+          <DialogFooter className="border-t border-white/5 pt-6 mt-6 flex gap-3">
+            <div className="flex gap-3 w-full justify-end flex-wrap">
+              <Button
+                variant="outline"
+                onClick={onClose}
+                className="bg-white/5 hover:bg-white/10 text-white font-bold rounded-xl border-white/10 h-12 px-6"
+              >
+                Fechar
+              </Button>
+              {!isCompleted && (
+                <>
+                  <Button
+                    onClick={handleOpenPixDialog}
+                    className="bg-blue-600 hover:bg-blue-700 text-white font-bold rounded-xl border border-blue-500/20 h-12 px-6"
+                  >
+                    <QrCode className="w-4 h-4 mr-2" />
+                    Gerar Pix
+                  </Button>
+                  <Button
+                    onClick={(e) => {
+                      e.stopPropagation();
+                      onClose();
+                      onMarkCompleted(appointment.id);
+                    }}
+                    className="bg-green-500 hover:bg-green-600 text-white font-bold rounded-xl shadow-lg border border-green-400/20 h-12 px-6"
+                  >
+                    <CheckCircle className="w-4 h-4 mr-2" />
+                    Concluir
+                  </Button>
+                </>
+              )}
+              <Button
+                variant="destructive"
+                onClick={() => onDelete(appointment.id)}
+                className="bg-red-500/10 hover:bg-red-500/20 text-red-500 font-bold rounded-xl border border-red-500/20 h-12 px-6"
+              >
+                <Trash2 className="w-4 h-4 mr-2" />
+                Excluir
+              </Button>
+            </div>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
+
+      {/* Pix Dialog */}
+      <Dialog open={isPixDialogOpen} onOpenChange={setIsPixDialogOpen}>
+        <DialogContent className="sm:max-w-md bg-black/95 border-gold-500/20">
+          <DialogHeader>
+            <DialogTitle className="text-white">Gerar Cobrança Pix</DialogTitle>
+          </DialogHeader>
+          {!generatedPix ? (
+            <form onSubmit={handleGeneratePix} className="space-y-4">
+              <div>
+                <Label className="text-white">CPF do Cliente (Obrigatório para Pix)</Label>
+                <Input
+                  value={pixData.cpfCnpj}
+                  onChange={(e) => {
+                    // Mascara simples de CPF
+                    let v = e.target.value.replace(/\D/g, '');
+                    if (v.length > 11) v = v.slice(0, 11);
+                    if (v.length > 9) v = v.replace(/(\d{3})(\d{3})(\d{3})(\d{2})/, "$1.$2.$3-$4");
+                    else if (v.length > 6) v = v.replace(/(\d{3})(\d{3})(\d{3})/, "$1.$2.$3");
+                    else if (v.length > 3) v = v.replace(/(\d{3})(\d{3})/, "$1.$2");
+                    setPixData({ ...pixData, cpfCnpj: v });
+                  }}
+                  className="bg-white/5 text-white border-white/10"
+                  placeholder="000.000.000-00"
+                  required
+                />
+              </div>
+              <div>
+                <Label className="text-white">Descrição</Label>
+                <Input
+                  value={pixData.description}
+                  onChange={(e) => setPixData({ ...pixData, description: e.target.value })}
+                  className="bg-white/5 text-white border-white/10"
+                />
+              </div>
+              <div>
+                <Label className="text-white">Valor (R$)</Label>
+                <Input
+                  value={pixData.amount}
+                  readOnly
+                  className="bg-white/5 text-white border-white/10 font-bold text-lg"
+                />
+              </div>
+              <Button type="submit" className="w-full bg-blue-600 hover:bg-blue-700 font-bold text-white">
+                Gerar QR Code
+              </Button>
+            </form>
+          ) : (
+            <div className="flex flex-col items-center space-y-4 py-4">
+              <div className="bg-white p-2 rounded-lg">
+                {/* eslint-disable-next-line @next/next/no-img-element */}
+                <img
+                  src={`data:image/png;base64,${generatedPix.qrCode.encodedImage}`}
+                  alt="QR Code Pix"
+                  className="w-48 h-48"
+                />
+              </div>
+              <p className="text-white font-bold text-lg">
+                {new Intl.NumberFormat('pt-BR', { style: 'currency', currency: 'BRL' }).format(Number(pixData.amount))}
+              </p>
+              <div className="w-full space-y-2">
+                <Label className="text-gray-400 text-xs uppercase">Copia e Cola</Label>
+                <div className="flex gap-2">
+                  <Input
+                    value={generatedPix.qrCode.payload}
+                    readOnly
+                    className="bg-black/50 border-white/10 text-gray-300 font-mono text-xs"
+                  />
+                  <Button size="icon" onClick={copyToClipboard} variant="outline" className="border-white/10 hover:bg-white/10">
+                    {copied ? <CheckCircle className="w-4 h-4 text-green-500" /> : <Copy className="w-4 h-4" />}
+                  </Button>
+                </div>
+              </div>
+              <Button variant="ghost" onClick={() => setIsPixDialogOpen(false)} className="text-gray-400 hover:text-white">
+                Fechar
+              </Button>
             </div>
           )}
-        </div>
-
-        <DialogFooter className="border-t border-white/5 pt-6 mt-6 flex gap-3">
-          <div className="flex gap-3 w-full justify-end flex-wrap">
-            <Button
-              variant="outline"
-              onClick={onClose}
-              className="bg-white/5 hover:bg-white/10 text-white font-bold rounded-xl border-white/10 h-12 px-6"
-            >
-              Fechar
-            </Button>
-            {!isCompleted && (
-              <Button
-                onClick={(e) => {
-                  e.stopPropagation();
-                  onClose();
-                  onMarkCompleted(appointment.id);
-                }}
-                className="bg-green-500 hover:bg-green-600 text-white font-bold rounded-xl shadow-lg border border-green-400/20 h-12 px-6"
-              >
-                <CheckCircle className="w-4 h-4 mr-2" />
-                Concluir
-              </Button>
-            )}
-            <Button
-              variant="destructive"
-              onClick={() => onDelete(appointment.id)}
-              className="bg-red-500/10 hover:bg-red-500/20 text-red-500 font-bold rounded-xl border border-red-500/20 h-12 px-6"
-            >
-              <Trash2 className="w-4 h-4 mr-2" />
-              Excluir
-            </Button>
-          </div>
-        </DialogFooter>
-      </DialogContent>
-    </Dialog>
+        </DialogContent>
+      </Dialog>
+    </>
   );
 
 }
