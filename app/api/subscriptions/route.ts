@@ -3,6 +3,8 @@ import { getServerSession } from 'next-auth';
 import { authOptions } from '@/lib/auth/auth-options';
 import { prisma } from '@/lib/db';
 
+export const dynamic = 'force-dynamic';
+
 // GET - Listar assinaturas
 export async function GET(request: NextRequest) {
   try {
@@ -124,21 +126,21 @@ export async function POST(request: NextRequest) {
       const currentDay = now.getDate();
       const currentMonth = now.getMonth();
       const currentYear = now.getFullYear();
-      
+
       // Se o billingDay já passou neste mês, usar próximo mês
       let targetMonth = currentDay >= billingDay ? currentMonth + 1 : currentMonth;
       let targetYear = currentYear;
-      
+
       // Ajustar ano se passar de dezembro
       if (targetMonth > 11) {
         targetMonth = 0;
         targetYear++;
       }
-      
+
       // Ajustar dia para meses com menos dias
       const lastDayOfMonth = new Date(targetYear, targetMonth + 1, 0).getDate();
       const adjustedDay = Math.min(billingDay, lastDayOfMonth);
-      
+
       return new Date(targetYear, targetMonth, adjustedDay);
     };
 

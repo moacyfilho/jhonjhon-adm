@@ -4,6 +4,8 @@ import { authOptions } from "@/lib/auth/auth-options";
 import { prisma } from "@/lib/db";
 import { createManausDate } from "@/lib/timezone";
 
+export const dynamic = 'force-dynamic';
+
 export async function GET(request: NextRequest) {
   try {
     const session = await getServerSession(authOptions);
@@ -46,23 +48,23 @@ export async function GET(request: NextRequest) {
       // Manaus 23:59 = UTC 03:59 do dia seguinte
       const startDateObj = new Date(startDate);
       const endDateObj = new Date(endDate);
-      
+
       // Início do dia em Manaus = 04:00 UTC do mesmo dia
       const startUTC = new Date(startDateObj);
       startUTC.setUTCHours(4, 0, 0, 0);
-      
+
       // Fim do dia em Manaus = 03:59:59 UTC do dia seguinte
       const endUTC = new Date(endDateObj);
       endUTC.setUTCDate(endUTC.getUTCDate() + 1);
       endUTC.setUTCHours(3, 59, 59, 999);
-      
+
       console.log('[Appointments API] Filtro de data:', {
         startDate,
         endDate,
         startUTC: startUTC.toISOString(),
         endUTC: endUTC.toISOString(),
       });
-      
+
       where.date = {
         gte: startUTC,
         lte: endUTC,
@@ -128,14 +130,14 @@ export async function POST(request: NextRequest) {
     // Converter hora local de Manaus (GMT-4) para UTC
     // A string vem como "2026-01-07T09:00:00" (9h local de Manaus)
     // Precisamos salvar como 13:00 UTC (9h + 4h)
-    
+
     // Parse da string de data/hora
     // Assumir que a hora na string é hora LOCAL de Manaus (não UTC)
     const [datePart, timePart] = date.split('T');
     const [hoursStr, minutesStr] = timePart.split(':');
     const hours = parseInt(hoursStr, 10);
     const minutes = parseInt(minutesStr, 10);
-    
+
     const appointmentDate = createManausDate(datePart, hours, minutes);
 
     console.log('[Appointments API] Conversão de timezone:', {
@@ -169,20 +171,20 @@ export async function POST(request: NextRequest) {
     // Get services to calculate total
     const services = serviceIds && serviceIds.length > 0
       ? await prisma.service.findMany({
-          where: {
-            id: {
-              in: serviceIds,
-            },
+        where: {
+          id: {
+            in: serviceIds,
           },
-        })
+        },
+      })
       : [];
 
     // Get products if provided
     const productIds = productItems ? productItems.map((p: any) => p.productId) : [];
     const products = productIds.length > 0
       ? await prisma.product.findMany({
-          where: { id: { in: productIds } },
-        })
+        where: { id: { in: productIds } },
+      })
       : [];
 
     // Check if client has an active subscription
@@ -197,11 +199,11 @@ export async function POST(request: NextRequest) {
 
     // Calculate totals
     const servicesTotal = services.reduce((sum, service) => sum + service.price, 0);
-    const productsTotal = productItems 
+    const productsTotal = productItems
       ? productItems.reduce((sum: number, item: any) => {
-          const product = products.find(p => p.id === item.productId);
-          return sum + (product ? product.price * item.quantity : 0);
-        }, 0)
+        const product = products.find(p => p.id === item.productId);
+        return sum + (product ? product.price * item.quantity : 0);
+      }, 0)
       : 0;
 
     // If client has active subscription, service is free (R$ 0.00)
