@@ -3,6 +3,8 @@ import { getServerSession } from 'next-auth';
 import { authOptions } from '@/lib/auth/auth-options';
 import { prisma } from '@/lib/db';
 
+export const dynamic = 'force-dynamic';
+
 // GET - Listar bloqueios de horário (para admin)
 export async function GET(request: NextRequest) {
   try {
@@ -105,7 +107,7 @@ export async function POST(request: NextRequest) {
 
     if (existingAppointments.length > 0) {
       return NextResponse.json(
-        { 
+        {
           error: 'Não é possível bloquear este horário pois existem agendamentos confirmados',
           conflicts: existingAppointments.length,
         },

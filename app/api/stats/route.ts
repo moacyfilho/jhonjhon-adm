@@ -3,6 +3,8 @@ import { getServerSession } from "next-auth";
 import { authOptions } from "@/lib/auth/auth-options";
 import { prisma } from "@/lib/db";
 
+
+
 // Using singleton prisma from lib/db
 
 export const dynamic = "force-dynamic";
@@ -147,7 +149,7 @@ export async function GET(request: NextRequest) {
       where: { id: { in: barberIds } },
       select: { id: true, name: true },
     });
-    
+
     const barbersMap = new Map(barbers.map(b => [b.id, b.name]));
     const barbersData = appointmentsByBarber.map((item) => ({
       name: barbersMap.get(item.barberId) || "Desconhecido",
@@ -174,7 +176,7 @@ export async function GET(request: NextRequest) {
       where: { id: { in: serviceIds } },
       select: { id: true, name: true },
     });
-    
+
     const servicesMap = new Map(services.map(s => [s.id, s.name]));
     const servicesData = topServices.map((item) => ({
       name: servicesMap.get(item.serviceId) || "Desconhecido",
