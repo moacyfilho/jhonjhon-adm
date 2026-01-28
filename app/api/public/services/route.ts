@@ -1,21 +1,14 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { prisma } from '@/lib/db';
 
-// GET - Listar serviços disponíveis para agendamento online (API pública)
+export const dynamic = 'force-dynamic';
+
 export async function GET() {
   try {
-    // Busca configurações
-    const settings = await prisma.bookingSettings.findFirst();
-
-    if (!settings || settings.serviceIds.length === 0) {
-      return NextResponse.json([]);
-    }
-
-    // Retorna apenas serviços configurados como disponíveis
+    // Retorna todos os serviços ativos
     const services = await prisma.service.findMany({
       where: {
         isActive: true,
-        id: { in: settings.serviceIds },
       },
       orderBy: { name: 'asc' },
       select: {

@@ -1,21 +1,14 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { prisma } from '@/lib/db';
 
-// GET - Listar barbeiros disponíveis para agendamento online (API pública)
+export const dynamic = 'force-dynamic';
+
 export async function GET() {
   try {
-    // Busca configurações
-    const settings = await prisma.bookingSettings.findFirst();
-
-    if (!settings || settings.barberIds.length === 0) {
-      return NextResponse.json([]);
-    }
-
-    // Retorna apenas barbeiros configurados como disponíveis
+    // Retorna todos os barbeiros ativos
     const barbers = await prisma.barber.findMany({
       where: {
         isActive: true,
-        id: { in: settings.barberIds },
       },
       orderBy: { name: 'asc' },
       select: {
