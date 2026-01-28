@@ -90,7 +90,7 @@ export default function AgendamentoPage() {
     if (barbers.length > 0 && !formData.barberId) {
       setFormData(prev => ({ ...prev, barberId: barbers[0].id }));
     }
-  }, [barbers]);
+  }, [barbers, formData.barberId]);
 
   const calculateMaxDate = () => {
     // Padrão: 30 dias no futuro (será atualizado pela API se houver configurações)
