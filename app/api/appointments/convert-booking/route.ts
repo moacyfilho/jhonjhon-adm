@@ -24,13 +24,18 @@ export async function POST(request: NextRequest) {
       );
     }
 
-    // Buscar o OnlineBooking
+    // Buscar o OnlineBooking com os serviços associados
     const onlineBooking = await prisma.onlineBooking.findUnique({
       where: { id: onlineBookingId },
       include: {
         client: true,
         barber: true,
         service: true,
+        services: {
+          include: {
+            service: true
+          }
+        }
       },
     });
 
@@ -53,8 +58,34 @@ export async function POST(request: NextRequest) {
       });
     }
 
-    // Calcular totais
-    const totalAmount = onlineBooking.service.price;
+    // Calcular totais e preparar lista de serviços
+    let totalAmount = 0;
+    const servicesToCreate = [];
+
+    // Prioridade: usar a lista de múltiplos serviços
+    if (onlineBooking.services && onlineBooking.services.length > 0) {
+      for (const item of onlineBooking.services) {
+        totalAmount += item.price;
+        servicesToCreate.push({
+          serviceId: item.serviceId,
+          price: item.price
+        });
+      }
+    } else if (onlineBooking.service) {
+      // Fallback para serviço único (legado)
+      totalAmount = onlineBooking.service.price;
+      servicesToCreate.push({
+        serviceId: onlineBooking.service.id,
+        price: onlineBooking.service.price
+      });
+    } else {
+      // Caso de erro: sem serviço nenhum (não deve acontecer se validado)
+      return NextResponse.json(
+        { error: "Agendamento sem serviços vinculados" },
+        { status: 400 }
+      );
+    }
+
     const commissionAmount = onlineBooking.barber
       ? (totalAmount * onlineBooking.barber.commissionRate) / 100
       : 0;
@@ -87,10 +118,7 @@ export async function POST(request: NextRequest) {
           status: "SCHEDULED", // Status inicial SCHEDULED, não COMPLETED
           onlineBookingId: onlineBookingId,
           services: {
-            create: {
-              serviceId: onlineBooking.serviceId,
-              price: onlineBooking.service.price,
-            },
+            create: servicesToCreate,
           },
         },
         include: {
