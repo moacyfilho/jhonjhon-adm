@@ -60,7 +60,7 @@ export async function POST(request: NextRequest) {
 
     // Calcular totais e preparar lista de serviços
     let totalAmount = 0;
-    const servicesToCreate = [];
+    const servicesToCreate: { serviceId: string; price: number }[] = [];
 
     // Prioridade: usar a lista de múltiplos serviços
     if (onlineBooking.services && onlineBooking.services.length > 0) {
