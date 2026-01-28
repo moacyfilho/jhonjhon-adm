@@ -587,39 +587,78 @@ export default function AgendamentoPage() {
                       </div>
                     </div>
 
-                    <div className="space-y-2">
-                      <Label htmlFor="barberId" className="text-gray-300 font-medium">Profissional (opcional)</Label>
-                      <Select
-                        value={formData.barberId || undefined}
-                        onValueChange={(value) => setFormData({ ...formData, barberId: value })}
-                      >
-                        <SelectTrigger className="bg-gray-900/70 border-gold/30 focus:border-gold text-white h-12">
-                          <SelectValue placeholder="Qualquer profissional disponível" />
-                        </SelectTrigger>
-                        <SelectContent className="bg-gray-900 border-gold/30">
-                          {barbers.map((barber) => {
-                            const photo = getBarberPhoto(barber.name);
-                            return (
-                              <SelectItem key={barber.id} value={barber.id} className="text-white hover:bg-gold/20">
-                                <div className="flex items-center gap-2">
-                                  {photo && (
-                                    <div className="relative w-6 h-6 rounded-full overflow-hidden border border-gold/30">
-                                      <Image
-                                        src={photo}
-                                        alt={barber.name}
-                                        width={24}
-                                        height={24}
-                                        className="object-cover"
-                                      />
+                    <div className="space-y-4">
+                      <Label className="text-gray-300 font-medium">Escolha seu Profissional (opcional)</Label>
+                      <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4">
+                        {/* Opção "Qualquer profissional" */}
+                        <div
+                          className={`
+                            relative p-4 rounded-lg border cursor-pointer transition-all
+                            ${!formData.barberId
+                              ? 'bg-gold/20 border-gold/60 ring-2 ring-gold/40'
+                              : 'bg-gray-900/70 border-gold/20 hover:bg-gold/10'}
+                          `}
+                          onClick={() => setFormData({ ...formData, barberId: '' })}
+                        >
+                          <div className="flex flex-col items-center text-center space-y-3">
+                            <div className="relative w-24 h-24 rounded-full overflow-hidden border-2 border-gold/30 bg-gradient-to-br from-gold/20 to-gray-800 flex items-center justify-center">
+                              <User className="h-12 w-12 text-gold" />
+                            </div>
+                            <div>
+                              <p className={`font-medium ${!formData.barberId ? 'text-white' : 'text-gray-300'}`}>
+                                Qualquer Profissional
+                              </p>
+                              <p className="text-xs text-gray-400 mt-1">Disponibilidade máxima</p>
+                            </div>
+                          </div>
+                        </div>
+
+                        {/* Cards dos barbeiros */}
+                        {barbers.map((barber) => {
+                          const photo = getBarberPhoto(barber.name);
+                          const isSelected = formData.barberId === barber.id;
+
+                          return (
+                            <div
+                              key={barber.id}
+                              className={`
+                                relative p-4 rounded-lg border cursor-pointer transition-all
+                                ${isSelected
+                                  ? 'bg-gold/20 border-gold/60 ring-2 ring-gold/40'
+                                  : 'bg-gray-900/70 border-gold/20 hover:bg-gold/10'}
+                              `}
+                              onClick={() => setFormData({ ...formData, barberId: barber.id })}
+                            >
+                              <div className="flex flex-col items-center text-center space-y-3">
+                                <div className="relative w-24 h-24 rounded-full overflow-hidden border-2 border-gold/30">
+                                  {photo ? (
+                                    <Image
+                                      src={photo}
+                                      alt={barber.name}
+                                      fill
+                                      className="object-cover"
+                                    />
+                                  ) : (
+                                    <div className="w-full h-full bg-gradient-to-br from-gold/20 to-gray-800 flex items-center justify-center">
+                                      <User className="h-12 w-12 text-gold" />
                                     </div>
                                   )}
-                                  <span>{barber.name}</span>
                                 </div>
-                              </SelectItem>
-                            );
-                          })}
-                        </SelectContent>
-                      </Select>
+                                <div>
+                                  <p className={`font-medium ${isSelected ? 'text-white' : 'text-gray-300'}`}>
+                                    {barber.name}
+                                  </p>
+                                </div>
+                              </div>
+                              {isSelected && (
+                                <div className="absolute top-2 right-2">
+                                  <CheckCircle2 className="h-5 w-5 text-gold" />
+                                </div>
+                              )}
+                            </div>
+                          );
+                        })}
+                      </div>
                     </div>
                   </div>
 
