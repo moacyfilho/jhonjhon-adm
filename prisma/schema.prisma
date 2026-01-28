@@ -303,9 +303,25 @@ model AccountReceivable {
   paymentLinks   PaymentLink[]   // Links de pagamento gerados para esta conta
 }
 
+// Planos de Assinatura disponíveis
+model SubscriptionPlan {
+  id               String         @id @default(cuid())
+  name             String         // Nome do plano (ex: "Plano Premium Mensal")
+  description      String?        // Descrição detalhada
+  price            Float          // Valor do plano
+  durationDays     Int            // Duração em dias (30 = mensal, 90 = trimestral, 365 = anual)
+  servicesIncluded String?        // JSON ou texto com serviços incluídos
+  usageLimit       Int?           // Limite de usos por período (null = ilimitado)
+  isActive         Boolean        @default(true)
+  createdAt        DateTime       @default(now())
+  updatedAt        DateTime       @updatedAt
+  subscriptions    Subscription[] // Assinaturas que usam este plano
+}
+
 model Subscription {
   id                String             @id @default(cuid())
   clientId          String
+  planId            String?            // Referência ao plano (opcional para compatibilidade com dados antigos)
   planName          String             // Nome do plano (ex: "Plano Premium Mensal")
   amount            Float              // Valor mensal da assinatura
   billingDay        Int                // Dia do mês para cobrança (1-31)
@@ -318,6 +334,7 @@ model Subscription {
   createdAt         DateTime           @default(now())
   updatedAt         DateTime           @updatedAt
   client            Client             @relation(fields: [clientId], references: [id])
+  plan              SubscriptionPlan?  @relation(fields: [planId], references: [id])
   usageHistory      SubscriptionUsage[]
   accountsReceivable AccountReceivable[] // Contas a receber geradas pela assinatura
 }

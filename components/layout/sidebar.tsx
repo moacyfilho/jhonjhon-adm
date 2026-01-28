@@ -66,6 +66,11 @@ const menuItems = [
     href: "/assinaturas",
   },
   {
+    title: "Planos",
+    icon: Package,
+    href: "/planos",
+  },
+  {
     title: "Config. Horários",
     icon: Settings,
     href: "/configuracoes-agendamento",
@@ -116,9 +121,9 @@ export function Sidebar() {
       {/* Logo */}
       <div className="p-6 border-b border-border">
         <div className="flex items-center gap-3">
-          <img 
-            src="/logo.png" 
-            alt="Logo Jhon Jhon Barbearia - Sistema Administrativo Desktop" 
+          <img
+            src="/logo.png"
+            alt="Logo Jhon Jhon Barbearia - Sistema Administrativo Desktop"
             className="w-32 h-auto"
           />
         </div>
