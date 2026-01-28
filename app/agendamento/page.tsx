@@ -42,6 +42,16 @@ interface TimeSlot {
   reason: string;
 }
 
+interface SubscriptionPlan {
+  id: string;
+  name: string;
+  description?: string;
+  price: number;
+  durationDays: number;
+  servicesIncluded?: string;
+  usageLimit?: number;
+}
+
 // Mapeamento de fotos dos barbeiros
 const getBarberPhoto = (barberName: string): string | null => {
   const name = barberName.toLowerCase().trim();
@@ -52,6 +62,7 @@ const getBarberPhoto = (barberName: string): string | null => {
 
   return null;
 };
+
 
 export default function AgendamentoPage() {
   const [services, setServices] = useState<Service[]>([]);
@@ -75,6 +86,10 @@ export default function AgendamentoPage() {
     observations: '',
   });
 
+  const [plans, setPlans] = useState<SubscriptionPlan[]>([]);
+  const [mode, setMode] = useState<'booking' | 'subscription'>('booking');
+  const [selectedPlanId, setSelectedPlanId] = useState('');
+
   const [displayDate, setDisplayDate] = useState(''); // Data no formato dd/mm/aaaa para exibição
   const [calendarOpen, setCalendarOpen] = useState(false); // Controla abertura do calendário
   const [selectedDate, setSelectedDate] = useState<Date | undefined>(undefined); // Data selecionada no calendário
@@ -82,6 +97,7 @@ export default function AgendamentoPage() {
   useEffect(() => {
     fetchServices();
     fetchBarbers();
+    fetchPlans();
     calculateMaxDate();
   }, []);
 
@@ -209,6 +225,18 @@ export default function AgendamentoPage() {
       toast.error('Erro ao carregar barbeiros');
     } finally {
       setLoading(false);
+    }
+  };
+
+  const fetchPlans = async () => {
+    try {
+      const response = await fetch('/api/public/subscription-plans');
+      if (!response.ok) throw new Error('Erro ao carregar planos');
+      const data = await response.json();
+      setPlans(data);
+    } catch (error) {
+      console.error(error);
+      toast.error('Erro ao carregar planos de assinatura');
     }
   };
 
@@ -343,6 +371,51 @@ export default function AgendamentoPage() {
     }
   };
 
+  const handleSubscriptionSubmit = async (e: React.FormEvent) => {
+    e.preventDefault();
+    setSubmitting(true);
+
+    try {
+      if (!selectedPlanId) {
+        toast.error('Selecione um plano de assinatura');
+        return;
+      }
+
+      if (!formData.clientName || !formData.clientPhone) {
+        toast.error('Nome e telefone são obrigatórios');
+        return;
+      }
+
+      const response = await fetch('/api/public/contract-subscription', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          planId: selectedPlanId,
+          clientName: formData.clientName,
+          clientPhone: formData.clientPhone,
+          clientEmail: formData.clientEmail,
+        }),
+      });
+
+      if (!response.ok) {
+        const error = await response.json();
+        throw new Error(error.error || 'Erro ao contratar assinatura');
+      }
+
+      setSuccess(true);
+      toast.success('Assinatura realizada com sucesso!');
+
+      // Reset
+      setFormData({ ...formData, clientName: '', clientPhone: '', clientEmail: '' });
+      setSelectedPlanId('');
+    } catch (error: any) {
+      console.error(error);
+      toast.error(error.message);
+    } finally {
+      setSubmitting(false);
+    }
+  };
+
   const selectedServicesTotal = services
     .filter(s => formData.serviceIds.includes(s.id))
     .reduce((sum, s) => sum + s.price, 0);
@@ -361,10 +434,12 @@ export default function AgendamentoPage() {
             </div>
             <div>
               <h2 className="text-2xl font-serif font-bold text-gold mb-2">
-                Agendamento Confirmado!
+                {mode === 'booking' ? 'Agendamento Confirmado!' : 'Assinatura Confirmada!'}
               </h2>
               <p className="text-muted-foreground">
-                Seu agendamento foi realizado com sucesso. Em breve entraremos em contato para confirmar.
+                {mode === 'booking'
+                  ? 'Seu agendamento foi realizado com sucesso. Em breve entraremos em contato para confirmar.'
+                  : 'Sua assinatura foi realizada com sucesso! Aproveite seus benefícios.'}
               </p>
             </div>
             <Button
@@ -385,6 +460,7 @@ export default function AgendamentoPage() {
                 setDisplayDate('');
                 setSelectedDate(undefined);
                 setAvailableSlots([]);
+                setSelectedPlanId('');
               }}
               className="bg-gold text-white hover:bg-gold/90"
             >
@@ -431,10 +507,42 @@ export default function AgendamentoPage() {
           {/* Formulário */}
           <Card className="bg-black/70 border-gold/30 backdrop-blur-sm shadow-2xl">
             <CardHeader className="bg-gradient-to-r from-gold/10 to-transparent border-b border-gold/20">
-              <CardTitle className="text-2xl md:text-3xl font-serif text-gold flex items-center gap-3">
-                <Scissors className="h-6 w-6" />
-                Dados do Agendamento
-              </CardTitle>
+              <div className="flex flex-col md:flex-row md:items-center justify-between gap-4">
+                <CardTitle className="text-2xl md:text-3xl font-serif text-gold flex items-center gap-3">
+                  {mode === 'booking' ? (
+                    <>
+                      <Scissors className="h-6 w-6" />
+                      Dados do Agendamento
+                    </>
+                  ) : (
+                    <>
+                      <CheckCircle2 className="h-6 w-6" />
+                      Contratar Plano
+                    </>
+                  )}
+                </CardTitle>
+
+                <div className="flex p-1 bg-gray-900 rounded-lg border border-gold/30">
+                  <button
+                    onClick={() => setMode('booking')}
+                    className={`px-4 py-2 rounded-md text-sm font-medium transition-all ${mode === 'booking'
+                      ? 'bg-gold text-white shadow-md'
+                      : 'text-gray-400 hover:text-white'
+                      }`}
+                  >
+                    Agendar Horário
+                  </button>
+                  <button
+                    onClick={() => setMode('subscription')}
+                    className={`px-4 py-2 rounded-md text-sm font-medium transition-all ${mode === 'subscription'
+                      ? 'bg-gold text-white shadow-md'
+                      : 'text-gray-400 hover:text-white'
+                      }`}
+                  >
+                    Assinar Plano
+                  </button>
+                </div>
+              </div>
             </CardHeader>
             <CardContent className="p-6 md:p-8">
               {loading ? (
@@ -455,7 +563,7 @@ export default function AgendamentoPage() {
                         : 'No momento não há profissionais disponíveis para agendamento online.'}
                   </AlertDescription>
                 </Alert>
-              ) : (
+              ) : mode === 'booking' ? (
                 <form onSubmit={handleSubmit} className="space-y-6">
                   {/* Informações Pessoais */}
                   <div className="space-y-6 bg-gradient-to-br from-gray-900/50 to-black/50 p-6 rounded-lg border border-gold/10">
@@ -791,6 +899,142 @@ export default function AgendamentoPage() {
                       </p>
                     )}
                   </div>
+                </form>
+              ) : (
+                <form onSubmit={handleSubscriptionSubmit} className="space-y-6">
+                  {/* Seleção de Plano */}
+                  <div className="space-y-6 bg-gradient-to-br from-gray-900/50 to-black/50 p-6 rounded-lg border border-gold/10">
+                    <h3 className="text-xl font-semibold text-gold flex items-center gap-3">
+                      <CheckCircle2 className="h-6 w-6" />
+                      Escolha seu Plano
+                    </h3>
+
+                    <div className="space-y-4">
+                      {plans.length === 0 ? (
+                        <Alert>
+                          <AlertCircle className="h-4 w-4" />
+                          <AlertDescription>
+                            Nenhum plano disponível no momento.
+                          </AlertDescription>
+                        </Alert>
+                      ) : (
+                        <div className="grid gap-4">
+                          {plans.map((plan) => (
+                            <div
+                              key={plan.id}
+                              className={`
+                                relative p-4 rounded-lg border cursor-pointer transition-all
+                                ${selectedPlanId === plan.id
+                                  ? 'bg-gold/20 border-gold/60 ring-1 ring-gold/40'
+                                  : 'bg-gray-900/70 border-gold/20 hover:bg-gold/10'}
+                              `}
+                              onClick={() => setSelectedPlanId(plan.id)}
+                            >
+                              <div className="flex justify-between items-start">
+                                <div>
+                                  <h4 className="font-bold text-lg text-white">{plan.name}</h4>
+                                  <p className="text-sm text-gray-400 mt-1">{plan.description}</p>
+                                  {plan.servicesIncluded && (
+                                    <p className="text-xs text-gold/80 mt-2 font-medium">
+                                      Inclui: {plan.servicesIncluded}
+                                    </p>
+                                  )}
+                                </div>
+                                <div className="text-right">
+                                  <p className="text-xl font-bold text-gold">
+                                    R$ {plan.price.toFixed(2)}
+                                  </p>
+                                  <p className="text-xs text-gray-500">
+                                    /{plan.durationDays} dias
+                                  </p>
+                                </div>
+                              </div>
+                              {selectedPlanId === plan.id && (
+                                <div className="absolute top-2 right-2">
+                                  <CheckCircle2 className="h-5 w-5 text-gold" />
+                                </div>
+                              )}
+                            </div>
+                          ))}
+                        </div>
+                      )}
+                    </div>
+                  </div>
+
+                  {/* Informações Pessoais */}
+                  <div className="space-y-6 bg-gradient-to-br from-gray-900/50 to-black/50 p-6 rounded-lg border border-gold/10">
+                    <h3 className="text-xl font-semibold text-gold flex items-center gap-3">
+                      <User className="h-6 w-6" />
+                      Seus Dados
+                    </h3>
+
+                    <div className="grid gap-6 md:grid-cols-2">
+                      <div className="space-y-2">
+                        <Label htmlFor="subClientName" className="text-gray-300 font-medium">
+                          Nome Completo *
+                        </Label>
+                        <Input
+                          id="subClientName"
+                          value={formData.clientName}
+                          onChange={(e) => setFormData({ ...formData, clientName: e.target.value })}
+                          placeholder="Digite seu nome"
+                          required
+                          className="bg-gray-900/50 border-gold/20 focus:border-gold text-white placeholder:text-gray-600"
+                        />
+                      </div>
+
+                      <div className="space-y-2">
+                        <Label htmlFor="subClientPhone" className="text-gray-300 font-medium">
+                          WhatsApp *
+                        </Label>
+                        <Input
+                          id="subClientPhone"
+                          value={formData.clientPhone}
+                          onChange={(e) => {
+                            // Mascara simples de telefone
+                            let v = e.target.value.replace(/\D/g, '');
+                            if (v.length > 11) v = v.slice(0, 11);
+                            if (v.length > 2) v = `(${v.slice(0, 2)}) ${v.slice(2)}`;
+                            if (v.length > 9) v = `${v.slice(0, 9)}-${v.slice(9)}`;
+                            setFormData({ ...formData, clientPhone: v });
+                          }}
+                          placeholder="(00) 00000-0000"
+                          required
+                          className="bg-gray-900/50 border-gold/20 focus:border-gold text-white placeholder:text-gray-600"
+                        />
+                      </div>
+
+                      <div className="space-y-2 md:col-span-2">
+                        <Label htmlFor="subClientEmail" className="text-gray-300 font-medium">
+                          Email (opcional)
+                        </Label>
+                        <Input
+                          id="subClientEmail"
+                          type="email"
+                          value={formData.clientEmail}
+                          onChange={(e) => setFormData({ ...formData, clientEmail: e.target.value })}
+                          placeholder="seu@email.com"
+                          className="bg-gray-900/50 border-gold/20 focus:border-gold text-white placeholder:text-gray-600"
+                        />
+                      </div>
+                    </div>
+                  </div>
+
+                  {/* Botão de Envio */}
+                  <Button
+                    type="submit"
+                    disabled={submitting || !selectedPlanId}
+                    className="w-full bg-gold text-white hover:bg-gold/90 h-12 text-lg disabled:opacity-50"
+                  >
+                    {submitting ? (
+                      <>
+                        <Loader2 className="h-4 w-4 mr-2 animate-spin" />
+                        Processando...
+                      </>
+                    ) : (
+                      'Contratar Assinatura'
+                    )}
+                  </Button>
                 </form>
               )}
             </CardContent>
