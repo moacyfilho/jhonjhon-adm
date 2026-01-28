@@ -1,17 +1,14 @@
-import { NextRequest, NextResponse } from 'next/server';
-import { createClient } from '@/utils/supabase/server';
+import { NextResponse } from 'next/server';
+import { getServerSession } from 'next-auth';
+import { authOptions } from '@/lib/auth/auth-options';
 import { prisma } from '@/lib/db';
 import { Prisma } from '@prisma/client';
 
-export const dynamic = 'force-dynamic';
-
 // GET - Listar vendas de produtos
-export async function GET(request: NextRequest) {
+export async function GET(request: Request) {
   try {
-    const supabase = createClient();
-    const { data: { user } } = await supabase.auth.getUser();
-
-    if (!user) {
+    const session = await getServerSession(authOptions);
+    if (!session) {
       return NextResponse.json({ error: 'Não autorizado' }, { status: 401 });
     }
 
@@ -69,12 +66,10 @@ export async function GET(request: NextRequest) {
 }
 
 // POST - Registrar venda de produto
-export async function POST(request: NextRequest) {
+export async function POST(request: Request) {
   try {
-    const supabase = createClient();
-    const { data: { user } } = await supabase.auth.getUser();
-
-    if (!user) {
+    const session = await getServerSession(authOptions);
+    if (!session) {
       return NextResponse.json({ error: 'Não autorizado' }, { status: 401 });
     }
 
@@ -135,7 +130,7 @@ export async function POST(request: NextRequest) {
           unitPrice,
           totalAmount,
           paymentMethod,
-          soldBy: soldBy || user.email || null,
+          soldBy: soldBy || session.user?.name || null,
           observations: observations || null,
         },
         include: {

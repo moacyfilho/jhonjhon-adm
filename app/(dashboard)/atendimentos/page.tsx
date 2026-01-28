@@ -1,7 +1,7 @@
 "use client";
 
 import { useState, useEffect } from "react";
-import { Plus, Search, Calendar as CalendarIcon, Trash2, Eye, User, Phone, DollarSign, Clock, Check, QrCode, Copy } from "lucide-react";
+import { Plus, Search, Calendar as CalendarIcon, Trash2, Eye, User, Phone, DollarSign, Clock } from "lucide-react";
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Badge } from "@/components/ui/badge";
@@ -17,11 +17,6 @@ import { format } from "date-fns";
 import { ptBR } from "date-fns/locale";
 import { cn } from "@/lib/utils";
 import { toManausTime } from "@/lib/timezone";
-import { CardGridSkeleton } from "@/components/ui/table-skeleton";
-import { EmptyState } from "@/components/ui/empty-state";
-import { DateRangePicker } from "@/components/ui/date-range-picker";
-import { DateRange } from "react-day-picker";
-import { AppointmentForm } from "@/components/appointments/appointment-form";
 
 interface Client {
   id: string;
@@ -74,35 +69,28 @@ export default function AtendimentosPage() {
   const [search, setSearch] = useState("");
   const [filterBarber, setFilterBarber] = useState("");
   const [filterPayment, setFilterPayment] = useState("");
-  const [filterStatus, setFilterStatus] = useState("");
   const [isDialogOpen, setIsDialogOpen] = useState(false);
   const [selectedAppointment, setSelectedAppointment] = useState<Appointment | null>(null);
   const [isViewDialogOpen, setIsViewDialogOpen] = useState(false);
   const [selectedBarberTab, setSelectedBarberTab] = useState<string>("all");
   const [selectedDate, setSelectedDate] = useState<Date | undefined>(undefined);
-  const [dateRange, setDateRange] = useState<DateRange | undefined>(undefined);
 
-  // Pix States
-  const [isPixDialogOpen, setIsPixDialogOpen] = useState(false);
-  const [pixData, setPixData] = useState({
+  const [formData, setFormData] = useState({
     clientId: "",
-    amount: "",
-    description: "",
+    barberId: "",
+    serviceIds: [] as string[],
+    date: "",
+    time: "",
+    paymentMethod: "",
+    notes: "",
   });
-  const [generatedPix, setGeneratedPix] = useState<{
-    id: string;
-    qrCode: { encodedImage: string; payload: string };
-  } | null>(null);
-  const [copied, setCopied] = useState(false);
-
-
 
   useEffect(() => {
     fetchAppointments();
     fetchClients();
     fetchBarbers();
     fetchServices();
-  }, [search, filterBarber, filterPayment, filterStatus, dateRange]);
+  }, [search, filterBarber, filterPayment]);
 
   const fetchAppointments = async () => {
     try {
@@ -111,22 +99,10 @@ export default function AtendimentosPage() {
       if (search) params.append("search", search);
       if (filterBarber) params.append("barberId", filterBarber);
       if (filterPayment) params.append("paymentMethod", filterPayment);
-      if (filterStatus) params.append("status", filterStatus);
-      if (dateRange?.from) params.append("startDate", dateRange.from.toISOString());
-      if (dateRange?.to) params.append("endDate", dateRange.to.toISOString());
 
-      const res = await fetch(`/api/appointments?${params.toString()}`);
+      const res = await fetch(`/api/appointments?${params}`);
       const data = await res.json();
-      if (Array.isArray(data)) {
-        const enhancedData = data.map((appt: any) => ({
-          ...appt,
-          commissionAmount: appt.commission?.amount || appt.commissionAmount || 0,
-        }));
-        setAppointments(enhancedData);
-      } else {
-        console.error("API response is not an array:", data);
-        toast.error("Erro ao carregar dados dos atendimentos");
-      }
+      setAppointments(data);
     } catch (error) {
       console.error("Error fetching appointments:", error);
       toast.error("Erro ao carregar atendimentos");
@@ -165,6 +141,41 @@ export default function AtendimentosPage() {
     }
   };
 
+  const handleSubmit = async (e: React.FormEvent) => {
+    e.preventDefault();
+
+    if (!formData.clientId || !formData.barberId || formData.serviceIds.length === 0 || 
+        !formData.date || !formData.time || !formData.paymentMethod) {
+      toast.error("Preencha todos os campos obrigatórios");
+      return;
+    }
+
+    try {
+      const dateTime = new Date(`${formData.date}T${formData.time}`);
+
+      const res = await fetch("/api/appointments", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          ...formData,
+          date: dateTime.toISOString(),
+        }),
+      });
+
+      if (res.ok) {
+        toast.success("Atendimento registrado com sucesso!");
+        setIsDialogOpen(false);
+        resetForm();
+        fetchAppointments();
+      } else {
+        toast.error("Erro ao registrar atendimento");
+      }
+    } catch (error) {
+      console.error("Error creating appointment:", error);
+      toast.error("Erro ao registrar atendimento");
+    }
+  };
+
   const handleDelete = async (id: string) => {
     if (!confirm("Tem certeza que deseja excluir este atendimento?")) return;
 
@@ -185,73 +196,40 @@ export default function AtendimentosPage() {
     }
   };
 
-  const handleOpenPixDialog = () => {
-    if (!selectedAppointment) return;
-    setPixData({
-      clientId: selectedAppointment.client.id,
-      amount: selectedAppointment.totalAmount.toString(),
-      description: `Atendimento - ${format(new Date(selectedAppointment.date), "dd/MM")}`,
+  const resetForm = () => {
+    setFormData({
+      clientId: "",
+      barberId: "",
+      serviceIds: [],
+      date: "",
+      time: "",
+      paymentMethod: "",
+      notes: "",
     });
-    setGeneratedPix(null);
-    setIsPixDialogOpen(true);
+    setSelectedDate(undefined);
   };
 
-  const handleGeneratePix = async (e: React.FormEvent) => {
-    e.preventDefault();
-    if (!pixData.clientId || !pixData.amount) {
-      toast.error("Erro nos dados do Pix");
-      return;
-    }
-
-    try {
-      const res = await fetch("/api/payments/pix", {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify(pixData)
-      });
-
-      const data = await res.json();
-
-      if (res.ok) {
-        setGeneratedPix(data);
-        toast.success("Pix gerado com sucesso!");
-      } else {
-        toast.error(data.error || "Erro ao gerar Pix");
-      }
-    } catch (error) {
-      toast.error("Erro na comunicação");
-    }
+  const toggleService = (serviceId: string) => {
+    setFormData(prev => ({
+      ...prev,
+      serviceIds: prev.serviceIds.includes(serviceId)
+        ? prev.serviceIds.filter(id => id !== serviceId)
+        : [...prev.serviceIds, serviceId]
+    }));
   };
 
-  const copyToClipboard = () => {
-    if (generatedPix?.qrCode?.payload) {
-      navigator.clipboard.writeText(generatedPix.qrCode.payload);
-      setCopied(true);
-      toast.success("Código copiado!");
-      setTimeout(() => setCopied(false), 2000);
-    }
+  const calculateTotal = () => {
+    return formData.serviceIds.reduce((sum, id) => {
+      const service = services.find(s => s.id === id);
+      return sum + (service?.price || 0);
+    }, 0);
   };
 
-  const handleCompleteAppointment = async (id: string) => {
-    try {
-      const res = await fetch(`/api/appointments/${id}`, {
-        method: "PATCH",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ status: "COMPLETED" }),
-      });
-
-      if (res.ok) {
-        toast.success("Atendimento concluído com sucesso!");
-        setIsViewDialogOpen(false);
-        fetchAppointments();
-      } else {
-        toast.error("Erro ao concluir atendimento");
-      }
-    } catch (error) {
-      toast.error("Erro ao concluir atendimento");
-    }
+  const calculateCommission = () => {
+    const total = calculateTotal();
+    const barber = barbers.find(b => b.id === formData.barberId);
+    return barber ? (total * barber.commissionRate) / 100 : 0;
   };
-
 
   const formatCurrency = (value: number) => {
     return new Intl.NumberFormat("pt-BR", {
@@ -267,309 +245,214 @@ export default function AtendimentosPage() {
     PIX: "PIX",
   };
 
-  const statusLabels: Record<string, string> = {
-    SCHEDULED: "Agendado",
-    COMPLETED: "Concluído",
-    CANCELED: "Cancelado",
-  };
-
   return (
-    <div className="space-y-10">
-      {/* Header */}
-      <div className="flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
+    <div className="p-6">
+      <div className="flex justify-between items-center mb-6">
         <div>
-          <h1 className="text-4xl font-serif font-bold text-white mb-2">
-            Histórico de <span className="text-gold-500">Atendimentos</span>
-          </h1>
-          <p className="text-gray-500 font-medium">
+          <h1 className="text-3xl font-bold text-foreground">Atendimentos</h1>
+          <p className="text-muted-foreground">
             Registre e gerencie os atendimentos da barbearia
           </p>
         </div>
-        <Button
-          onClick={() => setIsDialogOpen(true)}
-          className="bg-gold-gradient hover:scale-105 active:scale-95 text-black font-bold px-8 py-4 rounded-2xl transition-all shadow-gold h-auto"
-        >
-          <Plus className="w-5 h-5 mr-2" />
+        <Button onClick={() => setIsDialogOpen(true)}>
+          <Plus className="w-4 h-4 mr-2" />
           Novo Atendimento
         </Button>
       </div>
 
       {/* Filters */}
-      <div className="glass-panel p-6 rounded-3xl">
-        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-5 gap-4">
-          <div className="relative group">
-            <Search className="absolute left-4 top-1/2 -translate-y-1/2 text-gray-500 group-focus-within:text-gold-500 transition-colors" />
-            <Input
-              placeholder="Buscar..."
-              value={search}
-              onChange={(e) => setSearch(e.target.value)}
-              className="pl-12 bg-white/5 border-white/10 text-white focus:ring-gold-500/50 focus:border-gold-500 rounded-2xl py-4"
-            />
-          </div>
-          <Select value={filterBarber || undefined} onValueChange={(value) => setFilterBarber(value)}>
-            <SelectTrigger className="bg-white/5 border-white/10 text-white rounded-2xl h-full py-4">
-              <SelectValue placeholder="Barbeiro" />
-            </SelectTrigger>
-            <SelectContent>
-              <SelectItem value="all">Todos</SelectItem>
-              {barbers.map((barber) => (
-                <SelectItem key={barber.id} value={barber.id}>
-                  {barber.name}
-                </SelectItem>
-              ))}
-            </SelectContent>
-          </Select>
-          <Select value={filterStatus || undefined} onValueChange={(value) => setFilterStatus(value)}>
-            <SelectTrigger className="bg-white/5 border-white/10 text-white rounded-2xl h-full py-4">
-              <SelectValue placeholder="Status" />
-            </SelectTrigger>
-            <SelectContent>
-              <SelectItem value="SCHEDULED">Agendado</SelectItem>
-              <SelectItem value="COMPLETED">Concluído</SelectItem>
-              <SelectItem value="CANCELED">Cancelado</SelectItem>
-            </SelectContent>
-          </Select>
-          <Select value={filterPayment || undefined} onValueChange={(value) => setFilterPayment(value)}>
-            <SelectTrigger className="bg-white/5 border-white/10 text-white rounded-2xl h-full py-4">
-              <SelectValue placeholder="Pagamento" />
-            </SelectTrigger>
-            <SelectContent>
-              {Object.entries(paymentMethodLabels).map(([value, label]) => (
-                <SelectItem key={value} value={value}>
-                  {label}
-                </SelectItem>
-              ))}
-            </SelectContent>
-          </Select>
-          <DateRangePicker
-            value={dateRange}
-            onChange={setDateRange}
-            className="w-full"
+      <div className="grid grid-cols-1 md:grid-cols-3 gap-4 mb-6">
+        <div className="relative">
+          <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 text-muted-foreground w-4 h-4" />
+          <Input
+            placeholder="Buscar por cliente ou barbeiro..."
+            value={search}
+            onChange={(e) => setSearch(e.target.value)}
+            className="pl-10"
           />
         </div>
+        <Select value={filterBarber || undefined} onValueChange={(value) => setFilterBarber(value)}>
+          <SelectTrigger>
+            <SelectValue placeholder="Todos os barbeiros" />
+          </SelectTrigger>
+          <SelectContent>
+            {barbers.map((barber) => (
+              <SelectItem key={barber.id} value={barber.id}>
+                {barber.name}
+              </SelectItem>
+            ))}
+          </SelectContent>
+        </Select>
+        <Select value={filterPayment || undefined} onValueChange={(value) => setFilterPayment(value)}>
+          <SelectTrigger>
+            <SelectValue placeholder="Todas as formas" />
+          </SelectTrigger>
+          <SelectContent>
+            {Object.entries(paymentMethodLabels).map(([value, label]) => (
+              <SelectItem key={value} value={value}>
+                {label}
+              </SelectItem>
+            ))}
+          </SelectContent>
+        </Select>
       </div>
 
       {/* Appointments List by Barber */}
       {loading ? (
-        <CardGridSkeleton count={4} />
+        <div className="text-center py-12">
+          <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-primary mx-auto"></div>
+        </div>
       ) : appointments.length === 0 ? (
-        <EmptyState
-          icon={CalendarIcon}
-          title="Nenhum atendimento"
-          description={search ? "Não encontramos atendimentos para sua busca." : "Sua barbearia ainda não possui atendimentos registrados no período."}
-          actionLabel={search ? undefined : "Novo Atendimento"}
-          onAction={search ? undefined : () => setIsDialogOpen(true)}
-        />
+        <div className="text-center py-12 bg-card rounded-lg border border-border">
+          <CalendarIcon className="w-12 h-12 text-muted-foreground mx-auto mb-4" />
+          <p className="text-lg font-medium text-foreground">
+            Nenhum atendimento encontrado
+          </p>
+          <p className="text-muted-foreground">
+            Registre o primeiro atendimento clicando no botão acima
+          </p>
+        </div>
       ) : (
         <Tabs value={selectedBarberTab} onValueChange={setSelectedBarberTab} className="w-full">
-          <div className="overflow-x-auto pb-4 mb-6">
-            <TabsList className="bg-black/20 border border-white/5 p-1 rounded-2xl h-auto">
-              <TabsTrigger
-                value="all"
-                className="rounded-xl px-6 py-2.5 data-[state=active]:bg-gold-500 data-[state=active]:text-black transition-all"
-              >
-                Todos <span className="ml-2 opacity-60 text-xs font-bold leading-none align-middle">{appointments.length}</span>
-              </TabsTrigger>
-              {barbers.filter(b => appointments.some(a => a.barber.id === b.id)).map((barber) => {
-                const count = appointments.filter(a => a.barber.id === barber.id).length;
-                return (
-                  <TabsTrigger
-                    key={barber.id}
-                    value={barber.id}
-                    className="rounded-xl px-6 py-2.5 data-[state=active]:bg-gold-500 data-[state=active]:text-black transition-all"
-                  >
-                    {barber.name} <span className="ml-2 opacity-60 text-xs font-bold leading-none align-middle">{count}</span>
-                  </TabsTrigger>
-                );
-              })}
-            </TabsList>
-          </div>
+          <TabsList className="grid grid-cols-2 lg:grid-cols-4 xl:grid-cols-6 mb-6">
+            <TabsTrigger value="all" onClick={() => setSelectedBarberTab("all")}>
+              Todos ({appointments.length})
+            </TabsTrigger>
+            {barbers.filter(b => appointments.some(a => a.barber.id === b.id)).map((barber) => {
+              const barberAppointments = appointments.filter(a => a.barber.id === barber.id);
+              return (
+                <TabsTrigger key={barber.id} value={barber.id} onClick={() => setSelectedBarberTab(barber.id)}>
+                  {barber.name} ({barberAppointments.length})
+                </TabsTrigger>
+              );
+            })}
+          </TabsList>
 
-          <TabsContent value="all" className="mt-0 outline-none">
-            <div className="grid gap-6">
+          <TabsContent value="all" className="mt-0">
+            <div className="grid gap-4">
               {appointments.map((appointment) => (
-                <div
-                  key={appointment.id}
-                  className="glass-panel p-6 rounded-3xl group hover:border-gold-500/30 transition-all duration-500 relative cursor-pointer"
-                  onClick={() => {
-                    setSelectedAppointment(appointment);
-                    setIsViewDialogOpen(true);
-                  }}
-                >
-                  <div className="absolute -inset-0.5 bg-gold-gradient opacity-0 group-hover:opacity-10 rounded-3xl blur-xl transition-opacity pointer-events-none" />
-
-                  <div className="relative">
-                    <div className="flex justify-between items-start mb-6">
-                      <div className="flex items-center gap-4">
-                        <div className="w-14 h-14 bg-gold-500/10 rounded-2xl flex items-center justify-center border border-gold-500/20 group-hover:bg-gold-500/20 transition-colors">
-                          <User className="w-6 h-6 text-gold-500" />
-                        </div>
-                        <div>
-                          <h3 className="text-xl font-bold text-white group-hover:text-gold-500 transition-all">
-                            {appointment.client.name}
-                          </h3>
-                          <p className="text-xs font-black uppercase tracking-widest text-gold-500/60 mt-0.5">
-                            {appointment.barber.name}
-                          </p>
-                        </div>
-                      </div>
-                      <div className="flex gap-2">
-                        <div className="flex flex-col items-end mr-4">
-                          <span className="text-[10px] uppercase tracking-[0.2em] text-gray-500 font-bold mb-1">Valor Total</span>
-                          <span className="text-2xl font-serif font-bold text-gold-500 leading-none">
-                            {formatCurrency(appointment.totalAmount)}
-                          </span>
-                        </div>
-                        <Button
-                          variant="ghost"
-                          size="sm"
-                          onClick={(e) => {
-                            e.stopPropagation();
-                            handleDelete(appointment.id);
-                          }}
-                          className="w-10 h-10 p-0 text-gray-500 hover:text-red-500 hover:bg-red-500/10 rounded-xl transition-all"
-                        >
-                          <Trash2 className="w-5 h-5" />
-                        </Button>
-                      </div>
-                    </div>
-
-                    <div className="grid grid-cols-1 md:grid-cols-3 gap-6 pt-6 border-t border-white/5">
-                      <div className="flex items-center gap-3">
-                        <div className="w-10 h-10 rounded-xl bg-white/5 flex items-center justify-center">
-                          <CalendarIcon className="w-4 h-4 text-gray-500" />
-                        </div>
-                        <div>
-                          <span className="text-[10px] uppercase tracking-[0.2em] text-gray-500 font-bold block">Data e Hora</span>
-                          <span className="text-sm font-bold text-white">
-                            {format(toManausTime(new Date(appointment.date)), "dd/MM/yyyy • HH:mm", { locale: ptBR })}
-                          </span>
-                        </div>
-                      </div>
-
-                      <div className="flex items-center gap-3">
-                        <div className="w-10 h-10 rounded-xl bg-white/5 flex items-center justify-center">
-                          <Badge variant="outline" className="border-gold-500/30 text-gold-500 p-0 w-6 h-6 flex items-center justify-center rounded-full text-[10px] font-bold">
-                            {appointment.services.length}
-                          </Badge>
-                        </div>
-                        <div>
-                          <span className="text-[10px] uppercase tracking-[0.2em] text-gray-500 font-bold block">Serviços</span>
-                          <span className="text-sm font-bold text-white">
-                            {appointment.services.length} {appointment.services.length === 1 ? 'Procedimento' : 'Procedimentos'}
-                          </span>
-                        </div>
-                      </div>
-
-                      <div className="flex items-center gap-3">
-                        <div className="w-10 h-10 rounded-xl bg-white/5 flex items-center justify-center">
-                          <DollarSign className="w-4 h-4 text-gray-500" />
-                        </div>
-                        <div>
-                          <span className="text-[10px] uppercase tracking-[0.2em] text-gray-500 font-bold block">Pagamento</span>
-                          <span className="text-sm font-bold text-white">
-                            {paymentMethodLabels[appointment.paymentMethod]}
-                          </span>
-                        </div>
-                      </div>
-                    </div>
-                  </div>
+            <div
+              key={appointment.id}
+              className="bg-card rounded-lg border border-border p-6 hover:border-primary/50 transition-colors cursor-pointer"
+              onClick={() => {
+                setSelectedAppointment(appointment);
+                setIsViewDialogOpen(true);
+              }}
+            >
+              <div className="flex justify-between items-start mb-4">
+                <div>
+                  <h3 className="text-lg font-semibold text-foreground mb-1">
+                    {appointment.client.name}
+                  </h3>
+                  <p className="text-sm text-muted-foreground">
+                    Barbeiro: {appointment.barber.name}
+                  </p>
                 </div>
-              ))}
+                <div className="flex gap-2">
+                  <Button
+                    variant="destructive"
+                    size="sm"
+                    onClick={(e) => {
+                      e.stopPropagation();
+                      handleDelete(appointment.id);
+                    }}
+                  >
+                    <Trash2 className="w-4 h-4" />
+                  </Button>
+                </div>
+              </div>
+              <div className="grid grid-cols-2 md:grid-cols-4 gap-4 text-sm">
+                <div>
+                  <p className="text-muted-foreground">Data</p>
+                  <p className="font-medium text-foreground">
+                    {format(toManausTime(new Date(appointment.date)), "dd/MM/yyyy HH:mm", { locale: ptBR })}
+                  </p>
+                </div>
+                <div>
+                  <p className="text-muted-foreground">Serviços</p>
+                  <p className="font-medium text-foreground">
+                    {appointment.services.length} serviço(s)
+                  </p>
+                </div>
+                <div>
+                  <p className="text-muted-foreground">Pagamento</p>
+                  <p className="font-medium text-foreground">
+                    {paymentMethodLabels[appointment.paymentMethod]}
+                  </p>
+                </div>
+                <div>
+                  <p className="text-muted-foreground">Valor Total</p>
+                  <p className="font-semibold text-primary">
+                    {formatCurrency(appointment.totalAmount)}
+                  </p>
+                </div>
+              </div>
             </div>
+          ))}
+        </div>
           </TabsContent>
 
-          {/* Individual Barber Tabs Content */}
+          {/* Tabs individuais para cada barbeiro */}
           {barbers.filter(b => appointments.some(a => a.barber.id === b.id)).map((barber) => {
             const barberAppointments = appointments.filter(a => a.barber.id === barber.id);
             return (
-              <TabsContent key={barber.id} value={barber.id} className="mt-0 outline-none">
-                <div className="grid gap-6">
+              <TabsContent key={barber.id} value={barber.id} className="mt-0">
+                <div className="grid gap-4">
                   {barberAppointments.map((appointment) => (
                     <div
                       key={appointment.id}
-                      className="glass-panel p-6 rounded-3xl group hover:border-gold-500/30 transition-all duration-500 relative cursor-pointer"
+                      className="bg-card rounded-lg border border-border p-6 hover:border-primary/50 transition-colors cursor-pointer"
                       onClick={() => {
                         setSelectedAppointment(appointment);
                         setIsViewDialogOpen(true);
                       }}
                     >
-                      <div className="absolute -inset-0.5 bg-gold-gradient opacity-0 group-hover:opacity-10 rounded-3xl blur-xl transition-opacity pointer-events-none" />
-
-                      <div className="relative">
-                        <div className="flex justify-between items-start mb-6">
-                          <div className="flex items-center gap-4">
-                            <div className="w-14 h-14 bg-gold-500/10 rounded-2xl flex items-center justify-center border border-gold-500/20 group-hover:bg-gold-500/20 transition-colors">
-                              <User className="w-6 h-6 text-gold-500" />
-                            </div>
-                            <div>
-                              <h3 className="text-xl font-bold text-white group-hover:text-gold-500 transition-all">
-                                {appointment.client.name}
-                              </h3>
-                              <p className="text-xs font-black uppercase tracking-widest text-gold-500/60 mt-0.5">
-                                {appointment.barber.name}
-                              </p>
-                            </div>
-                          </div>
-                          <div className="flex gap-2">
-                            <div className="flex flex-col items-end mr-4">
-                              <span className="text-[10px] uppercase tracking-[0.2em] text-gray-500 font-bold mb-1">Valor Total</span>
-                              <span className="text-2xl font-serif font-bold text-gold-500 leading-none">
-                                {formatCurrency(appointment.totalAmount)}
-                              </span>
-                            </div>
-                            <Button
-                              variant="ghost"
-                              size="sm"
-                              onClick={(e) => {
-                                e.stopPropagation();
-                                handleDelete(appointment.id);
-                              }}
-                              className="w-10 h-10 p-0 text-gray-500 hover:text-red-500 hover:bg-red-500/10 rounded-xl transition-all"
-                            >
-                              <Trash2 className="w-5 h-5" />
-                            </Button>
-                          </div>
+                      <div className="flex justify-between items-start mb-4">
+                        <div>
+                          <h3 className="text-lg font-semibold text-foreground mb-1">
+                            {appointment.client.name}
+                          </h3>
+                          <p className="text-sm text-muted-foreground">
+                            Barbeiro: {appointment.barber.name}
+                          </p>
                         </div>
-
-                        <div className="grid grid-cols-1 md:grid-cols-3 gap-6 pt-6 border-t border-white/5">
-                          <div className="flex items-center gap-3">
-                            <div className="w-10 h-10 rounded-xl bg-white/5 flex items-center justify-center">
-                              <CalendarIcon className="w-4 h-4 text-gray-500" />
-                            </div>
-                            <div>
-                              <span className="text-[10px] uppercase tracking-[0.2em] text-gray-500 font-bold block">Data e Hora</span>
-                              <span className="text-sm font-bold text-white">
-                                {format(toManausTime(new Date(appointment.date)), "dd/MM/yyyy • HH:mm", { locale: ptBR })}
-                              </span>
-                            </div>
-                          </div>
-
-                          <div className="flex items-center gap-3">
-                            <div className="w-10 h-10 rounded-xl bg-white/5 flex items-center justify-center">
-                              <Badge variant="outline" className="border-gold-500/30 text-gold-500 p-0 w-6 h-6 flex items-center justify-center rounded-full text-[10px] font-bold">
-                                {appointment.services.length}
-                              </Badge>
-                            </div>
-                            <div>
-                              <span className="text-[10px] uppercase tracking-[0.2em] text-gray-500 font-bold block">Serviços</span>
-                              <span className="text-sm font-bold text-white">
-                                {appointment.services.length} {appointment.services.length === 1 ? 'Procedimento' : 'Procedimentos'}
-                              </span>
-                            </div>
-                          </div>
-
-                          <div className="flex items-center gap-3">
-                            <div className="w-10 h-10 rounded-xl bg-white/5 flex items-center justify-center">
-                              <DollarSign className="w-4 h-4 text-gray-500" />
-                            </div>
-                            <div>
-                              <span className="text-[10px] uppercase tracking-[0.2em] text-gray-500 font-bold block">Pagamento</span>
-                              <span className="text-sm font-bold text-white">
-                                {paymentMethodLabels[appointment.paymentMethod]}
-                              </span>
-                            </div>
-                          </div>
+                        <div className="flex gap-2">
+                          <Button
+                            variant="destructive"
+                            size="sm"
+                            onClick={(e) => {
+                              e.stopPropagation();
+                              handleDelete(appointment.id);
+                            }}
+                          >
+                            <Trash2 className="w-4 h-4" />
+                          </Button>
+                        </div>
+                      </div>
+                      <div className="grid grid-cols-2 md:grid-cols-4 gap-4 text-sm">
+                        <div>
+                          <p className="text-muted-foreground">Data</p>
+                          <p className="font-medium text-foreground">
+                            {format(toManausTime(new Date(appointment.date)), "dd/MM/yyyy HH:mm", { locale: ptBR })}
+                          </p>
+                        </div>
+                        <div>
+                          <p className="text-muted-foreground">Serviços</p>
+                          <p className="font-medium text-foreground">
+                            {appointment.services.length} serviço(s)
+                          </p>
+                        </div>
+                        <div>
+                          <p className="text-muted-foreground">Pagamento</p>
+                          <p className="font-medium text-foreground">
+                            {paymentMethodLabels[appointment.paymentMethod]}
+                          </p>
+                        </div>
+                        <div>
+                          <p className="text-muted-foreground">Valor Total</p>
+                          <p className="font-semibold text-primary">
+                            {formatCurrency(appointment.totalAmount)}
+                          </p>
                         </div>
                       </div>
                     </div>
@@ -583,20 +466,174 @@ export default function AtendimentosPage() {
 
       {/* Create Dialog */}
       <Dialog open={isDialogOpen} onOpenChange={setIsDialogOpen}>
-        <DialogContent className="max-w-2xl bg-black/95 border-gold-500/20 rounded-3xl">
+        <DialogContent>
           <DialogHeader>
-            <DialogTitle className="text-xl font-bold text-white mb-4">Novo Atendimento</DialogTitle>
+            <DialogTitle>Novo Atendimento</DialogTitle>
           </DialogHeader>
-          <AppointmentForm
-            clients={clients}
-            barbers={barbers}
-            services={services}
-            onSuccess={() => {
-              setIsDialogOpen(false);
-              fetchAppointments();
-            }}
-            onCancel={() => setIsDialogOpen(false)}
-          />
+          <form onSubmit={handleSubmit} className="space-y-4">
+            <div className="grid grid-cols-2 gap-4">
+              <div>
+                <Label htmlFor="clientId">Cliente *</Label>
+                <Select value={formData.clientId} onValueChange={(value) => setFormData({ ...formData, clientId: value })}>
+                  <SelectTrigger>
+                    <SelectValue placeholder="Selecione o cliente" />
+                  </SelectTrigger>
+                  <SelectContent>
+                    {clients.map((client) => (
+                      <SelectItem key={client.id} value={client.id}>
+                        {client.name} - {client.phone}
+                      </SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
+              </div>
+              <div>
+                <Label htmlFor="barberId">Barbeiro *</Label>
+                <Select value={formData.barberId} onValueChange={(value) => setFormData({ ...formData, barberId: value })}>
+                  <SelectTrigger>
+                    <SelectValue placeholder="Selecione o barbeiro" />
+                  </SelectTrigger>
+                  <SelectContent>
+                    {barbers.map((barber) => (
+                      <SelectItem key={barber.id} value={barber.id}>
+                        {barber.name}
+                      </SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
+              </div>
+            </div>
+
+            <div>
+              <Label>Serviços *</Label>
+              <div className="grid grid-cols-1 gap-2 mt-2 max-h-48 overflow-y-auto border border-border rounded-lg p-4">
+                {services.map((service) => (
+                  <label
+                    key={service.id}
+                    className="flex items-center gap-3 p-3 bg-secondary rounded-lg cursor-pointer hover:bg-secondary/80"
+                  >
+                    <input
+                      type="checkbox"
+                      checked={formData.serviceIds.includes(service.id)}
+                      onChange={() => toggleService(service.id)}
+                      className="w-4 h-4"
+                    />
+                    <div className="flex-1">
+                      <p className="font-medium text-foreground">{service.name}</p>
+                      <p className="text-sm text-muted-foreground">
+                        {formatCurrency(service.price)} • {service.duration} min
+                      </p>
+                    </div>
+                  </label>
+                ))}
+              </div>
+            </div>
+
+            <div className="grid grid-cols-2 gap-4">
+              <div>
+                <Label>Data *</Label>
+                <Popover>
+                  <PopoverTrigger asChild>
+                    <Button
+                      variant="outline"
+                      className={cn(
+                        "w-full justify-start text-left font-normal",
+                        !selectedDate && "text-muted-foreground"
+                      )}
+                    >
+                      <CalendarIcon className="mr-2 h-4 w-4" />
+                      {selectedDate ? format(selectedDate, "dd/MM/yyyy", { locale: ptBR }) : "Selecione a data"}
+                    </Button>
+                  </PopoverTrigger>
+                  <PopoverContent className="w-auto p-0" align="start">
+                    <Calendar
+                      mode="single"
+                      selected={selectedDate}
+                      onSelect={(date) => {
+                        setSelectedDate(date);
+                        if (date) {
+                          setFormData({ ...formData, date: format(date, "yyyy-MM-dd") });
+                        }
+                      }}
+                      disabled={(date) => date < new Date(new Date().setHours(0, 0, 0, 0))}
+                      initialFocus
+                      locale={ptBR}
+                    />
+                  </PopoverContent>
+                </Popover>
+              </div>
+              <div>
+                <Label htmlFor="time">Hora *</Label>
+                <Select value={formData.time} onValueChange={(value) => setFormData({ ...formData, time: value })}>
+                  <SelectTrigger>
+                    <SelectValue placeholder="Selecione o horário" />
+                  </SelectTrigger>
+                  <SelectContent>
+                    {TIME_SLOTS.map((time) => (
+                      <SelectItem key={time} value={time}>
+                        {time}
+                      </SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
+              </div>
+            </div>
+
+            <div>
+              <Label htmlFor="paymentMethod">Forma de Pagamento *</Label>
+              <Select value={formData.paymentMethod} onValueChange={(value) => setFormData({ ...formData, paymentMethod: value })}>
+                <SelectTrigger>
+                  <SelectValue placeholder="Selecione a forma de pagamento" />
+                </SelectTrigger>
+                <SelectContent>
+                  {Object.entries(paymentMethodLabels).map(([value, label]) => (
+                    <SelectItem key={value} value={value}>
+                      {label}
+                    </SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
+            </div>
+
+            <div>
+              <Label htmlFor="notes">Observações</Label>
+              <Textarea
+                id="notes"
+                value={formData.notes}
+                onChange={(e) => setFormData({ ...formData, notes: e.target.value })}
+                placeholder="Observações opcionais sobre o atendimento"
+                rows={3}
+              />
+            </div>
+
+            {formData.serviceIds.length > 0 && (
+              <div className="bg-secondary p-4 rounded-lg space-y-2">
+                <div className="flex justify-between">
+                  <span className="text-foreground">Valor Total:</span>
+                  <span className="font-bold text-primary">
+                    {formatCurrency(calculateTotal())}
+                  </span>
+                </div>
+                {formData.barberId && (
+                  <div className="flex justify-between text-sm">
+                    <span className="text-muted-foreground">Comissão do Barbeiro:</span>
+                    <span className="font-semibold text-foreground">
+                      {formatCurrency(calculateCommission())}
+                    </span>
+                  </div>
+                )}
+              </div>
+            )}
+
+            <div className="flex gap-2 pt-4">
+              <Button type="button" variant="outline" onClick={() => setIsDialogOpen(false)} className="flex-1">
+                Cancelar
+              </Button>
+              <Button type="submit" className="flex-1">
+                Registrar Atendimento
+              </Button>
+            </div>
+          </form>
         </DialogContent>
       </Dialog>
 
@@ -605,10 +642,8 @@ export default function AtendimentosPage() {
         <DialogContent>
           <DialogHeader>
             <DialogTitle>
-              <div className="flex items-center gap-2 text-xl font-serif text-white">
-                <div className="w-8 h-8 rounded-lg bg-gold-500/10 flex items-center justify-center border border-gold-500/20">
-                  <CalendarIcon className="w-4 h-4 text-gold-500" />
-                </div>
+              <div className="flex items-center gap-2 text-xl">
+                <CalendarIcon className="w-5 h-5 text-primary" />
                 Detalhes do Atendimento
               </div>
             </DialogTitle>
@@ -617,94 +652,86 @@ export default function AtendimentosPage() {
             <div className="space-y-6">
               {/* Cliente e Barbeiro */}
               <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                <div className="bg-white/5 border border-white/10 p-4 rounded-2xl">
+                <div className="bg-secondary/50 p-4 rounded-lg">
                   <div className="flex items-center gap-2 mb-2">
-                    <User className="w-4 h-4 text-gold-500" />
-                    <span className="text-xs font-bold uppercase tracking-widest text-gray-400">Cliente</span>
+                    <User className="w-4 h-4 text-primary" />
+                    <Label className="text-sm font-semibold">Cliente</Label>
                   </div>
-                  <p className="text-white font-bold text-lg">{selectedAppointment.client.name}</p>
-                  <div className="flex items-center gap-2 mt-1">
-                    <Phone className="w-3 h-3 text-gold-500/70" />
-                    <p className="text-sm text-gray-400 font-medium">{selectedAppointment.client.phone}</p>
+                  <p className="text-foreground font-medium">{selectedAppointment.client.name}</p>
+                  <div className="flex items-center gap-1 mt-1">
+                    <Phone className="w-3 h-3 text-muted-foreground" />
+                    <p className="text-sm text-muted-foreground">{selectedAppointment.client.phone}</p>
                   </div>
                 </div>
 
-                <div className="bg-white/5 border border-white/10 p-4 rounded-2xl">
+                <div className="bg-secondary/50 p-4 rounded-lg">
                   <div className="flex items-center gap-2 mb-2">
-                    <User className="w-4 h-4 text-gold-500" />
-                    <span className="text-xs font-bold uppercase tracking-widest text-gray-400">Barbeiro</span>
+                    <User className="w-4 h-4 text-primary" />
+                    <Label className="text-sm font-semibold">Barbeiro</Label>
                   </div>
-                  <p className="text-white font-bold text-lg">{selectedAppointment.barber.name}</p>
-                  <div className="mt-2">
-                    <Badge variant="outline" className="border-gold-500/30 text-gold-500 bg-gold-500/5">
-                      Comissão: {selectedAppointment.barber.commissionRate}%
-                    </Badge>
-                  </div>
-                </div>
-              </div>
-
-              {/* Data/Hora e Status */}
-              <div className="bg-white/5 border border-white/10 p-4 rounded-2xl">
-                <div className="flex items-center gap-2 mb-2">
-                  <Clock className="w-4 h-4 text-gold-500" />
-                  <span className="text-xs font-bold uppercase tracking-widest text-gray-400">Data e Hora</span>
-                </div>
-                <div className="flex justify-between items-center">
-                  <p className="text-white font-bold text-lg">
-                    {format(toManausTime(new Date(selectedAppointment.date)), "dd/MM/yyyy 'às' HH:mm", { locale: ptBR })}
-                  </p>
-                  <Badge
-                    className={cn(
-                      "px-3 py-1",
-                      selectedAppointment.status === 'COMPLETED'
-                        ? "bg-green-500/20 text-green-500 hover:bg-green-500/30 border-green-500/50"
-                        : "bg-white/10 text-white"
-                    )}
-                  >
-                    {statusLabels[selectedAppointment.status] || selectedAppointment.status}
+                  <p className="text-foreground font-medium">{selectedAppointment.barber.name}</p>
+                  <Badge variant="outline" className="mt-2">
+                    Comissão: {selectedAppointment.barber.commissionRate}%
                   </Badge>
                 </div>
               </div>
 
+              {/* Data/Hora e Status */}
+              <div className="bg-secondary/50 p-4 rounded-lg">
+                <div className="flex items-center gap-2 mb-2">
+                  <Clock className="w-4 h-4 text-primary" />
+                  <Label className="text-sm font-semibold">Data e Hora</Label>
+                </div>
+                <p className="text-foreground font-medium">
+                  {format(toManausTime(new Date(selectedAppointment.date)), "dd/MM/yyyy 'às' HH:mm", { locale: ptBR })}
+                </p>
+                <Badge 
+                  variant={selectedAppointment.status === 'COMPLETED' ? 'default' : 'secondary'}
+                  className="mt-2"
+                >
+                  {selectedAppointment.status === 'COMPLETED' ? '✓ Concluído' : selectedAppointment.status}
+                </Badge>
+              </div>
+
               {/* Serviços */}
-              <div className="bg-white/5 border border-white/10 p-4 rounded-2xl">
-                <span className="text-xs font-bold uppercase tracking-widest text-gray-400 mb-3 block">Serviços Realizados</span>
+              <div className="bg-secondary/50 p-4 rounded-lg">
+                <Label className="text-sm font-semibold mb-3 block">Serviços Realizados</Label>
                 <div className="space-y-2">
                   {selectedAppointment.services.map((s) => (
-                    <div
-                      key={s.service.id}
-                      className="flex justify-between items-center p-3 bg-black/20 rounded-xl border border-white/5"
+                    <div 
+                      key={s.service.id} 
+                      className="flex justify-between items-center p-2 bg-background rounded border border-border"
                     >
-                      <span className="text-white font-medium">{s.service.name}</span>
-                      <span className="font-bold text-gold-500">{formatCurrency(s.service.price)}</span>
+                      <span className="text-foreground">{s.service.name}</span>
+                      <span className="font-semibold text-primary">{formatCurrency(s.service.price)}</span>
                     </div>
                   ))}
                 </div>
               </div>
 
               {/* Pagamento */}
-              <div className="bg-white/5 border border-white/10 p-4 rounded-2xl">
+              <div className="bg-secondary/50 p-4 rounded-lg">
                 <div className="flex items-center gap-2 mb-2">
-                  <DollarSign className="w-4 h-4 text-gold-500" />
-                  <span className="text-xs font-bold uppercase tracking-widest text-gray-400">Forma de Pagamento</span>
+                  <DollarSign className="w-4 h-4 text-primary" />
+                  <Label className="text-sm font-semibold">Forma de Pagamento</Label>
                 </div>
-                <Badge variant="outline" className="text-base py-1 px-4 border-white/20 text-white bg-white/5">
+                <Badge variant="outline" className="text-base">
                   {paymentMethodLabels[selectedAppointment.paymentMethod]}
                 </Badge>
               </div>
 
               {/* Totais */}
-              <div className="bg-gold-500/5 border border-gold-500/20 p-6 rounded-2xl space-y-3">
+              <div className="bg-primary/10 border border-primary/20 p-4 rounded-lg space-y-3">
                 <div className="flex justify-between items-center">
-                  <span className="text-gray-400 font-medium">Valor Total:</span>
-                  <span className="font-serif font-bold text-gold-500 text-3xl">
+                  <span className="text-foreground font-medium">Valor Total:</span>
+                  <span className="font-bold text-primary text-xl">
                     {formatCurrency(selectedAppointment.totalAmount)}
                   </span>
                 </div>
-                <div className="border-t border-gold-500/10 pt-2">
+                <div className="border-t border-border pt-2">
                   <div className="flex justify-between items-center text-sm">
-                    <span className="text-gray-500 text-xs uppercase tracking-widest font-bold">Comissão do Barbeiro:</span>
-                    <span className="font-bold text-white/50">
+                    <span className="text-muted-foreground">Comissão do Barbeiro:</span>
+                    <span className="font-semibold text-foreground">
                       {formatCurrency(selectedAppointment.commissionAmount)}
                     </span>
                   </div>
@@ -713,92 +740,11 @@ export default function AtendimentosPage() {
 
               {/* Observações */}
               {selectedAppointment.notes && (
-                <div className="bg-white/5 border border-white/10 p-4 rounded-2xl">
-                  <span className="text-xs font-bold uppercase tracking-widest text-gray-400 mb-2 block">Observações</span>
-                  <p className="text-white text-sm italic opacity-80 leading-relaxed">"{selectedAppointment.notes}"</p>
+                <div className="bg-secondary/50 p-4 rounded-lg">
+                  <Label className="text-sm font-semibold mb-2 block">Observações</Label>
+                  <p className="text-foreground text-sm italic">{selectedAppointment.notes}</p>
                 </div>
               )}
-
-              {/* Action Buttons */}
-              {selectedAppointment.status !== 'COMPLETED' && (
-                <div className="grid grid-cols-2 gap-3">
-                  <Button
-                    onClick={handleOpenPixDialog}
-                    className="h-14 bg-blue-500 hover:bg-blue-600 text-white font-bold text-lg rounded-2xl shadow-lg shadow-blue-500/20"
-                  >
-                    <QrCode className="w-6 h-6 mr-2" />
-                    Gerar Pix
-                  </Button>
-                  <Button
-                    onClick={() => handleCompleteAppointment(selectedAppointment.id)}
-                    className="h-14 bg-green-500 hover:bg-green-600 text-white font-bold text-lg rounded-2xl shadow-lg shadow-green-500/20"
-                  >
-                    <Check className="w-6 h-6 mr-2" />
-                    Concluir
-                  </Button>
-                </div>
-              )}
-            </div>
-          )}
-        </DialogContent>      </Dialog>
-
-      {/* Pix Dialog */}
-      <Dialog open={isPixDialogOpen} onOpenChange={setIsPixDialogOpen}>
-        <DialogContent className="sm:max-w-md bg-black/95 border-gold-500/20">
-          <DialogHeader>
-            <DialogTitle className="text-white">Gerar Cobrança Pix</DialogTitle>
-          </DialogHeader>
-          {!generatedPix ? (
-            <form onSubmit={handleGeneratePix} className="space-y-4">
-              <div>
-                <Label className="text-white">Descrição</Label>
-                <Input
-                  value={pixData.description}
-                  onChange={(e) => setPixData({ ...pixData, description: e.target.value })}
-                  className="bg-white/5 text-white border-white/10"
-                />
-              </div>
-              <div>
-                <Label className="text-white">Valor (R$)</Label>
-                <Input
-                  value={pixData.amount}
-                  readOnly
-                  className="bg-white/5 text-white border-white/10 font-bold text-lg"
-                />
-              </div>
-              <Button type="submit" className="w-full bg-blue-600 hover:bg-blue-700 font-bold text-white">
-                Gerar QR Code
-              </Button>
-            </form>
-          ) : (
-            <div className="flex flex-col items-center space-y-4 py-4">
-              <div className="bg-white p-2 rounded-lg">
-                {/* eslint-disable-next-line @next/next/no-img-element */}
-                <img
-                  src={`data:image/png;base64,${generatedPix.qrCode.encodedImage}`}
-                  alt="QR Code Pix"
-                  className="w-48 h-48"
-                />
-              </div>
-              <p className="text-white font-bold text-lg">
-                {new Intl.NumberFormat('pt-BR', { style: 'currency', currency: 'BRL' }).format(Number(pixData.amount))}
-              </p>
-              <div className="w-full space-y-2">
-                <Label className="text-gray-400 text-xs uppercase">Copia e Cola</Label>
-                <div className="flex gap-2">
-                  <Input
-                    value={generatedPix.qrCode.payload}
-                    readOnly
-                    className="bg-black/50 border-white/10 text-gray-300 font-mono text-xs"
-                  />
-                  <Button size="icon" onClick={copyToClipboard} variant="outline" className="border-white/10 hover:bg-white/10">
-                    {copied ? <Check className="w-4 h-4 text-green-500" /> : <Copy className="w-4 h-4" />}
-                  </Button>
-                </div>
-              </div>
-              <Button variant="ghost" onClick={() => setIsPixDialogOpen(false)} className="text-gray-400 hover:text-white">
-                Fechar
-              </Button>
             </div>
           )}
         </DialogContent>

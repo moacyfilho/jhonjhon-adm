@@ -1,5 +1,6 @@
 import { NextRequest, NextResponse } from "next/server";
-import { createClient } from "@/utils/supabase/server";
+import { getServerSession } from "next-auth";
+import { authOptions } from "@/lib/auth/auth-options";
 import { prisma } from "@/lib/db";
 
 // Using singleton prisma from lib/db
@@ -11,10 +12,9 @@ export async function GET(
   { params }: { params: { id: string } }
 ) {
   try {
-    const supabase = createClient();
-    const { data: { user } } = await supabase.auth.getUser();
+    const session = await getServerSession(authOptions);
 
-    if (!user) {
+    if (!session) {
       return NextResponse.json({ error: "Não autorizado" }, { status: 401 });
     }
 
@@ -59,15 +59,14 @@ export async function PUT(
   { params }: { params: { id: string } }
 ) {
   try {
-    const supabase = createClient();
-    const { data: { user } } = await supabase.auth.getUser();
+    const session = await getServerSession(authOptions);
 
-    if (!user) {
+    if (!session) {
       return NextResponse.json({ error: "Não autorizado" }, { status: 401 });
     }
 
     const body = await request.json();
-    const { name, phone, email, commissionRate, hourlyRate, subscriptionCommissionRate, isActive } = body;
+    const { name, phone, email, commissionRate, hourlyRate, isActive } = body;
 
     if (!name || !phone) {
       return NextResponse.json(
@@ -83,8 +82,7 @@ export async function PUT(
         phone,
         email: email || null,
         commissionRate: parseFloat(commissionRate) || 0,
-        hourlyRate: hourlyRate ? parseFloat(hourlyRate) : 0,
-        subscriptionCommissionRate: subscriptionCommissionRate ? parseFloat(subscriptionCommissionRate) : 45,
+        hourlyRate: parseFloat(hourlyRate) || 0,
         isActive: isActive !== undefined ? isActive : true,
       },
     });
@@ -104,10 +102,9 @@ export async function DELETE(
   { params }: { params: { id: string } }
 ) {
   try {
-    const supabase = createClient();
-    const { data: { user } } = await supabase.auth.getUser();
+    const session = await getServerSession(authOptions);
 
-    if (!user) {
+    if (!session) {
       return NextResponse.json({ error: "Não autorizado" }, { status: 401 });
     }
 

@@ -1,5 +1,6 @@
 import { NextRequest, NextResponse } from 'next/server';
-import { createClient } from '@/utils/supabase/server';
+import { getServerSession } from 'next-auth';
+import { authOptions } from '@/lib/auth/auth-options';
 import { prisma } from '@/lib/db';
 
 export const dynamic = 'force-dynamic';
@@ -10,15 +11,13 @@ export async function PUT(
   { params }: { params: { id: string } }
 ) {
   try {
-    const supabase = createClient();
-    const { data: { user } } = await supabase.auth.getUser();
-
-    if (!user) {
+    const session = await getServerSession(authOptions);
+    if (!session) {
       return NextResponse.json({ error: 'Não autorizado' }, { status: 401 });
     }
 
     const body = await request.json();
-    const { description, category, payer, amount, dueDate, paymentDate, status, paymentMethod, observations, phone } = body;
+    const { description, category, payer, amount, dueDate, paymentDate, status, paymentMethod, observations } = body;
 
     const updateData: any = {};
 
@@ -29,8 +28,7 @@ export async function PUT(
     if (dueDate !== undefined) updateData.dueDate = new Date(dueDate);
     if (status !== undefined) updateData.status = status;
     if (observations !== undefined) updateData.observations = observations || null;
-    if (phone !== undefined) updateData.phone = phone || null;
-
+    
     // Se estiver marcando como recebido
     if (status === 'PAID') {
       updateData.paymentDate = paymentDate ? new Date(paymentDate) : new Date();
@@ -52,22 +50,22 @@ export async function PUT(
 
     // 🔄 RECORRÊNCIA AUTOMÁTICA: Se for assinatura e foi marcada como paga
     if (
-      existingAccount &&
-      existingAccount.category === 'SUBSCRIPTION' &&
-      status === 'PAID' &&
+      existingAccount && 
+      existingAccount.category === 'SUBSCRIPTION' && 
+      status === 'PAID' && 
       existingAccount.subscriptionId
     ) {
       try {
         console.log(`🔄 Criando recorrência para assinatura ${existingAccount.subscriptionId}...`);
-
+        
         const subscription = existingAccount.subscription;
-
+        
         if (subscription && subscription.status === 'ACTIVE') {
           // Calcular próxima data de vencimento (próximo mês, mesmo dia)
           const currentDueDate = new Date(existingAccount.dueDate);
           const nextDueDate = new Date(currentDueDate);
           nextDueDate.setMonth(nextDueDate.getMonth() + 1);
-
+          
           // Ajustar se o dia não existir no próximo mês (ex: 31 de fevereiro -> 28/29 de fevereiro)
           if (nextDueDate.getDate() !== currentDueDate.getDate()) {
             nextDueDate.setDate(0); // Vai para o último dia do mês anterior
@@ -110,19 +108,8 @@ export async function DELETE(
   { params }: { params: { id: string } }
 ) {
   try {
-    const supabase = createClient();
-    const { data: { user } } = await supabase.auth.getUser();
-
-    if (!user) {
-      return NextResponse.json({ error: 'Não autorizado' }, { status: 401 });
-    }
-
-    const dbUser = await prisma.user.findUnique({
-      where: { email: user.email! },
-      select: { role: true }
-    });
-
-    if (!dbUser || dbUser.role !== 'ADMIN') {
+    const session = await getServerSession(authOptions);
+    if (!session || (session.user as any)?.role !== 'ADMIN') {
       return NextResponse.json({ error: 'Não autorizado' }, { status: 401 });
     }
 

@@ -1,28 +1,20 @@
 import { NextRequest, NextResponse } from "next/server";
-import { createClient } from "@/utils/supabase/server";
+import { getServerSession } from "next-auth";
+import { authOptions } from "@/lib/auth/auth-options";
 import { prisma } from "@/lib/db";
-
-export const dynamic = "force-dynamic";
 
 export async function PUT(
   request: NextRequest,
   { params }: { params: { id: string } }
 ) {
   try {
-    const supabase = createClient();
-    const { data: { user } } = await supabase.auth.getUser();
-
-    if (!user) {
+    const session = await getServerSession(authOptions);
+    if (!session) {
       return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
     }
 
-    // Buscar o papel do usuário no banco de dados
-    const dbUser = await prisma.user.findUnique({
-      where: { email: user.email! },
-      select: { role: true }
-    });
-
-    if (!dbUser || dbUser.role !== "ADMIN") {
+    const user = session.user as any;
+    if (user.role !== "ADMIN") {
       return NextResponse.json(
         { error: "Only admins can mark commissions as paid" },
         { status: 403 }
@@ -31,7 +23,7 @@ export async function PUT(
 
     const commission = await prisma.commission.update({
       where: { id: params.id },
-      data: {
+      data: { 
         status: "PAID",
         paidAt: new Date(),
       },

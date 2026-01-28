@@ -8,47 +8,27 @@
   * {
     @apply border-border;
   }
-
+  
   body {
     @apply bg-background text-foreground;
     font-family: 'Montserrat', sans-serif;
   }
 
-  h1,
-  h2,
-  h3,
-  h4,
-  h5,
-  h6 {
+  h1, h2, h3, h4, h5, h6 {
     font-family: 'Playfair Display', serif;
   }
 }
 
 @layer utilities {
-
   /* Hide scrollbar for Chrome, Safari and Opera */
   .no-scrollbar::-webkit-scrollbar {
     display: none;
   }
-
+  
   /* Hide scrollbar for IE, Edge and Firefox */
   .no-scrollbar {
-    -ms-overflow-style: none;
-    /* IE and Edge */
-    scrollbar-width: none;
-    /* Firefox */
-  }
-
-  .glass-panel {
-    @apply bg-white/[0.03] backdrop-blur-xl border border-white/[0.08];
-  }
-
-  .text-gradient-gold {
-    @apply bg-gold-gradient bg-clip-text text-transparent;
-  }
-
-  .shadow-gold {
-    box-shadow: 0 0 25px rgba(212, 175, 55, 0.15);
+    -ms-overflow-style: none;  /* IE and Edge */
+    scrollbar-width: none;  /* Firefox */
   }
 }
 
@@ -57,49 +37,60 @@
   display: none !important;
 }
 
-/* Transições suaves globais */
-* {
-  @apply transition-all duration-300;
+/* Estilo para input time de bloqueio com cor vermelha */
+.time-input-red {
+  color: rgb(220, 38, 38) !important; /* text-red-600 */
+  -webkit-text-fill-color: rgb(220, 38, 38) !important;
 }
 
-/* Foco acessível premium */
-:focus-visible {
-  @apply outline-none ring-2 ring-gold-500/50 ring-offset-2 ring-offset-background;
+.time-input-red::-webkit-datetime-edit {
+  color: rgb(220, 38, 38) !important;
+  -webkit-text-fill-color: rgb(220, 38, 38) !important;
 }
 
-/* Estilo para inputs de tempo refinados */
-input[type="time"]::-webkit-calendar-picker-indicator {
+.time-input-red::-webkit-datetime-edit-fields-wrapper {
+  color: rgb(220, 38, 38) !important;
+  -webkit-text-fill-color: rgb(220, 38, 38) !important;
+}
+
+.time-input-red::-webkit-datetime-edit-hour-field {
+  color: rgb(220, 38, 38) !important;
+  -webkit-text-fill-color: rgb(220, 38, 38) !important;
+}
+
+.time-input-red::-webkit-datetime-edit-minute-field {
+  color: rgb(220, 38, 38) !important;
+  -webkit-text-fill-color: rgb(220, 38, 38) !important;
+}
+
+.time-input-red::-webkit-datetime-edit-ampm-field {
+  color: rgb(220, 38, 38) !important;
+  -webkit-text-fill-color: rgb(220, 38, 38) !important;
+}
+
+.time-input-red::-webkit-datetime-edit-text {
+  color: rgb(220, 38, 38) !important;
+  -webkit-text-fill-color: rgb(220, 38, 38) !important;
+}
+
+.time-input-red:focus::-webkit-datetime-edit-hour-field,
+.time-input-red:focus::-webkit-datetime-edit-minute-field {
+  background-color: rgba(220, 38, 38, 0.1) !important;
+  color: rgb(220, 38, 38) !important;
+  -webkit-text-fill-color: rgb(220, 38, 38) !important;
+}
+
+.time-input-red::-webkit-calendar-picker-indicator {
   filter: invert(18%) sepia(98%) saturate(7471%) hue-rotate(356deg) brightness(91%) contrast(92%);
   cursor: pointer;
 }
 
-.time-input-red {
-  @apply text-red-500 !important;
-}
-
+/* Estilo para select de horário com cor vermelha */
 .time-select-red {
-  @apply text-red-500 !important;
+  color: rgb(220, 38, 38) !important; /* text-red-600 */
+  -webkit-text-fill-color: rgb(220, 38, 38) !important;
 }
 
-/* Scrollbar Customizado Premium */
-::-webkit-scrollbar {
-  width: 8px;
-  height: 8px;
-}
-
-::-webkit-scrollbar-track {
-  @apply bg-background;
-}
-
-::-webkit-scrollbar-thumb {
-  @apply bg-white/5 rounded-full border-2 border-background;
-}
-
-::-webkit-scrollbar-thumb:hover {
-  @apply bg-gold-500/20;
-}
-
-/* Smooth Scrolling */
-html {
-  scroll-behavior: smooth;
+.time-select-red option {
+  color: rgb(220, 38, 38) !important;
 }

@@ -1,7 +1,7 @@
 "use client";
 
 import { useState, useEffect } from "react";
-import { Wallet, Plus, DollarSign, TrendingUp, TrendingDown, ShoppingCart, QrCode, Copy, Check } from "lucide-react";
+import { Wallet, Plus, DollarSign, TrendingUp, TrendingDown, ShoppingCart } from "lucide-react";
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -11,7 +11,7 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@
 import { toast } from "sonner";
 import { format } from "date-fns";
 import { ptBR } from "date-fns/locale";
-import { useUser } from "@/hooks/use-user";
+import { useSession } from "next-auth/react";
 
 interface CashRegister {
   id: string;
@@ -37,7 +37,7 @@ interface CashRegister {
 }
 
 export default function CaixaPage() {
-  const { user } = useUser();
+  const { data: session } = useSession() || {};
   const [cashRegisters, setCashRegisters] = useState<CashRegister[]>([]);
   const [openCashRegister, setOpenCashRegister] = useState<CashRegister | null>(null);
   const [loading, setLoading] = useState(true);
@@ -57,23 +57,8 @@ export default function CaixaPage() {
     productId: "",
     quantity: "1",
     paymentMethod: "",
-
     observations: "",
   });
-
-  // Pix States
-  const [isPixDialogOpen, setIsPixDialogOpen] = useState(false);
-  const [clients, setClients] = useState<any[]>([]);
-  const [pixData, setPixData] = useState({
-    clientId: "",
-    amount: "",
-    description: "",
-  });
-  const [generatedPix, setGeneratedPix] = useState<{
-    id: string;
-    qrCode: { encodedImage: string; payload: string };
-  } | null>(null);
-  const [copied, setCopied] = useState(false);
 
   useEffect(() => {
     fetchCashRegisters();
@@ -85,7 +70,7 @@ export default function CaixaPage() {
       const res = await fetch("/api/cash-register");
       const data = await res.json();
       setCashRegisters(data);
-
+      
       const open = data.find((cr: CashRegister) => cr.status === "OPEN");
       setOpenCashRegister(open || null);
     } catch (error) {
@@ -217,63 +202,6 @@ export default function CaixaPage() {
     }
   };
 
-  const fetchClients = async () => {
-    try {
-      const res = await fetch("/api/clients");
-      if (res.ok) {
-        const data = await res.json();
-        setClients(data.sort((a: any, b: any) => a.name.localeCompare(b.name)));
-      }
-    } catch (error) {
-      console.error("Error fetching clients:", error);
-    }
-  };
-
-  const handleOpenPixDialog = () => {
-    fetchClients();
-    setGeneratedPix(null);
-    setPixData({ clientId: "", amount: "", description: "" });
-    setIsPixDialogOpen(true);
-  };
-
-  const handleGeneratePix = async (e: React.FormEvent) => {
-    e.preventDefault();
-    if (!pixData.clientId || !pixData.amount) {
-      toast.error("Preencha cliente e valor");
-      return;
-    }
-
-    try {
-      const res = await fetch("/api/payments/pix", {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify(pixData)
-      });
-
-      const data = await res.json();
-
-      if (res.ok) {
-        setGeneratedPix(data);
-        toast.success("Pix gerado com sucesso!");
-      } else {
-        toast.error(data.error || "Erro ao gerar Pix");
-      }
-    } catch (error) {
-      toast.error("Erro na comunicação");
-    }
-  };
-
-
-
-  const copyToClipboard = () => {
-    if (generatedPix?.qrCode?.payload) {
-      navigator.clipboard.writeText(generatedPix.qrCode.payload);
-      setCopied(true);
-      toast.success("Código copiado!");
-      setTimeout(() => setCopied(false), 2000);
-    }
-  };
-
   const handleOpenProductSaleDialog = () => {
     fetchProducts();
     setIsProductSaleDialogOpen(true);
@@ -340,47 +268,37 @@ export default function CaixaPage() {
   };
 
   return (
-    <div className="space-y-10">
-      {/* Header */}
-      <div className="flex justify-between items-center">
+    <div className="p-6">
+      <div className="flex justify-between items-center mb-6">
         <div>
-          <h1 className="text-4xl font-serif font-bold text-white mb-2">
-            Controle de <span className="text-gold-500">Caixa</span>
-          </h1>
-          <p className="text-gray-500 font-medium">
-            Gerencie a movimentação financeira diária.
+          <h1 className="text-3xl font-bold text-foreground">Caixa</h1>
+          <p className="text-muted-foreground">
+            Gerencie a movimentação do caixa
           </p>
         </div>
         {!openCashRegister && (
-          <Button
-            onClick={() => setIsOpenDialogOpen(true)}
-            className="bg-gold-gradient hover:scale-105 active:scale-95 text-black font-bold px-8 py-4 rounded-2xl transition-all shadow-gold h-auto"
-          >
-            <Wallet className="w-5 h-5 mr-2" />
+          <Button onClick={() => setIsOpenDialogOpen(true)}>
+            <Wallet className="w-4 h-4 mr-2" />
             Abrir Caixa
           </Button>
         )}
       </div>
 
       {loading ? (
-        <div className="flex flex-col items-center justify-center py-32 space-y-4">
-          <div className="w-10 h-10 border-2 border-gold-500 border-t-transparent rounded-full animate-spin" />
-          <p className="text-gold-500 font-serif italic">Carregando caixa...</p>
+        <div className="text-center py-12">
+          <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-primary mx-auto"></div>
         </div>
       ) : openCashRegister ? (
         <>
           {/* Open Cash Register */}
-          <div className="glass-panel rounded-3xl p-6 border-l-4 border-l-green-500">
+          <div className="bg-card rounded-lg border border-border p-6 mb-6">
             <div className="flex justify-between items-start mb-6">
               <div>
-                <div className="flex items-center gap-3 mb-2">
-                  <div className="w-3 h-3 bg-green-500 rounded-full animate-pulse" />
-                  <h2 className="text-xl font-serif font-bold text-white">
-                    Caixa Aberto
-                  </h2>
-                </div>
-                <p className="text-sm text-gray-500">
-                  Aberto por <span className="text-gold-500 font-medium">{openCashRegister.openedBy.name}</span> em{" "}
+                <h2 className="text-xl font-bold text-foreground mb-2">
+                  Caixa Aberto
+                </h2>
+                <p className="text-sm text-muted-foreground">
+                  Aberto por {openCashRegister.openedBy.name} em{" "}
                   {format(new Date(openCashRegister.openedAt), "dd/MM/yyyy 'às' HH:mm", { locale: ptBR })}
                 </p>
               </div>
@@ -388,64 +306,52 @@ export default function CaixaPage() {
                 <Button
                   variant="outline"
                   onClick={handleOpenProductSaleDialog}
-                  className="border-green-500/30 text-green-500 hover:bg-green-500/10"
+                  className="text-green-600 border-green-600 hover:bg-green-50"
                 >
                   <ShoppingCart className="w-4 h-4 mr-2" />
                   Venda de Produto
                 </Button>
                 <Button
                   variant="outline"
-                  onClick={handleOpenPixDialog}
-                  className="border-blue-500/30 text-blue-500 hover:bg-blue-500/10"
-                >
-                  <QrCode className="w-4 h-4 mr-2" />
-                  Gerar Pix
-                </Button>
-                <Button
-                  variant="outline"
                   onClick={() => setIsExpenseDialogOpen(true)}
-                  className="border-white/10 text-gray-400 hover:bg-white/5 hover:text-white"
                 >
                   <Plus className="w-4 h-4 mr-2" />
                   Registrar Saída
                 </Button>
-                <Button
-                  onClick={() => setIsCloseDialogOpen(true)}
-                  className="bg-gold-500 hover:bg-gold-600 text-black font-bold"
-                >
+                <Button onClick={() => setIsCloseDialogOpen(true)}>
                   Fechar Caixa
                 </Button>
               </div>
             </div>
 
             <div className="grid grid-cols-1 md:grid-cols-4 gap-4">
-              <div className="bg-white/5 rounded-2xl p-5">
-                <p className="text-xs font-bold text-gray-500 uppercase tracking-wide mb-2">Valor Inicial</p>
-                <p className="text-2xl font-bold text-white">
+              <div className="bg-secondary p-4 rounded-lg">
+                <p className="text-sm text-muted-foreground mb-1">Valor Inicial</p>
+                <p className="text-2xl font-bold text-foreground">
                   {formatCurrency(openCashRegister.initialAmount)}
                 </p>
               </div>
-              <div className="bg-green-500/10 rounded-2xl p-5 border border-green-500/20">
-                <div className="flex items-center gap-2 mb-2">
+              <div className="bg-secondary p-4 rounded-lg">
+                <div className="flex items-center gap-2 mb-1">
                   <TrendingUp className="w-4 h-4 text-green-500" />
-                  <p className="text-xs font-bold text-green-500/80 uppercase tracking-wide">Entradas</p>
+                  <p className="text-sm text-muted-foreground">Entradas</p>
                 </div>
                 <p className="text-2xl font-bold text-green-500">
                   {formatCurrency(openCashRegister.totalIncome || 0)}
                 </p>
               </div>
-              <div className="bg-red-500/10 rounded-2xl p-5 border border-red-500/20">
-                <div className="flex items-center gap-2 mb-2">
+              <div className="bg-secondary p-4 rounded-lg">
+                <div className="flex items-center gap-2 mb-1">
                   <TrendingDown className="w-4 h-4 text-red-500" />
-                  <p className="text-xs font-bold text-red-500/80 uppercase tracking-wide">Saídas</p>
+                  <p className="text-sm text-muted-foreground">Saídas</p>
                 </div>
                 <p className="text-2xl font-bold text-red-500">
                   {formatCurrency(openCashRegister.totalExpense || 0)}
                 </p>
               </div>
-              <div className="bg-gold-500/10 rounded-2xl p-5 border border-gold-500/20">
-                <p className="text-xs font-bold text-gold-500/80 uppercase tracking-wide mb-2">Valor Atual</p>
-                <p className="text-2xl font-bold text-gold-500">
+              <div className="bg-primary/10 p-4 rounded-lg">
+                <p className="text-sm text-muted-foreground mb-1">Valor Atual</p>
+                <p className="text-2xl font-bold text-primary">
                   {formatCurrency(
                     openCashRegister.initialAmount +
                     (openCashRegister.totalIncome || 0) -
@@ -458,25 +364,22 @@ export default function CaixaPage() {
 
           {/* Expenses List */}
           {openCashRegister.movements.length > 0 && (
-            <div className="glass-panel rounded-3xl p-6">
-              <h3 className="text-lg font-serif font-bold text-white mb-4 flex items-center gap-2">
-                <TrendingDown className="w-5 h-5 text-red-500" />
-                Saídas Registradas
-              </h3>
+            <div className="bg-card rounded-lg border border-border p-6 mb-6">
+              <h3 className="text-lg font-bold text-foreground mb-4">Saídas Registradas</h3>
               <div className="space-y-3">
                 {openCashRegister.movements.map((movement) => (
                   <div
                     key={movement.id}
-                    className="flex justify-between items-center p-4 bg-white/5 rounded-2xl hover:bg-white/10 transition-colors"
+                    className="flex justify-between items-center p-4 bg-secondary rounded-lg"
                   >
                     <div>
-                      <p className="font-bold text-white">{movement.description}</p>
-                      <p className="text-sm text-gray-500">
+                      <p className="font-medium text-foreground">{movement.description}</p>
+                      <p className="text-sm text-muted-foreground">
                         {categoryLabels[movement.category]} •{" "}
                         {format(new Date(movement.createdAt), "HH:mm", { locale: ptBR })}
                       </p>
                     </div>
-                    <p className="text-lg font-bold text-red-500">
+                    <p className="text-lg font-semibold text-red-500">
                       - {formatCurrency(movement.amount)}
                     </p>
                   </div>
@@ -486,21 +389,16 @@ export default function CaixaPage() {
           )}
         </>
       ) : (
-        <div className="text-center py-20 bg-white/5 border border-white/5 rounded-3xl">
-          <div className="w-20 h-20 bg-white/5 rounded-full flex items-center justify-center mx-auto mb-6">
-            <Wallet className="w-10 h-10 text-gray-600" />
-          </div>
-          <p className="text-white text-lg font-bold mb-2">
+        <div className="text-center py-12 bg-card rounded-lg border border-border">
+          <Wallet className="w-12 h-12 text-muted-foreground mx-auto mb-4" />
+          <p className="text-lg font-medium text-foreground">
             Nenhum caixa aberto
           </p>
-          <p className="text-gray-500 mb-6">
+          <p className="text-muted-foreground mb-4">
             Abra o caixa para começar a registrar movimentações
           </p>
-          <Button
-            onClick={() => setIsOpenDialogOpen(true)}
-            className="bg-gold-gradient hover:scale-105 active:scale-95 text-black font-bold px-8 py-4 rounded-2xl transition-all shadow-gold h-auto"
-          >
-            <Wallet className="w-5 h-5 mr-2" />
+          <Button onClick={() => setIsOpenDialogOpen(true)}>
+            <Wallet className="w-4 h-4 mr-2" />
             Abrir Caixa
           </Button>
         </div>
@@ -508,47 +406,47 @@ export default function CaixaPage() {
 
       {/* Closed Cash Registers History */}
       {cashRegisters.filter(cr => cr.status === "CLOSED").length > 0 && (
-        <div>
-          <h2 className="text-xl font-serif font-bold text-white mb-4">Histórico de Fechamentos</h2>
+        <div className="mt-6">
+          <h2 className="text-xl font-bold text-foreground mb-4">Histórico de Fechamentos</h2>
           <div className="space-y-4">
             {cashRegisters
               .filter(cr => cr.status === "CLOSED")
               .map((cr) => (
                 <div
                   key={cr.id}
-                  className="glass-panel rounded-3xl p-6 hover:border-gold-500/20 transition-all"
+                  className="bg-card rounded-lg border border-border p-6"
                 >
                   <div className="grid grid-cols-2 md:grid-cols-6 gap-4">
                     <div>
-                      <p className="text-xs font-bold text-gray-500 uppercase tracking-wide mb-1">Data</p>
-                      <p className="font-bold text-white">
+                      <p className="text-sm text-muted-foreground">Data</p>
+                      <p className="font-medium text-foreground">
                         {format(new Date(cr.openedAt), "dd/MM/yyyy", { locale: ptBR })}
                       </p>
                     </div>
                     <div>
-                      <p className="text-xs font-bold text-gray-500 uppercase tracking-wide mb-1">Responsável</p>
-                      <p className="font-medium text-gray-300">{cr.openedBy.name}</p>
+                      <p className="text-sm text-muted-foreground">Responsável</p>
+                      <p className="font-medium text-foreground">{cr.openedBy.name}</p>
                     </div>
                     <div>
-                      <p className="text-xs font-bold text-gray-500 uppercase tracking-wide mb-1">Inicial</p>
-                      <p className="font-bold text-white">
+                      <p className="text-sm text-muted-foreground">Inicial</p>
+                      <p className="font-medium text-foreground">
                         {formatCurrency(cr.initialAmount)}
                       </p>
                     </div>
                     <div>
-                      <p className="text-xs font-bold text-gray-500 uppercase tracking-wide mb-1">Entradas</p>
-                      <p className="font-bold text-green-500">
+                      <p className="text-sm text-muted-foreground">Entradas</p>
+                      <p className="font-medium text-green-500">
                         {formatCurrency(cr.totalIncome || 0)}
                       </p>
                     </div>
                     <div>
-                      <p className="text-xs font-bold text-gray-500 uppercase tracking-wide mb-1">Saídas</p>
-                      <p className="font-bold text-red-500">
+                      <p className="text-sm text-muted-foreground">Saídas</p>
+                      <p className="font-medium text-red-500">
                         {formatCurrency(cr.totalExpense || 0)}
                       </p>
                     </div>
                     <div>
-                      <p className="text-xs font-bold text-gray-500 uppercase tracking-wide mb-1">Diferença</p>
+                      <p className="text-sm text-muted-foreground">Diferença</p>
                       <p className={`font-bold ${cr.difference! >= 0 ? "text-green-500" : "text-red-500"}`}>
                         {cr.difference! >= 0 ? "+" : ""}
                         {formatCurrency(cr.difference || 0)}
@@ -565,44 +463,31 @@ export default function CaixaPage() {
       <Dialog open={isOpenDialogOpen} onOpenChange={setIsOpenDialogOpen}>
         <DialogContent>
           <DialogHeader>
-            <DialogTitle>
-              <div className="flex items-center gap-2 font-serif text-white text-xl">
-                <div className="w-8 h-8 rounded-lg bg-gold-500/10 flex items-center justify-center border border-gold-500/20">
-                  <Wallet className="w-4 h-4 text-gold-500" />
-                </div>
-                Abrir Caixa
-              </div>
-            </DialogTitle>
+            <DialogTitle>Abrir Caixa</DialogTitle>
           </DialogHeader>
-          <form onSubmit={handleOpenCashRegister} className="space-y-6">
-            <div className="bg-white/5 border border-white/10 p-6 rounded-2xl">
-              <Label htmlFor="initialAmount" className="text-xs font-bold uppercase tracking-widest text-gray-400 mb-2 block">
-                Valor Inicial *
-              </Label>
-              <div className="relative">
-                <span className="absolute left-3 top-1/2 -translate-y-1/2 text-gray-400 font-serif">R$</span>
-                <Input
-                  id="initialAmount"
-                  type="number"
-                  step="0.01"
-                  value={initialAmount}
-                  onChange={(e) => setInitialAmount(e.target.value)}
-                  placeholder="0,00"
-                  required
-                  className="pl-10 h-12 bg-black/20 border-white/10 text-white text-lg font-bold focus:border-gold-500/50 transition-all placeholder:text-gray-600"
-                />
-              </div>
+          <form onSubmit={handleOpenCashRegister} className="space-y-4">
+            <div>
+              <Label htmlFor="initialAmount">Valor Inicial *</Label>
+              <Input
+                id="initialAmount"
+                type="number"
+                step="0.01"
+                value={initialAmount}
+                onChange={(e) => setInitialAmount(e.target.value)}
+                placeholder="0,00"
+                required
+              />
             </div>
-            <div className="flex gap-3 pt-2">
+            <div className="flex gap-2 pt-4">
               <Button
                 type="button"
                 variant="outline"
                 onClick={() => setIsOpenDialogOpen(false)}
-                className="flex-1 h-12 bg-white/5 border-white/10 text-white font-bold hover:bg-white/10"
+                className="flex-1"
               >
                 Cancelar
               </Button>
-              <Button type="submit" className="flex-1 h-12 bg-gold-gradient text-black font-bold shadow-gold hover:scale-[1.02] transition-transform">
+              <Button type="submit" className="flex-1">
                 Abrir Caixa
               </Button>
             </div>
@@ -614,41 +499,33 @@ export default function CaixaPage() {
       <Dialog open={isCloseDialogOpen} onOpenChange={setIsCloseDialogOpen}>
         <DialogContent>
           <DialogHeader>
-            <DialogTitle>
-              <div className="flex items-center gap-2 font-serif text-white text-xl">
-                <div className="w-8 h-8 rounded-lg bg-gold-500/10 flex items-center justify-center border border-gold-500/20">
-                  <Wallet className="w-4 h-4 text-gold-500" />
-                </div>
-                Fechar Caixa
-              </div>
-            </DialogTitle>
+            <DialogTitle>Fechar Caixa</DialogTitle>
           </DialogHeader>
-          <form onSubmit={handleCloseCashRegister} className="space-y-6">
+          <form onSubmit={handleCloseCashRegister} className="space-y-4">
             {openCashRegister && (
               <>
-                <div className="bg-white/5 border border-white/10 p-5 rounded-2xl space-y-3">
+                <div className="bg-secondary p-4 rounded-lg space-y-2">
                   <div className="flex justify-between text-sm">
-                    <span className="text-gray-400 font-medium">Valor Inicial:</span>
-                    <span className="font-bold text-white">
+                    <span className="text-muted-foreground">Valor Inicial:</span>
+                    <span className="font-medium text-foreground">
                       {formatCurrency(openCashRegister.initialAmount)}
                     </span>
                   </div>
                   <div className="flex justify-between text-sm">
-                    <span className="text-gray-400 font-medium">Entradas:</span>
-                    <span className="font-bold text-green-500">
+                    <span className="text-muted-foreground">Entradas:</span>
+                    <span className="font-medium text-green-500">
                       + {formatCurrency(openCashRegister.totalIncome || 0)}
                     </span>
                   </div>
                   <div className="flex justify-between text-sm">
-                    <span className="text-gray-400 font-medium">Saídas:</span>
-                    <span className="font-bold text-red-500">
+                    <span className="text-muted-foreground">Saídas:</span>
+                    <span className="font-medium text-red-500">
                       - {formatCurrency(openCashRegister.totalExpense || 0)}
                     </span>
                   </div>
-                  <div className="h-px bg-white/10 my-2" />
-                  <div className="flex justify-between items-center">
-                    <span className="text-xs font-bold uppercase tracking-widest text-gold-500">Valor Esperado</span>
-                    <span className="font-serif font-bold text-gold-500 text-xl">
+                  <div className="flex justify-between pt-2 border-t border-border">
+                    <span className="font-semibold text-foreground">Valor Esperado:</span>
+                    <span className="font-bold text-primary">
                       {formatCurrency(
                         openCashRegister.initialAmount +
                         (openCashRegister.totalIncome || 0) -
@@ -658,48 +535,39 @@ export default function CaixaPage() {
                   </div>
                 </div>
 
-                <div className="bg-white/5 border border-white/10 p-5 rounded-2xl">
-                  <Label htmlFor="finalAmount" className="text-xs font-bold uppercase tracking-widest text-gray-400 mb-2 block">
-                    Valor Contado *
-                  </Label>
-                  <div className="relative">
-                    <span className="absolute left-3 top-1/2 -translate-y-1/2 text-gray-400 font-serif">R$</span>
-                    <Input
-                      id="finalAmount"
-                      type="number"
-                      step="0.01"
-                      value={finalAmount}
-                      onChange={(e) => setFinalAmount(e.target.value)}
-                      placeholder="0,00"
-                      required
-                      className="pl-10 h-12 bg-black/20 border-white/10 text-white text-lg font-bold focus:border-gold-500/50 transition-all placeholder:text-gray-600"
-                    />
-                  </div>
+                <div>
+                  <Label htmlFor="finalAmount">Valor Contado *</Label>
+                  <Input
+                    id="finalAmount"
+                    type="number"
+                    step="0.01"
+                    value={finalAmount}
+                    onChange={(e) => setFinalAmount(e.target.value)}
+                    placeholder="0,00"
+                    required
+                  />
                 </div>
 
                 {finalAmount && (
-                  <div className="bg-white/5 border border-white/10 p-4 rounded-2xl animate-in fade-in">
-                    <div className="flex justify-between items-center">
-                      <span className="text-xs font-bold uppercase tracking-widest text-gray-400">Diferença</span>
+                  <div className="bg-secondary p-4 rounded-lg">
+                    <div className="flex justify-between">
+                      <span className="font-semibold text-foreground">Diferença:</span>
                       <span
-                        className={`font-bold text-lg ${parseFloat(finalAmount) -
-                          (openCashRegister.initialAmount +
-                            (openCashRegister.totalIncome || 0) -
-                            (openCashRegister.totalExpense || 0)) >=
+                        className={`font-bold ${
+                          parseFloat(finalAmount) -
+                            (openCashRegister.initialAmount +
+                              (openCashRegister.totalIncome || 0) -
+                              (openCashRegister.totalExpense || 0)) >=
                           0
-                          ? "text-green-500"
-                          : "text-red-500"
-                          }`}
+                            ? "text-green-500"
+                            : "text-red-500"
+                        }`}
                       >
-                        {parseFloat(finalAmount) -
-                          (openCashRegister.initialAmount +
-                            (openCashRegister.totalIncome || 0) -
-                            (openCashRegister.totalExpense || 0)) >= 0 ? "+" : ""}
                         {formatCurrency(
                           parseFloat(finalAmount) -
-                          (openCashRegister.initialAmount +
-                            (openCashRegister.totalIncome || 0) -
-                            (openCashRegister.totalExpense || 0))
+                            (openCashRegister.initialAmount +
+                              (openCashRegister.totalIncome || 0) -
+                              (openCashRegister.totalExpense || 0))
                         )}
                       </span>
                     </div>
@@ -708,16 +576,16 @@ export default function CaixaPage() {
               </>
             )}
 
-            <div className="flex gap-3 pt-2">
+            <div className="flex gap-2 pt-4">
               <Button
                 type="button"
                 variant="outline"
                 onClick={() => setIsCloseDialogOpen(false)}
-                className="flex-1 h-12 bg-white/5 border-white/10 text-white font-bold hover:bg-white/10"
+                className="flex-1"
               >
                 Cancelar
               </Button>
-              <Button type="submit" className="flex-1 h-12 bg-gold-gradient text-black font-bold shadow-gold hover:scale-[1.02] transition-transform">
+              <Button type="submit" className="flex-1">
                 Fechar Caixa
               </Button>
             </div>
@@ -729,82 +597,66 @@ export default function CaixaPage() {
       <Dialog open={isExpenseDialogOpen} onOpenChange={setIsExpenseDialogOpen}>
         <DialogContent>
           <DialogHeader>
-            <DialogTitle>
-              <div className="flex items-center gap-2 font-serif text-white text-xl">
-                <div className="w-8 h-8 rounded-lg bg-gold-500/10 flex items-center justify-center border border-gold-500/20">
-                  <TrendingDown className="w-4 h-4 text-red-500" />
-                </div>
-                Registrar Saída
-              </div>
-            </DialogTitle>
+            <DialogTitle>Registrar Saída</DialogTitle>
           </DialogHeader>
           <form onSubmit={handleAddExpense} className="space-y-4">
-            <div className="space-y-4">
-              <div>
-                <Label htmlFor="description" className="text-xs font-bold uppercase tracking-widest text-gray-400 mb-2 block">Descrição *</Label>
-                <Textarea
-                  id="description"
-                  value={expenseData.description}
-                  onChange={(e) =>
-                    setExpenseData({ ...expenseData, description: e.target.value })
-                  }
-                  placeholder="Descrição da despesa"
-                  required
-                  className="bg-white/5 border-white/10 text-white min-h-[80px]"
-                />
-              </div>
-              <div className="grid grid-cols-2 gap-4">
-                <div>
-                  <Label htmlFor="amount" className="text-xs font-bold uppercase tracking-widest text-gray-400 mb-2 block">Valor *</Label>
-                  <div className="relative">
-                    <span className="absolute left-3 top-1/2 -translate-y-1/2 text-gray-400 font-serif">R$</span>
-                    <Input
-                      id="amount"
-                      type="number"
-                      step="0.01"
-                      value={expenseData.amount}
-                      onChange={(e) =>
-                        setExpenseData({ ...expenseData, amount: e.target.value })
-                      }
-                      placeholder="0,00"
-                      required
-                      className="pl-10 bg-white/5 border-white/10 text-white"
-                    />
-                  </div>
-                </div>
-                <div>
-                  <Label htmlFor="category" className="text-xs font-bold uppercase tracking-widest text-gray-400 mb-2 block">Categoria *</Label>
-                  <Select
-                    value={expenseData.category}
-                    onValueChange={(value) =>
-                      setExpenseData({ ...expenseData, category: value })
-                    }
-                  >
-                    <SelectTrigger className="bg-white/5 border-white/10 text-white">
-                      <SelectValue placeholder="Selecione" />
-                    </SelectTrigger>
-                    <SelectContent>
-                      {Object.entries(categoryLabels).map(([value, label]) => (
-                        <SelectItem key={value} value={value}>
-                          {label}
-                        </SelectItem>
-                      ))}
-                    </SelectContent>
-                  </Select>
-                </div>
-              </div>
+            <div>
+              <Label htmlFor="description">Descrição *</Label>
+              <Textarea
+                id="description"
+                value={expenseData.description}
+                onChange={(e) =>
+                  setExpenseData({ ...expenseData, description: e.target.value })
+                }
+                placeholder="Descrição da despesa"
+                required
+              />
             </div>
-            <div className="flex gap-3 pt-4">
+            <div>
+              <Label htmlFor="amount">Valor *</Label>
+              <Input
+                id="amount"
+                type="number"
+                step="0.01"
+                value={expenseData.amount}
+                onChange={(e) =>
+                  setExpenseData({ ...expenseData, amount: e.target.value })
+                }
+                placeholder="0,00"
+                required
+              />
+            </div>
+            <div>
+              <Label htmlFor="category">Categoria *</Label>
+              <Select
+                value={expenseData.category}
+                onValueChange={(value) =>
+                  setExpenseData({ ...expenseData, category: value })
+                }
+              >
+                <SelectTrigger>
+                  <SelectValue placeholder="Selecione a categoria" />
+                </SelectTrigger>
+                <SelectContent>
+                  {Object.entries(categoryLabels).map(([value, label]) => (
+                    <SelectItem key={value} value={value}>
+                      {label}
+                    </SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
+            </div>
+            <div className="flex gap-2 pt-4">
               <Button
                 type="button"
                 variant="outline"
                 onClick={() => setIsExpenseDialogOpen(false)}
-                className="flex-1 h-12 bg-white/5 border-white/10 text-white font-bold hover:bg-white/10"
+                className="flex-1"
               >
                 Cancelar
               </Button>
-              <Button type="submit" className="flex-1 h-12 bg-red-500 hover:bg-red-600 text-white font-bold shadow-lg shadow-red-500/20">
-                Registrar Saída
+              <Button type="submit" className="flex-1">
+                Registrar
               </Button>
             </div>
           </form>
@@ -815,103 +667,90 @@ export default function CaixaPage() {
       <Dialog open={isProductSaleDialogOpen} onOpenChange={setIsProductSaleDialogOpen}>
         <DialogContent>
           <DialogHeader>
-            <DialogTitle>
-              <div className="flex items-center gap-2 font-serif text-white text-xl">
-                <div className="w-8 h-8 rounded-lg bg-gold-500/10 flex items-center justify-center border border-gold-500/20">
-                  <ShoppingCart className="w-4 h-4 text-gold-500" />
-                </div>
-                Venda de Produto
-              </div>
-            </DialogTitle>
+            <DialogTitle>Venda de Produto</DialogTitle>
           </DialogHeader>
           <form onSubmit={handleProductSale} className="space-y-4">
-            <div className="space-y-4">
-              <div>
-                <Label htmlFor="productId" className="text-xs font-bold uppercase tracking-widest text-gray-400 mb-2 block">Produto *</Label>
-                {products.length === 0 ? (
-                  <div className="text-sm text-gray-500 p-3 border border-white/10 rounded-xl bg-white/5">
-                    Nenhum produto disponível com estoque
-                  </div>
-                ) : (
-                  <Select
-                    value={productSaleData.productId}
-                    onValueChange={(value) => {
-                      setProductSaleData({ ...productSaleData, productId: value });
-                    }}
-                  >
-                    <SelectTrigger className="bg-white/5 border-white/10 text-white h-12">
-                      <SelectValue placeholder="Selecione o produto" />
-                    </SelectTrigger>
-                    <SelectContent>
-                      {products.map((product) => (
-                        <SelectItem key={product.id} value={product.id}>
-                          {product.name} - {formatCurrency(product.price)} (Estoque: {product.stock} {product.unit})
-                        </SelectItem>
-                      ))}
-                    </SelectContent>
-                  </Select>
-                )}
-              </div>
-
-              <div className="grid grid-cols-2 gap-4">
-                <div>
-                  <Label htmlFor="quantity" className="text-xs font-bold uppercase tracking-widest text-gray-400 mb-2 block">Quantidade *</Label>
-                  <Input
-                    id="quantity"
-                    type="number"
-                    step="0.01"
-                    min="0.01"
-                    value={productSaleData.quantity}
-                    onChange={(e) =>
-                      setProductSaleData({ ...productSaleData, quantity: e.target.value })
-                    }
-                    placeholder="1"
-                    required
-                    className="bg-white/5 border-white/10 text-white h-12"
-                  />
+            <div>
+              <Label htmlFor="productId">Produto *</Label>
+              {products.length === 0 ? (
+                <div className="text-sm text-muted-foreground p-2 border rounded">
+                  Nenhum produto disponível com estoque
                 </div>
+              ) : (
+                <Select
+                  value={productSaleData.productId}
+                  onValueChange={(value) => {
+                    setProductSaleData({ ...productSaleData, productId: value });
+                  }}
+                >
+                  <SelectTrigger>
+                    <SelectValue placeholder="Selecione o produto" />
+                  </SelectTrigger>
+                  <SelectContent>
+                    {products.map((product) => (
+                      <SelectItem key={product.id} value={product.id}>
+                        {product.name} - {formatCurrency(product.price)} (Estoque: {product.stock} {product.unit})
+                      </SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
+              )}
+            </div>
 
-                <div>
-                  <Label htmlFor="paymentMethod" className="text-xs font-bold uppercase tracking-widest text-gray-400 mb-2 block">Pagamento *</Label>
-                  <Select
-                    value={productSaleData.paymentMethod}
-                    onValueChange={(value) =>
-                      setProductSaleData({ ...productSaleData, paymentMethod: value })
-                    }
-                  >
-                    <SelectTrigger className="bg-white/5 border-white/10 text-white h-12">
-                      <SelectValue placeholder="Selecione" />
-                    </SelectTrigger>
-                    <SelectContent>
-                      <SelectItem value="CASH">Dinheiro</SelectItem>
-                      <SelectItem value="DEBIT_CARD">Cartão de Débito</SelectItem>
-                      <SelectItem value="CREDIT_CARD">Cartão de Crédito</SelectItem>
-                      <SelectItem value="PIX">PIX</SelectItem>
-                    </SelectContent>
-                  </Select>
-                </div>
-              </div>
+            <div>
+              <Label htmlFor="quantity">Quantidade *</Label>
+              <Input
+                id="quantity"
+                type="number"
+                step="0.01"
+                min="0.01"
+                value={productSaleData.quantity}
+                onChange={(e) =>
+                  setProductSaleData({ ...productSaleData, quantity: e.target.value })
+                }
+                placeholder="1"
+                required
+              />
+            </div>
 
-              <div>
-                <Label htmlFor="observations" className="text-xs font-bold uppercase tracking-widest text-gray-400 mb-2 block">Observações</Label>
-                <Textarea
-                  id="observations"
-                  value={productSaleData.observations}
-                  onChange={(e) =>
-                    setProductSaleData({ ...productSaleData, observations: e.target.value })
-                  }
-                  placeholder="Observações sobre a venda (opcional)"
-                  rows={2}
-                  className="bg-white/5 border-white/10 text-white min-h-[80px]"
-                />
-              </div>
+            <div>
+              <Label htmlFor="paymentMethod">Forma de Pagamento *</Label>
+              <Select
+                value={productSaleData.paymentMethod}
+                onValueChange={(value) =>
+                  setProductSaleData({ ...productSaleData, paymentMethod: value })
+                }
+              >
+                <SelectTrigger>
+                  <SelectValue placeholder="Selecione" />
+                </SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="CASH">Dinheiro</SelectItem>
+                  <SelectItem value="DEBIT_CARD">Cartão de Débito</SelectItem>
+                  <SelectItem value="CREDIT_CARD">Cartão de Crédito</SelectItem>
+                  <SelectItem value="PIX">PIX</SelectItem>
+                </SelectContent>
+              </Select>
+            </div>
+
+            <div>
+              <Label htmlFor="observations">Observações</Label>
+              <Textarea
+                id="observations"
+                value={productSaleData.observations}
+                onChange={(e) =>
+                  setProductSaleData({ ...productSaleData, observations: e.target.value })
+                }
+                placeholder="Observações sobre a venda (opcional)"
+                rows={2}
+              />
             </div>
 
             {productSaleData.productId && productSaleData.quantity && (
-              <div className="bg-green-500/10 border border-green-500/20 p-4 rounded-xl">
-                <div className="flex justify-between items-center">
-                  <span className="font-bold text-green-500 uppercase tracking-widest text-xs">Total da Venda</span>
-                  <span className="font-bold text-green-500 text-xl">
+              <div className="bg-secondary p-4 rounded-lg">
+                <div className="flex justify-between">
+                  <span className="font-semibold text-foreground">Total:</span>
+                  <span className="font-bold text-green-600">
                     {(() => {
                       const selectedProduct = products.find(
                         (p) => p.id === productSaleData.productId
@@ -928,101 +767,20 @@ export default function CaixaPage() {
               </div>
             )}
 
-            <div className="flex gap-3 pt-4">
+            <div className="flex gap-2 pt-4">
               <Button
                 type="button"
                 variant="outline"
                 onClick={() => setIsProductSaleDialogOpen(false)}
-                className="flex-1 h-12 bg-white/5 border-white/10 text-white font-bold hover:bg-white/10"
+                className="flex-1"
               >
                 Cancelar
               </Button>
-              <Button type="submit" className="flex-1 h-12 bg-green-600 hover:bg-green-700 text-white font-bold shadow-lg shadow-green-600/20">
-                Concluir Venda
+              <Button type="submit" className="flex-1 bg-green-600 hover:bg-green-700">
+                Confirmar Venda
               </Button>
             </div>
           </form>
-        </DialogContent>
-      </Dialog>
-
-      {/* Pix Dialog */}
-      <Dialog open={isPixDialogOpen} onOpenChange={setIsPixDialogOpen}>
-        <DialogContent className="sm:max-w-md">
-          <DialogHeader>
-            <DialogTitle>Gerar Cobrança Pix</DialogTitle>
-          </DialogHeader>
-          {!generatedPix ? (
-            <form onSubmit={handleGeneratePix} className="space-y-4">
-              <div>
-                <Label>Cliente</Label>
-                <Select
-                  value={pixData.clientId}
-                  onValueChange={(val) => setPixData({ ...pixData, clientId: val })}
-                >
-                  <SelectTrigger className="bg-white/5 text-white border-white/10">
-                    <SelectValue placeholder="Selecione o Cliente" />
-                  </SelectTrigger>
-                  <SelectContent>
-                    {clients.map(c => (
-                      <SelectItem key={c.id} value={c.id}>{c.name}</SelectItem>
-                    ))}
-                  </SelectContent>
-                </Select>
-              </div>
-              <div>
-                <Label>Valor (R$)</Label>
-                <Input
-                  type="number"
-                  step="0.01"
-                  value={pixData.amount}
-                  onChange={(e) => setPixData({ ...pixData, amount: e.target.value })}
-                  className="bg-white/5 text-white border-white/10"
-                />
-              </div>
-              <div>
-                <Label>Descrição</Label>
-                <Input
-                  value={pixData.description}
-                  onChange={(e) => setPixData({ ...pixData, description: e.target.value })}
-                  placeholder="Ex: Corte de Cabelo"
-                  className="bg-white/5 text-white border-white/10"
-                />
-              </div>
-              <Button type="submit" className="w-full bg-blue-600 hover:bg-blue-700 font-bold text-white">
-                Gerar QR Code
-              </Button>
-            </form>
-          ) : (
-            <div className="flex flex-col items-center space-y-4 py-4">
-              <div className="bg-white p-2 rounded-lg">
-                {/* eslint-disable-next-line @next/next/no-img-element */}
-                <img
-                  src={`data:image/png;base64,${generatedPix.qrCode.encodedImage}`}
-                  alt="QR Code Pix"
-                  className="w-48 h-48"
-                />
-              </div>
-              <p className="text-white font-bold text-lg">
-                {new Intl.NumberFormat('pt-BR', { style: 'currency', currency: 'BRL' }).format(Number(pixData.amount))}
-              </p>
-              <div className="w-full space-y-2">
-                <Label className="text-gray-400 text-xs uppercase">Copia e Cola</Label>
-                <div className="flex gap-2">
-                  <Input
-                    value={generatedPix.qrCode.payload}
-                    readOnly
-                    className="bg-black/50 border-white/10 text-gray-300 font-mono text-xs"
-                  />
-                  <Button size="icon" onClick={copyToClipboard} variant="outline" className="border-white/10 hover:bg-white/10">
-                    {copied ? <Check className="w-4 h-4 text-green-500" /> : <Copy className="w-4 h-4" />}
-                  </Button>
-                </div>
-              </div>
-              <Button variant="ghost" onClick={() => setIsPixDialogOpen(false)} className="text-gray-400 hover:text-white">
-                Fechar
-              </Button>
-            </div>
-          )}
         </DialogContent>
       </Dialog>
     </div>

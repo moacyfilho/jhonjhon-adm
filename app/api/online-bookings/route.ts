@@ -1,16 +1,13 @@
 import { NextRequest, NextResponse } from 'next/server';
-import { createClient } from '@/utils/supabase/server';
+import { getServerSession } from 'next-auth';
+import { authOptions } from '@/lib/auth/auth-options';
 import { prisma } from '@/lib/db';
-
-export const dynamic = 'force-dynamic';
 
 // GET - Listar agendamentos online (autenticado)
 export async function GET(request: NextRequest) {
   try {
-    const supabase = createClient();
-    const { data: { user } } = await supabase.auth.getUser();
-
-    if (!user) {
+    const session = await getServerSession(authOptions);
+    if (!session) {
       return NextResponse.json({ error: 'Não autorizado' }, { status: 401 });
     }
 
@@ -28,16 +25,10 @@ export async function GET(request: NextRequest) {
 
     // Filtro por data única (compatibilidade)
     if (date) {
-      const dateObj = new Date(date);
-
-      // Início do dia em Manaus = 04:00 UTC do mesmo dia
-      const startDate = new Date(dateObj);
-      startDate.setUTCHours(4, 0, 0, 0);
-
-      // Fim do dia em Manaus = 03:59:59 UTC do dia seguinte
-      const endDate = new Date(dateObj);
-      endDate.setUTCDate(endDate.getUTCDate() + 1);
-      endDate.setUTCHours(3, 59, 59, 999);
+      const startDate = new Date(date);
+      startDate.setHours(0, 0, 0, 0);
+      const endDate = new Date(date);
+      endDate.setHours(23, 59, 59, 999);
 
       where.scheduledDate = {
         gte: startDate,
@@ -46,17 +37,10 @@ export async function GET(request: NextRequest) {
     }
     // Filtro por período (para agenda visual)
     else if (startDateParam && endDateParam) {
-      const startDateObj = new Date(startDateParam);
-      const endDateObj = new Date(endDateParam);
-
-      // Início do dia em Manaus = 04:00 UTC do mesmo dia
-      const startDate = new Date(startDateObj);
-      startDate.setUTCHours(4, 0, 0, 0);
-
-      // Fim do dia em Manaus = 03:59:59 UTC do dia seguinte
-      const endDate = new Date(endDateObj);
-      endDate.setUTCDate(endDate.getUTCDate() + 1);
-      endDate.setUTCHours(3, 59, 59, 999);
+      const startDate = new Date(startDateParam);
+      startDate.setHours(0, 0, 0, 0);
+      const endDate = new Date(endDateParam);
+      endDate.setHours(23, 59, 59, 999);
 
       where.scheduledDate = {
         gte: startDate,

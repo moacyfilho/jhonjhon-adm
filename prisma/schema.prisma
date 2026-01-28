@@ -1,12 +1,13 @@
 generator client {
     provider = "prisma-client-js"
-    binaryTargets = ["native", "linux-musl-arm64-openssl-3.0.x"]
+    // Suporte multiplataforma: Windows, Linux (Ubuntu/Debian), e ARM64
+    binaryTargets = ["native", "linux-musl-arm64-openssl-3.0.x", "windows", "debian-openssl-3.0.x"]
+    // Usar output padrão (node_modules/.prisma/client) para compatibilidade
 }
 
 datasource db {
     provider = "postgresql"
-    url       = env("DATABASE_URL")
-    directUrl = env("DIRECT_URL")
+    url      = env("DATABASE_URL")
 }
 
 // Enums
@@ -143,7 +144,6 @@ model Client {
   subscriptions       Subscription[]
   accountsReceivable  AccountReceivable[]
   onlineBookings      OnlineBooking[]
-  asaasCustomerId     String?             // ID do cliente no Asaas
 }
 
 model Barber {
@@ -154,7 +154,6 @@ model Barber {
   password         String?         // Hash da senha para login
   commissionRate   Float           @default(0) // Percentual de comissão (0-100)
   hourlyRate       Float           @default(0) // Valor por hora para comissão de assinantes
-  subscriptionCommissionRate Float           @default(45) // Percentual de comissão para assinantes (0-100)
   isActive         Boolean         @default(true)
   createdAt        DateTime        @default(now())
   updatedAt        DateTime        @updatedAt
@@ -162,8 +161,6 @@ model Barber {
   commissions      Commission[]
   onlineBookings   OnlineBooking[]
   scheduleBlocks   ScheduleBlock[]
-  serviceCommissions BarberServiceCommission[]
-  productSales     ProductSale[]
 }
 
 model Service {
@@ -177,19 +174,6 @@ model Service {
   updatedAt           DateTime             @updatedAt
   appointmentServices AppointmentService[]
   onlineBookings      OnlineBooking[]
-  barberCommissions   BarberServiceCommission[]
-}
-
-model BarberServiceCommission {
-  id        String  @id @default(cuid())
-  barberId  String
-  serviceId String
-  percentage Float  @default(0) // 0-100
-
-  barber    Barber  @relation(fields: [barberId], references: [id], onDelete: Cascade)
-  service   Service @relation(fields: [serviceId], references: [id], onDelete: Cascade)
-
-  @@unique([barberId, serviceId])
 }
 
 model Appointment {
@@ -311,21 +295,16 @@ model AccountReceivable {
   paymentMethod  PaymentMethod?
   observations   String?
   subscriptionId String?         // ID da assinatura (para recorrência automática)
-  paymentLinks   PaymentLink[]   // Links de pagamento gerados para esta conta
-  asaasPaymentId String?         // ID da cobrança no Asaas
-  pixQrCode      String?         // Payload do QR Code do Pix
-  pixCopyPaste   String?         // Código Copia e Cola do Pix
   createdAt      DateTime        @default(now())
   updatedAt      DateTime        @updatedAt
   client         Client?         @relation(fields: [clientId], references: [id])
   subscription   Subscription?   @relation(fields: [subscriptionId], references: [id])
-
+  paymentLinks   PaymentLink[]   // Links de pagamento gerados para esta conta
 }
 
 model Subscription {
   id                String             @id @default(cuid())
   clientId          String
-  planId            String?            // Opcional: Referência ao plano modelo
   planName          String             // Nome do plano (ex: "Plano Premium Mensal")
   amount            Float              // Valor mensal da assinatura
   billingDay        Int                // Dia do mês para cobrança (1-31)
@@ -335,12 +314,9 @@ model Subscription {
   observations      String?
   servicesIncluded  String?            // JSON ou texto com serviços incluídos
   usageLimit        Int?               // Limite de usos por mês (null = ilimitado)
-
-  asaasSubscriptionId String?          // ID da assinatura no Asaas
   createdAt         DateTime           @default(now())
   updatedAt         DateTime           @updatedAt
   client            Client             @relation(fields: [clientId], references: [id])
-  plan              Plan?              @relation(fields: [planId], references: [id])
   usageHistory      SubscriptionUsage[]
   accountsReceivable AccountReceivable[] // Contas a receber geradas pela assinatura
 }
@@ -414,12 +390,9 @@ model Product {
   name                 String
   description          String?
   price                Float
-  costPrice            Float?               @default(0)
   stock                Float                @default(0) // Quantidade em estoque
   unit                 String               @default("un") // Unidade: un, kg, L, ml, etc
   category             String?              // Categoria: Pomadas, Shampoos, Acessórios, etc
-  isCommissioned       Boolean              @default(false)
-  commissionPercentage Float?               @default(0)
   isActive             Boolean              @default(true)
   createdAt            DateTime             @default(now())
   updatedAt            DateTime             @updatedAt
@@ -441,10 +414,6 @@ model ProductSale {
   createdAt      DateTime       @default(now())
   updatedAt      DateTime       @updatedAt
   product        Product        @relation(fields: [productId], references: [id])
-  
-  barberId       String?
-  barber         Barber?        @relation(fields: [barberId], references: [id])
-  commissionValue Float?        @default(0)
 }
 
 // Bloqueios de horário por barbeiro
@@ -458,16 +427,4 @@ model ScheduleBlock {
   reason      String?  // Motivo opcional (almoço, folga, etc.)
   createdAt   DateTime @default(now())
   updatedAt   DateTime @updatedAt
-}
-
-model Plan {
-  id               String         @id @default(cuid())
-  name             String
-  price            Float
-  paymentLink      String?
-  servicesIncluded String?        // JSON string: { "serviceId": { "unlimited": true, "quantity": 4 } }
-  isActive         Boolean        @default(true)
-  createdAt        DateTime       @default(now())
-  updatedAt        DateTime       @updatedAt
-  subscriptions    Subscription[]
 }

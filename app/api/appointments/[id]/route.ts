@@ -1,19 +1,15 @@
 import { NextRequest, NextResponse } from "next/server";
-import { createClient } from "@/utils/supabase/server";
+import { getServerSession } from "next-auth";
+import { authOptions } from "@/lib/auth/auth-options";
 import { prisma } from "@/lib/db";
-import { isServiceIncluded } from "@/lib/utils";
-
-export const dynamic = "force-dynamic";
 
 export async function GET(
   request: NextRequest,
   { params }: { params: { id: string } }
 ) {
   try {
-    const supabase = createClient();
-    const { data: { user } } = await supabase.auth.getUser();
-
-    if (!user) {
+    const session = await getServerSession(authOptions);
+    if (!session) {
       return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
     }
 
@@ -57,38 +53,35 @@ export async function PATCH(
   { params }: { params: { id: string } }
 ) {
   try {
-    const supabase = createClient();
-    const { data: { user } } = await supabase.auth.getUser();
-
-    if (!user) {
+    const session = await getServerSession(authOptions);
+    if (!session) {
       return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
     }
 
     const body = await request.json();
-    const { date, barberId, status, serviceIds, productItems, paymentMethod, notes, observations } = body;
+    const { date, barberId, status, serviceIds, productItems, paymentMethod } = body;
 
     const updateData: any = {};
     if (date) updateData.date = new Date(date);
     if (barberId) updateData.barberId = barberId;
     if (status) updateData.status = status;
     if (paymentMethod) updateData.paymentMethod = paymentMethod;
-    if (notes || observations) updateData.observations = notes || observations;
 
     // Se serviceIds ou productItems foi fornecido, atualizar serviços/produtos
     if ((serviceIds && Array.isArray(serviceIds)) || (productItems && Array.isArray(productItems))) {
       // Buscar os preços dos serviços
-      const services = serviceIds && serviceIds.length > 0
+      const services = serviceIds && serviceIds.length > 0 
         ? await prisma.service.findMany({
-          where: { id: { in: serviceIds } },
-        })
+            where: { id: { in: serviceIds } },
+          })
         : [];
 
       // Buscar os produtos se fornecidos
       const productIds = productItems ? productItems.map((p: any) => p.productId) : [];
       const products = productIds.length > 0
         ? await prisma.product.findMany({
-          where: { id: { in: productIds } },
-        })
+            where: { id: { in: productIds } },
+          })
         : [];
 
       // Buscar o barbeiro atual ou o novo barbeiro
@@ -97,145 +90,33 @@ export async function PATCH(
         include: { barber: true, commission: true },
       });
 
-      const barber = barberId
+      const barber = barberId 
         ? await prisma.barber.findUnique({ where: { id: barberId } })
         : appointment?.barber;
 
-      // Buscar assinatura ativa do cliente
-      const activeSubscription = appointment?.clientId ? await prisma.subscription.findFirst({
-        where: {
-          clientId: appointment.clientId,
-          status: 'ACTIVE',
-        },
-      }) : null;
-
-      let activeSubscriptionWithPlan: any = activeSubscription;
-      if (activeSubscription && !activeSubscription.servicesIncluded && activeSubscription.planId) {
-        const plan = await prisma.plan.findUnique({ where: { id: activeSubscription.planId } });
-        if (plan) {
-          activeSubscriptionWithPlan = { ...activeSubscription, plan };
-        }
-      }
-
-      const isSubscriptionAppointment = !!activeSubscription || appointment?.isSubscriptionAppointment || false;
-
-      // Calcular totais e preparar dados dos serviços
-      const servicesData = services.map(s => {
-        let price = s.price;
-        const originalPrice = s.price; // Mantém o preço original para cálculo de comissão de assinante
-
-        if (isSubscriptionAppointment && activeSubscription) {
-          // Se o nome do serviço está contido na descrição dos serviços incluídos, é grátis
-          const servicesIncluded = activeSubscriptionWithPlan?.servicesIncluded || activeSubscriptionWithPlan?.plan?.servicesIncluded;
-          if (isServiceIncluded(servicesIncluded, s.name, s.id)) {
-            price = 0;
-          }
-        } else if (isSubscriptionAppointment && !activeSubscription) {
-          price = 0;
-        }
-
-        return {
-          id: s.id,
-          price,
-          originalPrice, // Exporta o preço original
-          duration: s.duration
-        };
-      });
-
-      const servicesTotal = servicesData.reduce((sum, s) => sum + s.price, 0);
-
-      // Agrupar produtos para evitar duplicatas e erro de constraint
-      const productMap = new Map<string, { quantity: number, unitPrice: number }>();
-      if (productItems && Array.isArray(productItems)) {
-        productItems.forEach((item: any) => {
-          const existing = productMap.get(item.productId);
-          if (existing) {
-            existing.quantity += item.quantity;
-          } else {
-            // Se o preço não foi enviado, buscar do DB
-            const dbProduct = products.find(p => p.id === item.productId);
-            productMap.set(item.productId, {
-              quantity: item.quantity,
-              unitPrice: item.unitPrice || dbProduct?.price || 0
-            });
-          }
-        });
-      }
-
-      const mergedProducts = Array.from(productMap.entries()).map(([productId, data]) => ({
-        productId,
-        ...data
-      }));
-
-      const productsTotal = mergedProducts.reduce((sum, item) => sum + (item.unitPrice * item.quantity), 0);
-
-      // Buscar comissões personalizadas
-      const customCommissions = barber ? await prisma.barberServiceCommission.findMany({
-        where: { barberId: barber.id }
-      }) : [];
-
-      const getCommissionRate = (serviceId: string) => {
-        const custom = customCommissions.find(c => c.serviceId === serviceId);
-        return custom ? custom.percentage : (barber?.commissionRate || 0);
-      };
-
+      // Calcular totais
+      const servicesTotal = services.reduce((sum, s) => sum + s.price, 0);
+      const productsTotal = productItems 
+        ? productItems.reduce((sum: number, item: any) => {
+            const product = products.find(p => p.id === item.productId);
+            return sum + (product ? product.price * item.quantity : 0);
+          }, 0)
+        : 0;
+      
       const totalAmount = servicesTotal + productsTotal;
-      let commissionAmount = 0;
-
-      if (barber) {
-        // Comissão de Serviços
-        if (isSubscriptionAppointment) {
-          // Assinantes: % configurada no barbeiro sobre o valor original dos serviços
-          const subRate = (barber as any).subscriptionCommissionRate ?? 45;
-          const totalOriginalValue = servicesData.reduce((sum, s) => sum + (s.originalPrice || 0), 0);
-          commissionAmount += totalOriginalValue * (subRate / 100);
-        } else {
-          // Normal: % configurada sobre o valor pago
-          commissionAmount += servicesData.reduce((sum, s) => {
-            const rate = getCommissionRate(s.id);
-            return sum + (s.price * rate / 100);
-          }, 0);
-        }
-
-        // Comissão de Produtos
-        if (mergedProducts.length > 0) {
-          mergedProducts.forEach(item => {
-            const productInfo = products.find(p => p.id === item.productId);
-            if (productInfo?.isCommissioned && productInfo.commissionPercentage) {
-              const itemTotal = item.unitPrice * item.quantity;
-              commissionAmount += itemTotal * (productInfo.commissionPercentage / 100);
-            }
-          });
-        }
-      }
+      const commissionAmount = barber 
+        ? (servicesTotal * barber.commissionRate) / 100 
+        : 0;
 
       // Calculate worked hours based on service durations (convert minutes to hours)
-      const totalMinutes = servicesData.reduce((sum, s) => sum + s.duration, 0);
+      const totalMinutes = services.reduce((sum, s) => sum + s.duration, 0);
       const workedHours = totalMinutes / 60;
 
       updateData.totalAmount = totalAmount;
-      updateData.workedHours = isSubscriptionAppointment ? 0 : workedHours;
-      updateData.workedHoursSubscription = isSubscriptionAppointment ? workedHours : 0;
-      updateData.isSubscriptionAppointment = isSubscriptionAppointment;
-
-      // Buscar produtos atuais para restaurar o estoque antes de aplicar o novo
-      const currentAppointment = await prisma.appointment.findUnique({
-        where: { id: params.id },
-        include: { products: true }
-      });
+      updateData.workedHours = workedHours;
 
       // Atualizar o appointment e seus serviços/produtos em uma transação
       const updatedAppointment = await prisma.$transaction(async (tx) => {
-        // Restaurar estoque dos produtos removidos/alterados
-        if (currentAppointment?.products) {
-          for (const p of currentAppointment.products) {
-            await tx.product.update({
-              where: { id: p.productId },
-              data: { stock: { increment: p.quantity } }
-            });
-          }
-        }
-
         // Deletar os serviços antigos
         await tx.appointmentService.deleteMany({
           where: { appointmentId: params.id },
@@ -250,32 +131,34 @@ export async function PATCH(
         if (serviceIds && serviceIds.length > 0) {
           await tx.appointmentService.createMany({
             data: serviceIds.map((serviceId: string) => {
-              const servicePrice = servicesData.find(s => s.id === serviceId)?.price ?? 0;
+              const service = services.find(s => s.id === serviceId);
               return {
                 appointmentId: params.id,
                 serviceId,
-                price: servicePrice,
+                price: service?.price || 0,
               };
             }),
           });
         }
 
         // Criar os novos produtos
-        if (mergedProducts.length > 0) {
+        if (productItems && productItems.length > 0) {
           await tx.appointmentProduct.createMany({
-            data: mergedProducts.map((item: any) => {
+            data: productItems.map((item: any) => {
+              const product = products.find(p => p.id === item.productId);
+              const unitPrice = product?.price || 0;
               return {
                 appointmentId: params.id,
                 productId: item.productId,
                 quantity: item.quantity,
-                unitPrice: item.unitPrice,
-                totalPrice: item.unitPrice * item.quantity,
+                unitPrice: unitPrice,
+                totalPrice: unitPrice * item.quantity,
               };
             }),
           });
 
-          // Reduzir estoque dos novos produtos
-          for (const item of mergedProducts) {
+          // Atualizar o estoque dos produtos
+          for (const item of productItems) {
             await tx.product.update({
               where: { id: item.productId },
               data: {
@@ -287,13 +170,12 @@ export async function PATCH(
           }
         }
 
-        // Atualizar ou criar a comissão
+        // Atualizar ou criar a comissão se houver mudança no valor de serviços
         if (appointment?.commission) {
           await tx.commission.update({
             where: { appointmentId: params.id },
             data: {
               amount: commissionAmount,
-              barberId: barber?.id || appointment.barberId
             },
           });
         } else if (commissionAmount > 0 && barber) {
@@ -302,7 +184,6 @@ export async function PATCH(
               appointmentId: params.id,
               barberId: barber.id,
               amount: commissionAmount,
-              status: "PENDING"
             },
           });
         }
@@ -326,84 +207,12 @@ export async function PATCH(
             },
           },
         });
-      }, {
-        timeout: 10000 // Timeout de 10s
       });
 
       return NextResponse.json(updatedAppointment);
     }
 
     // Se não tem serviceIds, apenas atualizar os campos normais
-    // Mas se está mudando para COMPLETED, criar comissão se não existir
-    const existingAppointment = await prisma.appointment.findUnique({
-      where: { id: params.id },
-      include: {
-        barber: true,
-        client: true,
-        services: {
-          include: {
-            service: true,
-          },
-        },
-        products: {
-          include: {
-            product: true,
-          },
-        },
-        commission: true,
-      },
-    });
-
-    if (status === 'COMPLETED' && existingAppointment && existingAppointment.status !== 'COMPLETED' && !existingAppointment.commission) {
-      // Criar comissão ao finalizar
-      const barber = existingAppointment.barber;
-      const servicesTotal = existingAppointment.services.reduce((sum: number, s: any) => sum + s.price, 0);
-
-      // Verificar se é assinatura
-      const isSubscription = existingAppointment.isSubscriptionAppointment;
-
-      let commissionAmount = 0;
-      if (barber) {
-        if (isSubscription) {
-          // Assinantes: % configurada no barbeiro sobre o valor original dos serviços
-          const subRate = (barber as any).subscriptionCommissionRate ?? 45;
-          const totalOriginalValue = existingAppointment.services.reduce((sum: number, s: any) => sum + (s.service?.price || 0), 0);
-          commissionAmount = totalOriginalValue * (subRate / 100);
-        } else {
-          // Comissão baseada em percentual (Customizada ou Padrão)
-          const customCommissions = await prisma.barberServiceCommission.findMany({
-            where: { barberId: barber.id }
-          });
-
-          commissionAmount = existingAppointment.services.reduce((sum: number, s: any) => {
-            const custom = customCommissions.find(c => c.serviceId === s.serviceId);
-            const rate = custom ? custom.percentage : (barber.commissionRate || 0);
-            return sum + (s.price * rate / 100);
-          }, 0);
-        }
-
-        // Adicionar comissão de produtos
-        if (existingAppointment.products && existingAppointment.products.length > 0) {
-          existingAppointment.products.forEach((item: any) => {
-            const productInfo = item.product;
-            if (productInfo?.isCommissioned && productInfo.commissionPercentage) {
-              const itemTotal = item.unitPrice * item.quantity;
-              commissionAmount += itemTotal * (productInfo.commissionPercentage / 100);
-            }
-          });
-        }
-      }
-
-      await prisma.commission.create({
-        data: {
-          appointmentId: params.id,
-          barberId: barber.id,
-          amount: commissionAmount,
-          status: 'PENDING',
-        },
-      });
-    }
-
     const appointment = await prisma.appointment.update({
       where: { id: params.id },
       data: updateData,
@@ -438,10 +247,8 @@ export async function DELETE(
   { params }: { params: { id: string } }
 ) {
   try {
-    const supabase = createClient();
-    const { data: { user } } = await supabase.auth.getUser();
-
-    if (!user) {
+    const session = await getServerSession(authOptions);
+    if (!session) {
       return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
     }
 

@@ -1,5 +1,6 @@
 import { NextRequest, NextResponse } from "next/server";
-import { createClient } from "@/utils/supabase/server";
+import { getServerSession } from "next-auth";
+import { authOptions } from "@/lib/auth/auth-options";
 import { prisma } from "@/lib/db";
 
 // Using singleton prisma from lib/db
@@ -7,18 +8,10 @@ import { prisma } from "@/lib/db";
 export const dynamic = "force-dynamic";
 
 export async function GET(request: NextRequest) {
-  console.log('[Barbers API] GET request started');
   try {
-    console.log('[Barbers API] Creating Supabase client...');
-    const supabase = createClient();
+    const session = await getServerSession(authOptions);
 
-    console.log('[Barbers API] Getting user...');
-    const { data: { user }, error: authError } = await supabase.auth.getUser();
-
-    console.log('[Barbers API] User:', user?.email, 'Auth Error:', authError);
-
-    if (!user) {
-      console.log('[Barbers API] No user, returning 401');
+    if (!session) {
       return NextResponse.json({ error: "Não autorizado" }, { status: 401 });
     }
 
@@ -44,12 +37,10 @@ export async function GET(request: NextRequest) {
     });
 
     return NextResponse.json(barbers);
-  } catch (error: any) {
-    console.error("[Barbers API] ERROR:", error);
-    console.error("[Barbers API] Error message:", error?.message);
-    console.error("[Barbers API] Error stack:", error?.stack);
+  } catch (error) {
+    console.error("Error fetching barbers:", error);
     return NextResponse.json(
-      { error: "Erro ao buscar barbeiros", details: error?.message },
+      { error: "Erro ao buscar barbeiros" },
       { status: 500 }
     );
   }
@@ -57,15 +48,14 @@ export async function GET(request: NextRequest) {
 
 export async function POST(request: NextRequest) {
   try {
-    const supabase = createClient();
-    const { data: { user } } = await supabase.auth.getUser();
+    const session = await getServerSession(authOptions);
 
-    if (!user) {
+    if (!session) {
       return NextResponse.json({ error: "Não autorizado" }, { status: 401 });
     }
 
     const body = await request.json();
-    const { name, phone, email, commissionRate, hourlyRate, subscriptionCommissionRate, isActive } = body;
+    const { name, phone, email, commissionRate, hourlyRate, isActive } = body;
 
     if (!name || !phone) {
       return NextResponse.json(
@@ -80,8 +70,7 @@ export async function POST(request: NextRequest) {
         phone,
         email: email || null,
         commissionRate: parseFloat(commissionRate) || 0,
-        hourlyRate: hourlyRate ? parseFloat(hourlyRate) : 0, // Mantém compatibilidade mas pode ser ignorado na UI
-        subscriptionCommissionRate: subscriptionCommissionRate ? parseFloat(subscriptionCommissionRate) : 45,
+        hourlyRate: parseFloat(hourlyRate) || 0,
         isActive: isActive !== undefined ? isActive : true,
       },
     });

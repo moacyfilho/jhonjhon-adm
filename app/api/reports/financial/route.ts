@@ -1,5 +1,6 @@
 import { NextRequest, NextResponse } from 'next/server';
-import { createClient } from '@/utils/supabase/server';
+import { getServerSession } from 'next-auth';
+import { authOptions } from '@/lib/auth/auth-options';
 import { prisma } from '@/lib/db';
 import { startOfMonth, endOfMonth, subMonths, format } from 'date-fns';
 
@@ -8,10 +9,8 @@ export const dynamic = 'force-dynamic';
 // GET - Relatório financeiro consolidado
 export async function GET(request: NextRequest) {
   try {
-    const supabase = createClient();
-    const { data: { user } } = await supabase.auth.getUser();
-
-    if (!user) {
+    const session = await getServerSession(authOptions);
+    if (!session) {
       return NextResponse.json({ error: 'Não autorizado' }, { status: 401 });
     }
 
@@ -78,19 +77,19 @@ export async function GET(request: NextRequest) {
     // Calcular totais
     const totalPayable = accountsPayable.reduce((sum: any, acc: any) => sum + acc.amount, 0);
     const totalReceivable = accountsReceivable.reduce((sum: any, acc: any) => sum + acc.amount, 0);
-
+    
     const totalPayablePaid = accountsPayable
       .filter((acc: any) => acc.status === 'PAID')
       .reduce((sum: any, acc: any) => sum + acc.amount, 0);
-
+    
     const totalReceivablePaid = accountsReceivable
       .filter((acc: any) => acc.status === 'PAID')
       .reduce((sum: any, acc: any) => sum + acc.amount, 0);
-
+    
     const totalPayablePending = accountsPayable
       .filter((acc: any) => acc.status === 'PENDING' || acc.status === 'OVERDUE')
       .reduce((sum: any, acc: any) => sum + acc.amount, 0);
-
+    
     const totalReceivablePending = accountsReceivable
       .filter((acc: any) => acc.status === 'PENDING' || acc.status === 'OVERDUE')
       .reduce((sum: any, acc: any) => sum + acc.amount, 0);
@@ -119,7 +118,7 @@ export async function GET(request: NextRequest) {
       const date = new Date();
       date.setDate(date.getDate() - i);
       date.setHours(0, 0, 0, 0);
-
+      
       const nextDate = new Date(date);
       nextDate.setDate(nextDate.getDate() + 1);
 

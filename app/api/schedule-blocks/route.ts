@@ -1,21 +1,13 @@
 import { NextRequest, NextResponse } from 'next/server';
-import { createClient } from '@/utils/supabase/server';
+import { getServerSession } from 'next-auth';
+import { authOptions } from '@/lib/auth/auth-options';
 import { prisma } from '@/lib/db';
-import {
-  getManausStartOfDay,
-  getManausEndOfDay,
-  createManausDate
-} from '@/lib/timezone';
-
-export const dynamic = 'force-dynamic';
 
 // GET - Listar bloqueios de horário (para admin)
 export async function GET(request: NextRequest) {
   try {
-    const supabase = createClient();
-    const { data: { user } } = await supabase.auth.getUser();
-
-    if (!user) {
+    const session = await getServerSession(authOptions);
+    if (!session) {
       return NextResponse.json({ error: 'Não autorizado' }, { status: 401 });
     }
 
@@ -32,8 +24,8 @@ export async function GET(request: NextRequest) {
 
     if (startDate && endDate) {
       whereClause.date = {
-        gte: getManausStartOfDay(startDate),
-        lte: getManausEndOfDay(endDate),
+        gte: new Date(startDate),
+        lte: new Date(endDate),
       };
     }
 
@@ -66,10 +58,8 @@ export async function GET(request: NextRequest) {
 // POST - Criar bloqueio de horário (para admin)
 export async function POST(request: NextRequest) {
   try {
-    const supabase = createClient();
-    const { data: { user } } = await supabase.auth.getUser();
-
-    if (!user) {
+    const session = await getServerSession(authOptions);
+    if (!session) {
       return NextResponse.json({ error: 'Não autorizado' }, { status: 401 });
     }
 
@@ -102,88 +92,23 @@ export async function POST(request: NextRequest) {
       );
     }
 
-    // Verificar conflitos com agendamentos existentes (checando horário)
-    // Usando horário de Manaus para query no banco e cálculos
-    const searchStart = getManausStartOfDay(date);
-    const searchEnd = getManausEndOfDay(date);
-
+    // Verificar conflitos com agendamentos existentes
     const existingAppointments = await prisma.appointment.findMany({
       where: {
         barberId,
         date: {
-          gte: searchStart,
-          lte: searchEnd,
-        },
-        status: {
-          not: 'CANCELLED',
-        },
-      },
-      include: {
-        services: {
-          include: {
-            service: true,
-          },
+          gte: new Date(date + 'T00:00:00'),
+          lt: new Date(date + 'T23:59:59'),
         },
       },
     });
 
-    const [startHour, startMinute] = startTime.split(':').map(Number);
-    const [endHour, endMinute] = endTime.split(':').map(Number);
-
-    // Datas de bloqueio em UTC (correspondente ao horário de Manaus)
-    const blockStart = createManausDate(date, startHour, startMinute);
-    const blockEnd = createManausDate(date, endHour, endMinute);
-
-    const conflicts = existingAppointments.filter((appointment) => {
-      // Data do agendamento já está em UTC no banco
-      const apptStart = new Date(appointment.date);
-      const durationMinutes = appointment.services.reduce(
-        (acc, s) => acc + s.service.duration,
-        0
-      );
-      const apptEnd = new Date(apptStart.getTime() + durationMinutes * 60000);
-
-      // Verifica sobreposição de horário
-      // (StartA < EndB) && (EndA > StartB)
-      return apptStart < blockEnd && apptEnd > blockStart;
-    });
-
-    if (conflicts.length > 0) {
+    if (existingAppointments.length > 0) {
       return NextResponse.json(
-        {
+        { 
           error: 'Não é possível bloquear este horário pois existem agendamentos confirmados',
-          conflicts: conflicts.length,
+          conflicts: existingAppointments.length,
         },
-        { status: 409 }
-      );
-    }
-
-    // Verificar conflitos com OUTROS BLOQUEIOS existentes
-    const existingBlocks = await prisma.scheduleBlock.findMany({
-      where: {
-        barberId,
-        date: {
-          gte: searchStart,
-          lte: searchEnd,
-        },
-      },
-    });
-
-    const blockConflicts = existingBlocks.filter((b) => {
-      // Converter strings HH:mm para Date hoje (UTC)
-      const [bStartH, bStartM] = b.startTime.split(':').map(Number);
-      const [bEndH, bEndM] = b.endTime.split(':').map(Number);
-
-      const bStart = createManausDate(date, bStartH, bStartM);
-      const bEnd = createManausDate(date, bEndH, bEndM);
-
-      // (StartA < EndB) && (EndA > StartB)
-      return blockStart < bEnd && blockEnd > bStart;
-    });
-
-    if (blockConflicts.length > 0) {
-      return NextResponse.json(
-        { error: 'Já existe um bloqueio para este horário' },
         { status: 409 }
       );
     }
@@ -191,9 +116,7 @@ export async function POST(request: NextRequest) {
     const block = await prisma.scheduleBlock.create({
       data: {
         barberId,
-        // Armazena a "Data" do bloqueio normalizada para o início do dia em Manaus
-        // Isso garante que queries usando timezone funcionem corretamente
-        date: getManausStartOfDay(date),
+        date: new Date(date),
         startTime,
         endTime,
         reason,
@@ -221,10 +144,8 @@ export async function POST(request: NextRequest) {
 // DELETE - Remover bloqueio de horário (para admin)
 export async function DELETE(request: NextRequest) {
   try {
-    const supabase = createClient();
-    const { data: { user } } = await supabase.auth.getUser();
-
-    if (!user) {
+    const session = await getServerSession(authOptions);
+    if (!session) {
       return NextResponse.json({ error: 'Não autorizado' }, { status: 401 });
     }
 

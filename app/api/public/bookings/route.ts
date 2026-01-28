@@ -19,9 +19,9 @@ export async function POST(request: NextRequest) {
     } = body;
 
     // Validações
-    if (!clientName || !clientPhone || !serviceId || !barberId || !scheduledDate) {
+    if (!clientName || !clientPhone || !serviceId || !scheduledDate) {
       return NextResponse.json(
-        { error: 'Campos obrigatórios: clientName, clientPhone, serviceId, barberId, scheduledDate' },
+        { error: 'Campos obrigatórios: clientName, clientPhone, serviceId, scheduledDate' },
         { status: 400 }
       );
     }
@@ -38,16 +38,18 @@ export async function POST(request: NextRequest) {
       );
     }
 
-    // Verificar se o barbeiro existe e está ativo
-    const barber = await prisma.barber.findUnique({
-      where: { id: barberId },
-    });
+    // Se barbeiro foi especificado, verificar se existe e está ativo
+    if (barberId) {
+      const barber = await prisma.barber.findUnique({
+        where: { id: barberId },
+      });
 
-    if (!barber || !barber.isActive) {
-      return NextResponse.json(
-        { error: 'Barbeiro não encontrado ou inativo' },
-        { status: 404 }
-      );
+      if (!barber || !barber.isActive) {
+        return NextResponse.json(
+          { error: 'Barbeiro não encontrado ou inativo' },
+          { status: 404 }
+        );
+      }
     }
 
     // === VALIDAÇÃO DE HORÁRIO DISPONÍVEL ===
@@ -74,7 +76,7 @@ export async function POST(request: NextRequest) {
         status: {
           in: ['PENDING', 'CONFIRMED'],
         },
-        barberId,
+        ...(barberId ? { barberId } : {}),
       },
     });
 
@@ -95,7 +97,7 @@ export async function POST(request: NextRequest) {
         status: {
           not: 'CANCELLED',
         },
-        barberId,
+        ...(barberId ? { barberId } : {}),
       },
     });
 
@@ -149,7 +151,7 @@ export async function POST(request: NextRequest) {
         clientPhone,
         clientEmail,
         serviceId,
-        barberId,
+        barberId: barberId || null,
         scheduledDate: requestedDateTime, // Usa o Date já criado sem conversão
         isSubscriber,
         observations,

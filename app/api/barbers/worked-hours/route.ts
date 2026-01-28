@@ -1,16 +1,13 @@
 import { NextRequest, NextResponse } from "next/server";
-import { createClient } from "@/utils/supabase/server";
+import { getServerSession } from "next-auth";
+import { authOptions } from "@/lib/auth/auth-options";
 import { prisma } from "@/lib/db";
 import { startOfMonth, endOfMonth } from "date-fns";
 
-export const dynamic = "force-dynamic";
-
 export async function GET(request: NextRequest) {
   try {
-    const supabase = createClient();
-    const { data: { user } } = await supabase.auth.getUser();
-
-    if (!user) {
+    const session = await getServerSession(authOptions);
+    if (!session) {
       return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
     }
 
@@ -64,7 +61,7 @@ export async function GET(request: NextRequest) {
 
         // Calcular totais
         const totalHours = appointments.reduce(
-          (sum, apt) => sum + (apt.workedHours || 0) + ((apt as any).workedHoursSubscription || 0),
+          (sum, apt) => sum + (apt.workedHours || 0),
           0
         );
         const totalAppointments = appointments.length;
@@ -91,7 +88,7 @@ export async function GET(request: NextRequest) {
             date: apt.date,
             clientName: apt.client.name,
             services: apt.services.map((s) => s.service.name).join(", "),
-            workedHours: (apt.workedHours || 0) + ((apt as any).workedHoursSubscription || 0),
+            workedHours: apt.workedHours || 0,
             totalAmount: apt.totalAmount,
           })),
         };

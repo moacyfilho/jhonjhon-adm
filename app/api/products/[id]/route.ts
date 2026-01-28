@@ -1,25 +1,22 @@
-import { NextRequest, NextResponse } from 'next/server';
-import { createClient } from '@/utils/supabase/server';
+import { NextResponse } from 'next/server';
+import { getServerSession } from 'next-auth';
+import { authOptions } from '@/lib/auth/auth-options';
 import { prisma } from '@/lib/db';
-
-export const dynamic = 'force-dynamic';
 
 // PUT - Atualizar produto
 export async function PUT(
-  request: NextRequest,
+  request: Request,
   { params }: { params: { id: string } }
 ) {
   try {
-    const supabase = createClient();
-    const { data: { user } } = await supabase.auth.getUser();
-
-    if (!user) {
+    const session = await getServerSession(authOptions);
+    if (!session) {
       return NextResponse.json({ error: 'Não autorizado' }, { status: 401 });
     }
 
     const { id } = params;
     const data = await request.json();
-    const { name, description, price, costPrice, stock, unit, category, isCommissioned, commissionPercentage, isActive } = data;
+    const { name, description, price, stock, unit, category, isActive } = data;
 
     // Verificar se produto existe
     const existingProduct = await prisma.product.findUnique({
@@ -49,12 +46,9 @@ export async function PUT(
     if (name !== undefined) updateData.name = name;
     if (description !== undefined) updateData.description = description || null;
     if (price !== undefined) updateData.price = parseFloat(price);
-    if (costPrice !== undefined) updateData.costPrice = costPrice ? parseFloat(costPrice) : 0;
     if (stock !== undefined) updateData.stock = parseFloat(stock);
     if (unit !== undefined) updateData.unit = unit;
     if (category !== undefined) updateData.category = category || null;
-    if (isCommissioned !== undefined) updateData.isCommissioned = isCommissioned;
-    if (commissionPercentage !== undefined) updateData.commissionPercentage = commissionPercentage ? parseFloat(commissionPercentage) : 0;
     if (isActive !== undefined) updateData.isActive = isActive;
 
     const product = await prisma.product.update({
@@ -72,14 +66,12 @@ export async function PUT(
 
 // DELETE - Excluir produto
 export async function DELETE(
-  request: NextRequest,
+  request: Request,
   { params }: { params: { id: string } }
 ) {
   try {
-    const supabase = createClient();
-    const { data: { user } } = await supabase.auth.getUser();
-
-    if (!user) {
+    const session = await getServerSession(authOptions);
+    if (!session) {
       return NextResponse.json({ error: 'Não autorizado' }, { status: 401 });
     }
 
@@ -106,9 +98,9 @@ export async function DELETE(
         data: { isActive: false },
       });
       console.log('Produto desativado (tinha vendas):', product);
-      return NextResponse.json({
+      return NextResponse.json({ 
         message: 'Produto desativado (não pode ser excluído pois possui vendas registradas)',
-        product
+        product 
       });
     }
 

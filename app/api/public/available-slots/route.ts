@@ -1,12 +1,12 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { prisma } from '@/lib/db';
-import {
-  getManausNow,
-  toManausTime,
-  getManausStartOfDay,
+import { 
+  getManausNow, 
+  toManausTime, 
+  getManausStartOfDay, 
   getManausEndOfDay,
   isSameDayManaus,
-  createManausDate
+  createManausDate 
 } from '@/lib/timezone';
 
 const dayMapping: { [key: string]: string } = {
@@ -124,21 +124,6 @@ export async function GET(request: NextRequest) {
       },
     });
 
-    // Busca bloqueios de horário (ScheduleBlock)
-    const scheduleBlocks = await prisma.scheduleBlock.findMany({
-      where: {
-        date: {
-          gte: startOfDay,
-          lte: endOfDay,
-        },
-        ...(barberId ? { barberId } : {}),
-      },
-      select: {
-        startTime: true,
-        endTime: true,
-      },
-    });
-
     // Combina horários ocupados de AMBAS as tabelas (convertendo para horário de Manaus)
     const occupiedSlotsArray = [
       ...existingOnlineBookings.map((booking) => {
@@ -175,17 +160,6 @@ export async function GET(request: NextRequest) {
         reason = 'occupied';
       }
 
-      // Verifica se está dentro de algum bloqueio
-      if (isAvailable) {
-        for (const block of scheduleBlocks) {
-          if (slot >= block.startTime && slot < block.endTime) {
-            isAvailable = false;
-            reason = 'blocked';
-            break;
-          }
-        }
-      }
-
       // Se for hoje (no fuso de Manaus), verifica se já passou ou está dentro do tempo mínimo de aviso
       if (isAvailable && isSameDayManaus(targetDate, nowManaus)) {
         const minimumNoticeMs = settings.minimumNotice * 60 * 60 * 1000;
@@ -193,12 +167,12 @@ export async function GET(request: NextRequest) {
 
         const [hours, minutes] = slot.split(':').map(Number);
         const slotTime = createManausDate(dateStr, hours, minutes);
-
+        
         console.log(`[available-slots] Verificando slot ${slot}:`);
         console.log(`  - Horário atual (Manaus): ${nowManaus.toISOString()}`);
         console.log(`  - Horário do slot: ${slotTime.toISOString()}`);
         console.log(`  - Tempo mínimo necessário: ${minTime.toISOString()}`);
-
+        
         if (slotTime < minTime) {
           isAvailable = false;
           reason = 'past';

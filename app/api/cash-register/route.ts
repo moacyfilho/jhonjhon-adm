@@ -1,15 +1,12 @@
 import { NextRequest, NextResponse } from "next/server";
-import { createClient } from "@/utils/supabase/server";
+import { getServerSession } from "next-auth";
+import { authOptions } from "@/lib/auth/auth-options";
 import { prisma } from "@/lib/db";
-
-export const dynamic = "force-dynamic";
 
 export async function GET(request: NextRequest) {
   try {
-    const supabase = createClient();
-    const { data: { user } } = await supabase.auth.getUser();
-
-    if (!user) {
+    const session = await getServerSession(authOptions);
+    if (!session) {
       return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
     }
 
@@ -66,10 +63,8 @@ export async function GET(request: NextRequest) {
 
 export async function POST(request: NextRequest) {
   try {
-    const supabase = createClient();
-    const { data: { user } } = await supabase.auth.getUser();
-
-    if (!user || !user.email) {
+    const session = await getServerSession(authOptions);
+    if (!session) {
       return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
     }
 
@@ -95,29 +90,11 @@ export async function POST(request: NextRequest) {
       );
     }
 
-    // Sync User: Ensure Prisma user exists
-    let dbUser = await prisma.user.findUnique({
-      where: { email: user.email },
-    });
-
-    if (!dbUser) {
-      // Create user in Prisma if not exists (using Supabase ID if possible, but schema has CUID default)
-      // We'll trust the ID from Supabase if we can, or let Prisma gen one.
-      // Ideally we want to link them.
-      dbUser = await prisma.user.create({
-        data: {
-          id: user.id, // Try to enforce same ID
-          email: user.email,
-          name: user.user_metadata.full_name || user.email.split('@')[0],
-          role: (user.user_metadata.role as any) || 'SECRETARY',
-        }
-      });
-    }
-
+    const user = session.user as any;
     const cashRegister = await prisma.cashRegister.create({
       data: {
         initialAmount,
-        openedBy: dbUser.id,
+        openedBy: user.id,
         status: "OPEN",
       },
       include: {

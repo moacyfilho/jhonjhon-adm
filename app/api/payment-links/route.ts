@@ -1,16 +1,13 @@
 import { NextRequest, NextResponse } from 'next/server';
-import { createClient } from '@/utils/supabase/server';
+import { getServerSession } from 'next-auth';
+import { authOptions } from '@/lib/auth/auth-options';
 import { prisma } from '@/lib/db';
-
-export const dynamic = 'force-dynamic';
 
 // POST - Gerar link de pagamento
 export async function POST(request: NextRequest) {
   try {
-    const supabase = createClient();
-    const { data: { user } } = await supabase.auth.getUser();
-
-    if (!user) {
+    const session = await getServerSession(authOptions);
+    if (!session || !session.user) {
       return NextResponse.json({ error: 'Não autorizado' }, { status: 401 });
     }
 
@@ -52,7 +49,7 @@ export async function POST(request: NextRequest) {
       data: {
         accountReceivableId,
         linkUrl,
-        generatedBy: user.id || 'system',
+        generatedBy: (session.user as any).id || 'system',
         expiresAt,
         status: 'generated',
       },
@@ -78,10 +75,8 @@ export async function POST(request: NextRequest) {
 // GET - Listar links de pagamento
 export async function GET(request: NextRequest) {
   try {
-    const supabase = createClient();
-    const { data: { user } } = await supabase.auth.getUser();
-
-    if (!user) {
+    const session = await getServerSession(authOptions);
+    if (!session) {
       return NextResponse.json({ error: 'Não autorizado' }, { status: 401 });
     }
 

@@ -1,12 +1,10 @@
 'use client';
 
-import { useState, useEffect, useMemo } from 'react';
+import { useState, useEffect } from 'react';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
-import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
-import { Checkbox } from '@/components/ui/checkbox';
 import {
   Dialog,
   DialogContent,
@@ -45,16 +43,21 @@ import {
   Clock,
   XCircle,
   Calendar,
-  RefreshCw,
-  MoreVertical,
-  Scissors,
-  DollarSign,
-  BarChart3,
-  Users,
-  Timer
 } from 'lucide-react';
 import { toast } from 'sonner';
-import { formatCurrency } from '@/lib/utils'; // Assuming this exists or I'll implement local
+import {
+  Table,
+  TableBody,
+  TableCaption,
+  TableCell,
+  TableFooter,
+  TableHead,
+  TableHeader,
+  TableRow,
+} from '@/components/ui/table';
+import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
+import { format, subMonths, addMonths, startOfMonth } from 'date-fns';
+import { ptBR } from 'date-fns/locale';
 
 interface Client {
   id: string;
@@ -66,7 +69,6 @@ interface Client {
 interface Subscription {
   id: string;
   clientId: string;
-  planId?: string;
   planName: string;
   amount: number;
   billingDay: number;
@@ -77,22 +79,11 @@ interface Subscription {
   usageLimit?: number;
   observations?: string;
   client: Client;
-  plan?: Plan;
-}
-
-interface Plan {
-  id: string;
-  name: string;
-  price: number;
-  paymentLink?: string;
-  servicesIncluded: string | null;
-  isActive: boolean;
-}
-
-interface Service {
-  id: string;
-  name: string;
-  price: number;
+  usageHistory?: Array<{
+    id: string;
+    usedDate: string;
+    serviceDetails?: string;
+  }>;
 }
 
 interface PaymentLink {
@@ -102,39 +93,48 @@ interface PaymentLink {
   createdAt: string;
 }
 
+interface SubscriptionReport {
+  metrics: {
+    received: number;
+    pending: number;
+    totalHours: number;
+    hourlyRate: number;
+  };
+  table: {
+    serviceNames: string[];
+    barbers: Array<{
+      name: string;
+      services: Record<string, { count: number; minutes: number }>;
+      totalHours: number;
+      totalValue: number;
+      commission: number;
+      house: number;
+    }>;
+  };
+}
+
 export default function AssinaturasPage() {
-  const [activeTab, setActiveTab] = useState('assinaturas');
-
-  // Data States
   const [subscriptions, setSubscriptions] = useState<Subscription[]>([]);
-  const [plans, setPlans] = useState<Plan[]>([]);
   const [clients, setClients] = useState<Client[]>([]);
-  const [services, setServices] = useState<Service[]>([]);
-
-  // UI States
   const [loading, setLoading] = useState(true);
   const [searchTerm, setSearchTerm] = useState('');
   const [statusFilter, setStatusFilter] = useState<string | undefined>(undefined);
-
-  // Dialog States
-  const [isSubDialogOpen, setIsSubDialogOpen] = useState(false);
-  const [isPlanDialogOpen, setIsPlanDialogOpen] = useState(false);
+  const [isDialogOpen, setIsDialogOpen] = useState(false);
   const [isLinkDialogOpen, setIsLinkDialogOpen] = useState(false);
   const [isDeleteDialogOpen, setIsDeleteDialogOpen] = useState(false);
-
-  // Selection States
   const [selectedSubscription, setSelectedSubscription] = useState<Subscription | null>(null);
-  const [selectedPlan, setSelectedPlan] = useState<Plan | null>(null);
-  const [itemToDelete, setItemToDelete] = useState<{ type: 'subscription' | 'plan', id: string } | null>(null);
+  const [subscriptionToDelete, setSubscriptionToDelete] = useState<string | null>(null);
   const [generatedLink, setGeneratedLink] = useState<PaymentLink | null>(null);
   const [submitting, setSubmitting] = useState(false);
 
-  // Forms
-  const [clientSearchTerm, setClientSearchTerm] = useState('');
+  // Dashboard State
+  const [reportData, setReportData] = useState<SubscriptionReport | null>(null);
+  const [reportDate, setReportDate] = useState<Date>(new Date());
+  const [loadingReport, setLoadingReport] = useState(false);
 
-  const [subFormData, setSubFormData] = useState({
+  const [clientSearchTerm, setClientSearchTerm] = useState('');
+  const [formData, setFormData] = useState({
     clientId: '',
-    planId: 'custom', // 'custom' or plan ID
     planName: '',
     amount: '',
     billingDay: '',
@@ -144,28 +144,36 @@ export default function AssinaturasPage() {
     status: 'ACTIVE' as 'ACTIVE' | 'SUSPENDED' | 'CANCELLED',
   });
 
-  const [planFormData, setPlanFormData] = useState({
-    name: '',
-    price: '',
-    paymentLink: '',
-    servicesIncluded: [] as { serviceId: string, unlimited: boolean, quantity: number }[],
-  });
-
-  // Load Data
   useEffect(() => {
+    fetchSubscriptions();
     fetchClients();
-    fetchServices();
-    fetchPlans();
-    fetchSubscriptions();
-  }, []); // Reload when needed
-
-  useEffect(() => {
-    fetchSubscriptions();
+    fetchReport();
   }, [searchTerm, statusFilter]);
 
-  // Fetch Functions
+  // Recarregar relatório quando a data mudar
+  useEffect(() => {
+    fetchReport();
+  }, [reportDate]);
+
+  const fetchReport = async () => {
+    try {
+      setLoadingReport(true);
+      const dateStr = format(reportDate, 'yyyy-MM-dd');
+      const response = await fetch(`/api/reports/subscriptions?date=${dateStr}`);
+      if (!response.ok) throw new Error('Erro ao carregar relatório');
+      const data = await response.json();
+      setReportData(data);
+    } catch (error) {
+      console.error(error);
+      toast.error('Erro ao carregar dados do dashboard');
+    } finally {
+      setLoadingReport(false);
+    }
+  };
+
   const fetchSubscriptions = async () => {
     try {
+      setLoading(true);
       const params = new URLSearchParams();
       if (searchTerm) params.append('search', searchTerm);
       if (statusFilter) params.append('status', statusFilter);
@@ -176,17 +184,9 @@ export default function AssinaturasPage() {
       setSubscriptions(data);
     } catch (error) {
       console.error(error);
-    }
-  };
-
-  const fetchPlans = async () => {
-    try {
-      const response = await fetch('/api/plans');
-      if (!response.ok) throw new Error('Erro ao carregar planos');
-      const data = await response.json();
-      setPlans(data);
-    } catch (error) {
-      console.error(error);
+      toast.error('Erro ao carregar assinaturas');
+    } finally {
+      setLoading(false);
     }
   };
 
@@ -195,39 +195,29 @@ export default function AssinaturasPage() {
       const response = await fetch('/api/clients');
       if (!response.ok) throw new Error('Erro ao carregar clientes');
       const data = await response.json();
-      setClients(data.sort((a: Client, b: Client) => a.name.localeCompare(b.name)));
+      setClients(data);
     } catch (error) {
       console.error(error);
+      toast.error('Erro ao carregar clientes');
     }
   };
 
-  const fetchServices = async () => {
-    try {
-      const response = await fetch('/api/services');
-      if (!response.ok) throw new Error('Erro ao carregar serviços');
-      const data = await response.json();
-      setServices(data);
-    } catch (error) {
-      console.error(error);
-    }
-  };
-
-  // --- Handlers for Subscription ---
-
-  const handleSubSubmit = async (e: React.FormEvent) => {
+  const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     setSubmitting(true);
+
     try {
       const url = selectedSubscription
         ? `/api/subscriptions/${selectedSubscription.id}`
         : '/api/subscriptions';
+
       const method = selectedSubscription ? 'PATCH' : 'POST';
 
       const payload = {
-        ...subFormData,
-        amount: parseFloat(subFormData.amount),
-        billingDay: parseInt(subFormData.billingDay),
-        usageLimit: subFormData.usageLimit ? parseInt(subFormData.usageLimit) : null,
+        ...formData,
+        amount: parseFloat(formData.amount),
+        billingDay: parseInt(formData.billingDay),
+        usageLimit: formData.usageLimit ? parseInt(formData.usageLimit) : null,
       };
 
       const response = await fetch(url, {
@@ -236,550 +226,676 @@ export default function AssinaturasPage() {
         body: JSON.stringify(payload),
       });
 
-      if (!response.ok) throw new Error('Erro ao salvar assinatura');
+      if (!response.ok) {
+        const error = await response.json();
+        throw new Error(error.error || 'Erro ao salvar assinatura');
+      }
 
-      toast.success(selectedSubscription ? 'Assinatura atualizada!' : 'Assinatura criada!');
-      setIsSubDialogOpen(false);
+      toast.success(
+        selectedSubscription
+          ? 'Assinatura atualizada com sucesso!'
+          : 'Assinatura criada com sucesso!'
+      );
+      setIsDialogOpen(false);
+      resetForm();
       fetchSubscriptions();
     } catch (error: any) {
+      console.error(error);
       toast.error(error.message);
     } finally {
       setSubmitting(false);
     }
   };
-
-  // --- Handlers for Plans ---
-
-  const handlePlanSubmit = async (e: React.FormEvent) => {
-    e.preventDefault();
-    setSubmitting(true);
-    try {
-      const url = selectedPlan
-        ? `/api/plans/${selectedPlan.id}`
-        : '/api/plans';
-      const method = selectedPlan ? 'PATCH' : 'POST';
-
-      // Format servicesIncluded to JSON string
-      const servicesJSON = JSON.stringify(
-        planFormData.servicesIncluded.reduce((acc, curr) => {
-          acc[curr.serviceId] = { unlimited: curr.unlimited, quantity: curr.quantity };
-          return acc;
-        }, {} as Record<string, any>)
-      );
-
-      const payload = {
-        name: planFormData.name,
-        price: parseFloat(planFormData.price),
-        paymentLink: planFormData.paymentLink,
-        servicesIncluded: servicesJSON,
-      };
-
-      const response = await fetch(url, {
-        method,
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify(payload),
-      });
-
-      if (!response.ok) throw new Error('Erro ao salvar plano');
-
-      toast.success(selectedPlan ? 'Plano atualizado!' : 'Plano criado!');
-      setIsPlanDialogOpen(false);
-      fetchPlans();
-    } catch (error: any) {
-      toast.error(error.message);
-    } finally {
-      setSubmitting(false);
-    }
-  };
-
-  const handleServiceToggle = (serviceId: string, checked: boolean) => {
-    if (checked) {
-      setPlanFormData(prev => ({
-        ...prev,
-        servicesIncluded: [...prev.servicesIncluded, { serviceId, unlimited: false, quantity: 1 }]
-      }));
-    } else {
-      setPlanFormData(prev => ({
-        ...prev,
-        servicesIncluded: prev.servicesIncluded.filter(s => s.serviceId !== serviceId)
-      }));
-    }
-  };
-
-  const updateServiceDetail = (serviceId: string, field: 'unlimited' | 'quantity', value: any) => {
-    setPlanFormData(prev => ({
-      ...prev,
-      servicesIncluded: prev.servicesIncluded.map(s =>
-        s.serviceId === serviceId ? { ...s, [field]: value } : s
-      )
-    }));
-  };
-
-  // --- Common Handlers ---
 
   const handleDelete = async () => {
-    if (!itemToDelete) return;
+    if (!subscriptionToDelete) return;
 
     try {
-      const endpoint = itemToDelete.type === 'subscription'
-        ? `/api/subscriptions/${itemToDelete.id}`
-        : `/api/plans/${itemToDelete.id}`;
+      const response = await fetch(`/api/subscriptions/${subscriptionToDelete}`, {
+        method: 'DELETE',
+      });
 
-      await fetch(endpoint, { method: 'DELETE' });
+      if (!response.ok) throw new Error('Erro ao excluir assinatura');
 
-      toast.success('Excluído com sucesso!');
-      if (itemToDelete.type === 'subscription') fetchSubscriptions();
-      else fetchPlans();
-
+      toast.success('Assinatura excluída com sucesso!');
       setIsDeleteDialogOpen(false);
+      setSubscriptionToDelete(null);
+      fetchSubscriptions();
     } catch (error) {
-      toast.error('Erro ao excluir');
+      console.error(error);
+      toast.error('Erro ao excluir assinatura');
+    }
+  }
+
+
+  const handleMonthChange = (direction: 'prev' | 'next') => {
+    setReportDate(curr => direction === 'prev' ? subMonths(curr, 1) : addMonths(curr, 1));
+  };
+
+
+  const handleGeneratePaymentLink = async (subscription: Subscription) => {
+    try {
+      // Primeiro, criar uma conta a receber para esta assinatura
+      const dueDate = new Date();
+      dueDate.setDate(subscription.billingDay);
+      if (dueDate < new Date()) {
+        dueDate.setMonth(dueDate.getMonth() + 1);
+      }
+
+      const accountResponse = await fetch('/api/accounts-receivable', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          description: `Assinatura - ${subscription.planName} - ${subscription.client.name}`,
+          category: 'SUBSCRIPTION',
+          payer: subscription.client.name,
+          clientId: subscription.clientId,
+          phone: subscription.client.phone,
+          amount: subscription.amount,
+          dueDate: dueDate.toISOString(),
+        }),
+      });
+
+      if (!accountResponse.ok) {
+        throw new Error('Erro ao criar conta a receber');
+      }
+
+      const account = await accountResponse.json();
+
+      // Agora gerar o link de pagamento
+      const linkResponse = await fetch('/api/payment-links', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          accountReceivableId: account.id,
+          expiryDays: 7, // Link expira em 7 dias
+        }),
+      });
+
+      if (!linkResponse.ok) {
+        throw new Error('Erro ao gerar link de pagamento');
+      }
+
+      const link = await linkResponse.json();
+      setGeneratedLink(link);
+      setSelectedSubscription(subscription);
+      setIsLinkDialogOpen(true);
+      toast.success('Link de pagamento gerado com sucesso!');
+    } catch (error: any) {
+      console.error(error);
+      toast.error(error.message);
     }
   };
 
-  // --- Helpers ---
-
-  const getStatusBadge = (status: string) => {
-    const variants: Record<string, any> = {
-      ACTIVE: { label: 'Ativa', className: 'bg-green-500/10 text-green-500 border-green-500/20' },
-      SUSPENDED: { label: 'Suspensa', className: 'bg-yellow-500/10 text-yellow-500 border-yellow-500/20' },
-      CANCELLED: { label: 'Cancelada', className: 'bg-red-500/10 text-red-500 border-red-500/20' },
-    };
-    const config = variants[status] || variants.ACTIVE;
-    return <Badge className={config.className}>{config.label}</Badge>;
+  const handleCopyLink = () => {
+    if (generatedLink) {
+      navigator.clipboard.writeText(generatedLink.linkUrl);
+      toast.success('Link copiado para área de transferência!');
+    }
   };
 
-  const filteredClients = clients.filter(c =>
-    c.name.toLowerCase().includes(clientSearchTerm.toLowerCase()) ||
-    c.phone.includes(clientSearchTerm)
-  );
+  const handleSendWhatsApp = () => {
+    if (!generatedLink || !selectedSubscription) return;
 
-  // Metrics Calculation
-  const activeSubs = subscriptions.filter(s => s.status === 'ACTIVE');
-  // Simulating Paid vs Pending for now (would need real transaction data)
-  const totalRevenue = activeSubs.reduce((sum, s) => sum + s.amount, 0);
-  const paidRevenue = 0; // Placeholder until payment integration
-  const pendingRevenue = totalRevenue - paidRevenue;
+    const phone = selectedSubscription.client.phone.replace(/\D/g, '');
+    const message = `Olá, ${selectedSubscription.client.name}! Segue o link para pagamento da sua assinatura (${new Date().toLocaleDateString('pt-BR', { month: 'long', year: 'numeric' })}): ${generatedLink.linkUrl}`;
+    const whatsappUrl = `https://wa.me/55${phone}?text=${encodeURIComponent(message)}`;
 
-  // Placeholders for advanced metrics
-  const hourlyRate = 0;
-  const frequency = 0;
-  const serviceTime = "0h00min";
+    // Marcar link como enviado
+    fetch(`/api/payment-links/${generatedLink.id}`, {
+      method: 'PATCH',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ status: 'sent', sentAt: new Date().toISOString() }),
+    });
+
+    window.open(whatsappUrl, '_blank');
+    toast.success('Abrindo WhatsApp Web...');
+  };
+
+  const openCreateDialog = () => {
+    resetForm();
+    setSelectedSubscription(null);
+    setIsDialogOpen(true);
+  };
+
+  const openEditDialog = (subscription: Subscription) => {
+    setSelectedSubscription(subscription);
+    setFormData({
+      clientId: subscription.clientId,
+      planName: subscription.planName,
+      amount: subscription.amount.toString(),
+      billingDay: subscription.billingDay.toString(),
+      servicesIncluded: subscription.servicesIncluded || '',
+      usageLimit: subscription.usageLimit?.toString() || '',
+      observations: subscription.observations || '',
+      status: subscription.status,
+    });
+    setIsDialogOpen(true);
+  };
+
+  const resetForm = () => {
+    setFormData({
+      clientId: '',
+      planName: '',
+      amount: '',
+      billingDay: '',
+      servicesIncluded: '',
+      usageLimit: '',
+      observations: '',
+      status: 'ACTIVE',
+    });
+    setClientSearchTerm('');
+  };
+
+  // Filtrar clientes baseado na pesquisa
+  const filteredClients = clients.filter((client) => {
+    if (!clientSearchTerm) return true;
+    const searchLower = clientSearchTerm.toLowerCase();
+    return (
+      client.name.toLowerCase().includes(searchLower) ||
+      client.phone.includes(searchLower)
+    );
+  });
+
+  const getStatusBadge = (status: string) => {
+    const variants: Record<string, { label: string; className: string; icon: any }> = {
+      ACTIVE: {
+        label: 'Ativa',
+        className: 'bg-green-500/10 text-green-500 border-green-500/20',
+        icon: CheckCircle2,
+      },
+      SUSPENDED: {
+        label: 'Suspensa',
+        className: 'bg-yellow-500/10 text-yellow-500 border-yellow-500/20',
+        icon: Clock,
+      },
+      CANCELLED: {
+        label: 'Cancelada',
+        className: 'bg-red-500/10 text-red-500 border-red-500/20',
+        icon: XCircle,
+      },
+    };
+
+    const config = variants[status] || variants.ACTIVE;
+    const Icon = config.icon;
+
+    return (
+      <Badge className={config.className}>
+        <Icon className="mr-1 h-3 w-3" />
+        {config.label}
+      </Badge>
+    );
+  };
+
+  const formatMinutesToHours = (minutes: number) => {
+    const hours = Math.floor(minutes / 60);
+    const mins = Math.round(minutes % 60);
+    return `${hours}h${mins.toString().padStart(2, '0')}min`;
+  };
 
   return (
-    <div className="space-y-8">
+    <div className="space-y-6">
       {/* Header */}
       <div className="flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
         <div>
-          <h1 className="text-4xl font-serif font-bold text-white mb-2">
-            Gestão de <span className="text-gold-500">Planos & Assinaturas</span>
-          </h1>
-          <p className="text-gray-500 font-medium">
-            Gerencie planos recorrentes e assinaturas de clientes
+          <h1 className="text-3xl font-serif font-bold text-gold">Assinaturas</h1>
+          <p className="text-sm text-muted-foreground mt-1">
+            Gerencie os clientes assinantes e gere links de cobrança
           </p>
         </div>
-        <div className="flex gap-3">
-          {activeTab === 'assinaturas' ? (
-            <Button onClick={() => {
-              setSubFormData({
-                clientId: '',
-                planId: 'custom',
-                planName: '',
-                amount: '',
-                billingDay: '',
-                servicesIncluded: '',
-                usageLimit: '',
-                observations: '',
-                status: 'ACTIVE'
-              });
-              setSelectedSubscription(null);
-              setIsSubDialogOpen(true);
-            }} className="bg-gold-gradient text-black font-bold h-12 px-6 rounded-2xl">
-              <Plus className="mr-2 h-5 w-5" /> Nova Assinatura
-            </Button>
-          ) : (
-            <Button onClick={() => {
-              setPlanFormData({
-                name: '',
-                price: '',
-                paymentLink: '',
-                servicesIncluded: []
-              });
-              setSelectedPlan(null);
-              setIsPlanDialogOpen(true);
-            }} className="bg-gold-gradient text-black font-bold h-12 px-6 rounded-2xl">
-              <Plus className="mr-2 h-5 w-5" /> Novo Plano
-            </Button>
-          )}
-        </div>
+        <Button onClick={openCreateDialog} className="bg-gold text-white hover:bg-gold/90">
+          <Plus className="mr-2 h-4 w-4" />
+          Nova Assinatura
+        </Button>
       </div>
 
-      {/* Metrics Cards */}
-      <div className="grid grid-cols-2 lg:grid-cols-6 gap-4">
-        {/* Green - Recebidas */}
-        <Card className="bg-[#4ADE80] border-none text-black">
-          <CardContent className="p-4">
-            <p className="text-sm font-bold opacity-80">Recebidas</p>
-            <h3 className="text-xl font-bold mt-1">
-              {new Intl.NumberFormat('pt-BR', { style: 'currency', currency: 'BRL' }).format(paidRevenue)}
-            </h3>
-          </CardContent>
-        </Card>
+      {/* Conteúdo Principal com Tabs */}
+      <Tabs defaultValue="management" className="w-full">
+        <TabsList className="grid w-full grid-cols-2 mb-8">
+          <TabsTrigger value="overview">Visão Geral & Relatórios</TabsTrigger>
+          <TabsTrigger value="management">Gerenciar Assinaturas</TabsTrigger>
+        </TabsList>
 
-        {/* Red - A receber */}
-        <Card className="bg-[#F87171] border-none text-black">
-          <CardContent className="p-4">
-            <p className="text-sm font-bold opacity-80">A receber</p>
-            <h3 className="text-xl font-bold mt-1">
-              {new Intl.NumberFormat('pt-BR', { style: 'currency', currency: 'BRL' }).format(pendingRevenue)}
-            </h3>
-          </CardContent>
-        </Card>
-
-        {/* Gray - Total */}
-        <Card className="bg-[#6B7280] border-none text-white">
-          <CardContent className="p-4">
-            <p className="text-sm font-bold opacity-80">Total</p>
-            <h3 className="text-xl font-bold mt-1">
-              {new Intl.NumberFormat('pt-BR', { style: 'currency', currency: 'BRL' }).format(totalRevenue)}
-            </h3>
-          </CardContent>
-        </Card>
-
-        {/* Yellow - Valor/Hora */}
-        <Card className="bg-[#FACC15] border-none text-black">
-          <CardContent className="p-4">
-            <p className="text-sm font-bold opacity-80">Valor/Hora</p>
-            <h3 className="text-xl font-bold mt-1">
-              {new Intl.NumberFormat('pt-BR', { style: 'currency', currency: 'BRL' }).format(hourlyRate)}
-            </h3>
-          </CardContent>
-        </Card>
-
-        {/* Blue - Frequência */}
-        <Card className="bg-[#38BDF8] border-none text-black">
-          <CardContent className="p-4">
-            <p className="text-sm font-bold opacity-80">Frequência</p>
-            <div className="flex items-baseline gap-1 mt-1">
-              <span className="text-sm font-medium opacity-70">- vezes</span>
+        {/* TAB: VISÃO GERAL (Dashboard) */}
+        <TabsContent value="overview" className="space-y-6">
+          {/* Seletor de Mês */}
+          <div className="flex items-center justify-between bg-card p-4 rounded-lg shadow-sm border">
+            <Button variant="ghost" size="icon" onClick={() => handleMonthChange('prev')}>
+              <span className="text-xl">←</span>
+            </Button>
+            <div className="text-center">
+              <h2 className="text-lg font-semibold capitalize">
+                {format(reportDate, "MMMM 'de' yyyy", { locale: ptBR })}
+              </h2>
             </div>
-          </CardContent>
-        </Card>
-
-        {/* Light Blue - Atendimento */}
-        <Card className="bg-[#A5F3FC] border-none text-black">
-          <CardContent className="p-4">
-            <p className="text-sm font-bold opacity-80">Atendimento</p>
-            <h3 className="text-md font-bold mt-1">{serviceTime}</h3>
-          </CardContent>
-        </Card>
-      </div>
-
-      {/* Tabs */}
-      <Tabs value={activeTab} onValueChange={setActiveTab} className="space-y-8">
-        <div className="flex justify-between items-center">
-          <TabsList className="bg-black/40 border border-white/10 p-1 rounded-xl">
-            <TabsTrigger value="assinaturas" className="rounded-lg data-[state=active]:bg-gold-500 data-[state=active]:text-black">
-              Assinaturas
-            </TabsTrigger>
-            <TabsTrigger value="planos" className="rounded-lg data-[state=active]:bg-gold-500 data-[state=active]:text-black">
-              Pacotes/Planos
-            </TabsTrigger>
-          </TabsList>
-
-          {activeTab === 'assinaturas' && (
-            <div className="flex gap-2 w-full max-w-sm">
-              <Input
-                placeholder="Buscar cliente..."
-                value={searchTerm}
-                onChange={(e) => setSearchTerm(e.target.value)}
-                className="bg-white/5 border-white/10 text-white rounded-xl"
-              />
-            </div>
-          )}
-        </div>
-
-        <TabsContent value="assinaturas" className="space-y-6">
-          <div className="grid gap-6 md:grid-cols-2 lg:grid-cols-3">
-            {subscriptions.map(sub => (
-              <div key={sub.id} className="glass-panel p-6 rounded-3xl group relative overflow-hidden border border-white/5 hover:border-gold-500/30 transition-all">
-                <div className="relative z-10">
-                  <div className="flex justify-between items-start mb-4">
-                    <div>
-                      <h3 className="text-lg font-bold text-white">{sub.client.name}</h3>
-                      <p className="text-sm text-gray-400">{sub.client.phone}</p>
-                    </div>
-                    {getStatusBadge(sub.status)}
-                  </div>
-                  <div className="space-y-2">
-                    <p className="text-sm text-gold-500 font-medium tracking-wide uppercase">{sub.planName}</p>
-                    <div className="flex items-baseline gap-1">
-                      <span className="text-3xl font-serif font-bold text-white">R$ {sub.amount.toFixed(2)}</span>
-                      <span className="text-sm text-gray-500">/mês</span>
-                    </div>
-                    <p className="text-xs text-gray-500">Vence dia {sub.billingDay}</p>
-                  </div>
-                  <div className="mt-6 pt-4 border-t border-white/5 flex gap-2">
-                    <Button size="sm" variant="outline" className="flex-1 rounded-xl border-white/10 hover:bg-white/5"
-                      onClick={() => {
-                        setSelectedSubscription(sub);
-                        setSubFormData({
-                          clientId: sub.clientId,
-                          planId: sub.planId || 'custom',
-                          planName: sub.planName,
-                          amount: sub.amount.toString(),
-                          billingDay: sub.billingDay.toString(),
-                          usageLimit: sub.usageLimit?.toString() || '',
-                          servicesIncluded: sub.servicesIncluded || '',
-                          observations: sub.observations || '',
-                          status: sub.status
-                        });
-                        setIsSubDialogOpen(true);
-                      }}
-                    >
-                      Editar
-                    </Button>
-                    <Button size="icon" variant="ghost" className="rounded-xl text-red-500 hover:bg-red-500/10"
-                      onClick={() => { setItemToDelete({ type: 'subscription', id: sub.id }); setIsDeleteDialogOpen(true); }}
-                    >
-                      <Trash2 className="h-4 w-4" />
-                    </Button>
-                  </div>
-                </div>
-              </div>
-            ))}
+            <Button variant="ghost" size="icon" onClick={() => handleMonthChange('next')}>
+              <span className="text-xl">→</span>
+            </Button>
           </div>
+
+          {loadingReport ? (
+            <div className="text-center py-12">Carregando relatório...</div>
+          ) : reportData ? (
+            <>
+              {/* Cards Metrics */}
+              <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-4">
+                <Card className="bg-green-500/10 border-green-500/20">
+                  <CardContent className="p-6">
+                    <p className="text-sm font-medium text-green-600 mb-2">Recebidas</p>
+                    <h3 className="text-2xl font-bold text-green-700">
+                      R$ {reportData.metrics.received.toFixed(2)}
+                    </h3>
+                  </CardContent>
+                </Card>
+
+                <Card className="bg-red-500/10 border-red-500/20">
+                  <CardContent className="p-6">
+                    <p className="text-sm font-medium text-red-600 mb-2">A receber</p>
+                    <h3 className="text-2xl font-bold text-red-700">
+                      R$ {reportData.metrics.pending.toFixed(2)}
+                    </h3>
+                  </CardContent>
+                </Card>
+
+                <Card className="bg-yellow-500/10 border-yellow-500/20">
+                  <CardContent className="p-6">
+                    <p className="text-sm font-medium text-yellow-600 mb-2">Valor/Hora</p>
+                    <h3 className="text-2xl font-bold text-yellow-700">
+                      R$ {reportData.metrics.hourlyRate.toFixed(2)}
+                    </h3>
+                  </CardContent>
+                </Card>
+
+                <Card className="bg-blue-500/10 border-blue-500/20">
+                  <CardContent className="p-6">
+                    <p className="text-sm font-medium text-blue-600 mb-2">Atendimento</p>
+                    <h3 className="text-2xl font-bold text-blue-700">
+                      {formatMinutesToHours(reportData.metrics.totalHours * 60)}
+                    </h3>
+                  </CardContent>
+                </Card>
+              </div>
+
+              {/* Tabela de Produtividade */}
+              <Card>
+                <CardHeader>
+                  <CardTitle>Resumo por Profissional</CardTitle>
+                </CardHeader>
+                <CardContent>
+                  <div className="overflow-x-auto">
+                    <Table>
+                      <TableHeader>
+                        <TableRow className="bg-muted/50">
+                          <TableHead className="w-[200px] font-bold">Serviço / Plano</TableHead>
+                          {reportData.table.barbers.map((barber) => (
+                            <TableHead key={barber.name} className="text-center font-bold">
+                              {barber.name}
+                            </TableHead>
+                          ))}
+                          <TableHead className="text-center font-bold bg-gold/10 text-gold">Casa (Total)</TableHead>
+                        </TableRow>
+                      </TableHeader>
+                      <TableBody>
+                        {reportData.table.serviceNames.map((serviceName) => (
+                          <TableRow key={serviceName}>
+                            <TableCell className="font-medium bg-muted/20">{serviceName}</TableCell>
+                            {reportData.table.barbers.map((barber, idx) => {
+                              const svc = barber.services[serviceName];
+                              return (
+                                <TableCell key={idx} className="text-center">
+                                  {svc ? (
+                                    <div className="flex flex-col items-center">
+                                      <span className="font-bold">{svc.count}</span>
+                                      <span className="text-xs text-muted-foreground">
+                                        ({formatMinutesToHours(svc.minutes)})
+                                      </span>
+                                    </div>
+                                  ) : (
+                                    <span className="text-muted-foreground">-</span>
+                                  )}
+                                </TableCell>
+                              );
+                            })}
+                            {/* Coluna 'Casa' somando os counts/tempos de todos (opcional, ou apenas traço se Casa for separate) */}
+                            {/* Para simplificar, vou somar a linha para a coluna Casa */}
+                            <TableCell className="text-center bg-gold/5 font-semibold">
+                              {(() => {
+                                let totalCount = 0;
+                                let totalMinutes = 0;
+                                reportData.table.barbers.forEach(b => {
+                                  const s = b.services[serviceName];
+                                  if (s) {
+                                    totalCount += s.count;
+                                    totalMinutes += s.minutes;
+                                  }
+                                });
+                                return (
+                                  <div className="flex flex-col items-center">
+                                    <span>{totalCount}</span>
+                                    <span className="text-xs text-muted-foreground">({formatMinutesToHours(totalMinutes)})</span>
+                                  </div>
+                                );
+                              })()}
+                            </TableCell>
+                          </TableRow>
+                        ))}
+
+                        {/* Totais Gerais */}
+                        <TableRow className="bg-muted font-medium border-t-2">
+                          <TableCell>Horas em atendimentos</TableCell>
+                          {reportData.table.barbers.map((barber, idx) => (
+                            <TableCell key={idx} className="text-center">
+                              {formatMinutesToHours(barber.totalHours * 60)}
+                            </TableCell>
+                          ))}
+                          <TableCell className="text-center bg-gold/10 font-bold">
+                            {formatMinutesToHours(reportData.metrics.totalHours * 60)}
+                          </TableCell>
+                        </TableRow>
+                        <TableRow>
+                          <TableCell>Total (Valor Gerado)</TableCell>
+                          {reportData.table.barbers.map((barber, idx) => (
+                            <TableCell key={idx} className="text-center">
+                              R$ {barber.totalValue.toFixed(2)}
+                            </TableCell>
+                          ))}
+                          <TableCell className="text-center bg-gold/10 font-bold">
+                            R$ {reportData.metrics.received.toFixed(2)}
+                          </TableCell>
+                        </TableRow>
+                        <TableRow>
+                          <TableCell>Comissão (45%)</TableCell>
+                          {reportData.table.barbers.map((barber, idx) => (
+                            <TableCell key={idx} className="text-center text-green-600 font-bold">
+                              R$ {barber.commission.toFixed(2)}
+                            </TableCell>
+                          ))}
+                          <TableCell className="text-center bg-gold/10 text-muted-foreground">
+                            -
+                          </TableCell>
+                        </TableRow>
+                        <TableRow>
+                          <TableCell className="text-gold font-bold">Casa (55%)</TableCell>
+                          {reportData.table.barbers.map((barber, idx) => (
+                            <TableCell key={idx} className="text-center text-gold font-bold">
+                              R$ {barber.house.toFixed(2)}
+                            </TableCell>
+                          ))}
+                          <TableCell className="text-center bg-gold/10 font-extrabold text-gold">
+                            {/* Total House Share */}
+                            R$ {reportData.table.barbers.reduce((acc, b) => acc + b.house, 0).toFixed(2)}
+                          </TableCell>
+                        </TableRow>
+                      </TableBody>
+                    </Table>
+                  </div>
+                </CardContent>
+              </Card>
+            </>
+          ) : null}
         </TabsContent>
 
-        <TabsContent value="planos" className="space-y-6">
-          <div className="grid gap-6 md:grid-cols-2 lg:grid-cols-3">
-            {plans.map(plan => (
-              <div key={plan.id} className="glass-panel p-6 rounded-3xl border border-white/5 hover:border-gold-500/30 transition-all">
-                <div className="flex justify-between items-start mb-4">
-                  <h3 className="text-xl font-bold text-white">{plan.name}</h3>
-                  <Badge variant={plan.isActive ? 'default' : 'secondary'} className={plan.isActive ? 'bg-green-500/10 text-green-500' : ''}>
-                    {plan.isActive ? 'Ativo' : 'Inativo'}
-                  </Badge>
+        {/* TAB: GERENCIAR ASSINATURAS (Antiga View) */}
+        <TabsContent value="management" className="space-y-6">
+          {/* Filtros */}
+          <Card>
+            <CardContent className="pt-6">
+              <div className="flex flex-col gap-4 sm:flex-row">
+                <div className="relative flex-1">
+                  <Search className="absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-muted-foreground" />
+                  <Input
+                    placeholder="Buscar por nome ou telefone do cliente..."
+                    value={searchTerm}
+                    onChange={(e) => setSearchTerm(e.target.value)}
+                    className="pl-10"
+                  />
                 </div>
-                <div className="mb-4">
-                  <span className="text-3xl font-serif font-bold text-gold-500">R$ {plan.price.toFixed(2)}</span>
-                </div>
-                <div className="space-y-2 mb-6">
-                  {plan.servicesIncluded && (() => {
-                    try {
-                      const parsed = JSON.parse(plan.servicesIncluded);
-                      return Object.entries(parsed).slice(0, 3).map(([svcId, details]: [string, any]) => {
-                        const svcName = services.find(s => s.id === svcId)?.name || 'Serviço';
-                        return (
-                          <div key={svcId} className="flex items-center text-sm text-gray-400">
-                            <CheckCircle2 className="h-3 w-3 mr-2 text-gold-500" />
-                            {svcName}: {details.unlimited ? 'Ilimitado' : `${details.quantity}x`}
-                          </div>
-                        )
-                      });
-                    } catch (e) { return <span className="text-sm text-gray-500">Detalhes indisponíveis</span> }
-                  })()}
-                </div>
-                <div className="flex gap-2">
-                  <Button className="flex-1 rounded-xl bg-white/5 hover:bg-white/10" variant="outline"
-                    onClick={() => {
-                      const parsed = plan.servicesIncluded ? JSON.parse(plan.servicesIncluded) : {};
-                      const formattedServices = Object.entries(parsed).map(([id, det]: [string, any]) => ({
-                        serviceId: id,
-                        unlimited: det.unlimited,
-                        quantity: det.quantity || 1
-                      }));
-                      setPlanFormData({
-                        name: plan.name,
-                        price: plan.price.toString(),
-                        paymentLink: plan.paymentLink || '',
-                        servicesIncluded: formattedServices
-                      });
-                      setSelectedPlan(plan);
-                      setIsPlanDialogOpen(true);
-                    }}
-                  >
-                    Editar
-                  </Button>
-                  <Button size="icon" variant="ghost" className="rounded-xl text-red-500 hover:bg-red-500/10"
-                    onClick={() => { setItemToDelete({ type: 'plan', id: plan.id }); setIsDeleteDialogOpen(true); }}
-                  >
-                    <Trash2 className="h-4 w-4" />
-                  </Button>
-                </div>
-              </div>
-            ))}
-          </div>
-        </TabsContent>
-      </Tabs>
-
-      {/* Dialog: Create/Edit Plan */}
-      <Dialog open={isPlanDialogOpen} onOpenChange={setIsPlanDialogOpen}>
-        <DialogContent className="max-w-xl bg-black/95 border-white/10 text-white">
-          <DialogHeader>
-            <DialogTitle>{selectedPlan ? 'Editar Plano' : 'Cadastrar novo Pacote/Plano'}</DialogTitle>
-          </DialogHeader>
-          <form onSubmit={handlePlanSubmit} className="space-y-4">
-            <div className="grid grid-cols-2 gap-4">
-              <div className="space-y-2">
-                <Label>Nome do plano</Label>
-                <Input
-                  placeholder="Ex: Combo Cabelo + Barba"
-                  value={planFormData.name}
-                  onChange={e => setPlanFormData({ ...planFormData, name: e.target.value })}
-                  className="bg-white/5 border-white/10"
-                  required
-                />
-              </div>
-              <div className="space-y-2">
-                <Label>Valor do plano</Label>
-                <Input
-                  type="number" step="0.01"
-                  value={planFormData.price}
-                  onChange={e => setPlanFormData({ ...planFormData, price: e.target.value })}
-                  className="bg-white/5 border-white/10"
-                  required
-                />
-              </div>
-            </div>
-            <div className="space-y-2">
-              <Label>Link de cobrança</Label>
-              <Input
-                placeholder="Link para pagamento recorrente"
-                value={planFormData.paymentLink}
-                onChange={e => setPlanFormData({ ...planFormData, paymentLink: e.target.value })}
-                className="bg-white/5 border-white/10"
-              />
-            </div>
-
-            <div className="space-y-3 pt-4 border-t border-white/10">
-              <div className="grid grid-cols-12 text-xs font-bold text-gray-500 uppercase">
-                <div className="col-span-6">Serviços</div>
-                <div className="col-span-3 text-center">Ilimitado</div>
-                <div className="col-span-3 text-center">Quantidade</div>
-              </div>
-              {services.filter(s => true /* active */).map(service => {
-                const included = planFormData.servicesIncluded.find(i => i.serviceId === service.id);
-                return (
-                  <div key={service.id} className="grid grid-cols-12 items-center gap-2">
-                    <div className="col-span-6 flex items-center gap-2">
-                      <Checkbox
-                        checked={!!included}
-                        onCheckedChange={(checked) => handleServiceToggle(service.id, checked as boolean)}
-                      />
-                      <span className="text-sm">{service.name}</span>
-                    </div>
-                    <div className="col-span-3 flex justify-center">
-                      {included && (
-                        <Checkbox
-                          checked={included.unlimited}
-                          onCheckedChange={(c) => updateServiceDetail(service.id, 'unlimited', c)}
-                        />
-                      )}
-                    </div>
-                    <div className="col-span-3">
-                      {included && !included.unlimited && (
-                        <Input
-                          type="number" min="1"
-                          className="h-8 bg-white/5 border-white/10 text-center"
-                          value={included.quantity}
-                          onChange={(e) => updateServiceDetail(service.id, 'quantity', parseInt(e.target.value))}
-                        />
-                      )}
-                    </div>
-                  </div>
-                )
-              })}
-            </div>
-
-            <DialogFooter className="mt-6">
-              <Button type="button" variant="ghost" onClick={() => setIsPlanDialogOpen(false)}>Cancelar</Button>
-              <Button type="submit" className="bg-gold-gradient text-black font-bold">
-                {submitting ? 'Salvando...' : 'Cadastrar'}
-              </Button>
-            </DialogFooter>
-          </form>
-        </DialogContent>
-      </Dialog>
-
-      {/* Dialog: Create/Edit Subscription */}
-      <Dialog open={isSubDialogOpen} onOpenChange={setIsSubDialogOpen}>
-        <DialogContent className="max-w-lg bg-black/95 border-white/10 text-white">
-          <DialogHeader><DialogTitle>{selectedSubscription ? 'Editar Assinatura' : 'Nova Assinatura'}</DialogTitle></DialogHeader>
-          <form onSubmit={handleSubSubmit} className="space-y-4">
-            {/* Similar fields to previous implementation but simplified */}
-            <div className="space-y-2">
-              <Label>Cliente</Label>
-              <Select value={subFormData.clientId} onValueChange={v => setSubFormData({ ...subFormData, clientId: v })} disabled={!!selectedSubscription}>
-                <SelectTrigger className="bg-white/5 border-white/10"><SelectValue placeholder="Selecione" /></SelectTrigger>
-                <SelectContent className="max-h-60">
-                  {filteredClients.map(c => <SelectItem key={c.id} value={c.id}>{c.name}</SelectItem>)}
-                </SelectContent>
-              </Select>
-            </div>
-
-            <div className="space-y-2">
-              <Label>Plano Base (Modelo)</Label>
-              <Select value={subFormData.planId} onValueChange={(v) => {
-                const selected = plans.find(p => p.id === v);
-                if (selected) {
-                  setSubFormData(prev => ({
-                    ...prev,
-                    planId: selected.id,
-                    planName: selected.name,
-                    amount: selected.price.toString(),
-                    servicesIncluded: selected.servicesIncluded || '', // Raw JSON
-                  }));
-                } else {
-                  setSubFormData(prev => ({ ...prev, planId: 'custom' }));
-                }
-              }}>
-                <SelectTrigger className="bg-white/5 border-white/10"><SelectValue placeholder="Personalizado" /></SelectTrigger>
-                <SelectContent>
-                  <SelectItem value="custom">Personalizado / Nenhum</SelectItem>
-                  {plans.map(p => <SelectItem key={p.id} value={p.id}>{p.name}</SelectItem>)}
-                </SelectContent>
-              </Select>
-            </div>
-
-            <div className="grid grid-cols-2 gap-4">
-              <div className="space-y-2">
-                <Label>Nome do Plano (Exibição)</Label>
-                <Input value={subFormData.planName} onChange={e => setSubFormData({ ...subFormData, planName: e.target.value })} className="bg-white/5 border-white/10" required />
-              </div>
-              <div className="space-y-2">
-                <Label>Valor</Label>
-                <Input value={subFormData.amount} onChange={e => setSubFormData({ ...subFormData, amount: e.target.value })} className="bg-white/5 border-white/10" required type="number" />
-              </div>
-            </div>
-
-            <div className="grid grid-cols-2 gap-4">
-              <div className="space-y-2">
-                <Label>Dia de Cobrança</Label>
-                <Input value={subFormData.billingDay} onChange={e => setSubFormData({ ...subFormData, billingDay: e.target.value })} className="bg-white/5 border-white/10" type="number" min="1" max="31" required />
-              </div>
-              <div className="space-y-2">
-                <Label>Status</Label>
-                <Select value={subFormData.status} onValueChange={(v: any) => setSubFormData({ ...subFormData, status: v })}>
-                  <SelectTrigger className="bg-white/5 border-white/10"><SelectValue /></SelectTrigger>
+                <Select value={statusFilter} onValueChange={(value) => setStatusFilter(value || undefined)}>
+                  <SelectTrigger className="w-full sm:w-[200px]">
+                    <SelectValue placeholder="Todos os status" />
+                  </SelectTrigger>
                   <SelectContent>
-                    <SelectItem value="ACTIVE">Ativa</SelectItem>
-                    <SelectItem value="SUSPENDED">Suspensa</SelectItem>
-                    <SelectItem value="CANCELLED">Cancelada</SelectItem>
+                    <SelectItem value="all">Todos os status</SelectItem>
+                    <SelectItem value="ACTIVE">Ativas</SelectItem>
+                    <SelectItem value="SUSPENDED">Suspensas</SelectItem>
+                    <SelectItem value="CANCELLED">Canceladas</SelectItem>
                   </SelectContent>
                 </Select>
               </div>
+            </CardContent>
+          </Card>
+
+          {/* Lista de Assinaturas */}
+          {loading ? (
+            <div className="text-center py-12">
+              <p className="text-muted-foreground">Carregando assinaturas...</p>
+            </div>
+          ) : subscriptions.length === 0 ? (
+            <Card>
+              <CardContent className="py-12 text-center">
+                <Calendar className="mx-auto h-12 w-12 text-muted-foreground mb-4" />
+                <p className="text-muted-foreground">Nenhuma assinatura encontrada</p>
+              </CardContent>
+            </Card>
+          ) : (
+            <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-3">
+              {subscriptions.map((subscription) => (
+                <Card key={subscription.id} className="hover:shadow-lg transition-shadow">
+                  <CardHeader className="pb-3">
+                    <div className="flex items-start justify-between">
+                      <div className="space-y-1">
+                        <CardTitle className="text-lg">{subscription.client.name}</CardTitle>
+                        <p className="text-sm text-muted-foreground">{subscription.client.phone}</p>
+                      </div>
+                      {getStatusBadge(subscription.status)}
+                    </div>
+                  </CardHeader>
+                  <CardContent className="space-y-4">
+                    <div>
+                      <p className="text-sm font-medium">{subscription.planName}</p>
+                      <p className="text-2xl font-bold text-gold">
+                        R$ {subscription.amount.toFixed(2)}
+                        <span className="text-sm text-muted-foreground font-normal">/mês</span>
+                      </p>
+                      <p className="text-sm text-muted-foreground mt-1">
+                        Vencimento: dia {subscription.billingDay}
+                      </p>
+                    </div>
+
+                    {subscription.servicesIncluded && (
+                      <div className="text-sm text-muted-foreground">
+                        <strong>Serviços:</strong> {subscription.servicesIncluded}
+                      </div>
+                    )}
+
+                    {subscription.usageLimit && (
+                      <div className="text-sm text-muted-foreground">
+                        <strong>Limite:</strong> {subscription.usageLimit} usos/mês
+                      </div>
+                    )}
+
+                    <div className="flex flex-wrap gap-2 pt-2">
+                      <Button
+                        size="sm"
+                        variant="outline"
+                        onClick={() => handleGeneratePaymentLink(subscription)}
+                        disabled={subscription.status !== 'ACTIVE'}
+                        className="flex-1"
+                      >
+                        <LinkIcon className="mr-2 h-4 w-4" />
+                        Gerar Link
+                      </Button>
+                      <Button
+                        size="sm"
+                        variant="outline"
+                        onClick={() => openEditDialog(subscription)}
+                      >
+                        <Edit className="h-4 w-4" />
+                      </Button>
+                      <Button
+                        size="sm"
+                        variant="outline"
+                        onClick={() => {
+                          setSubscriptionToDelete(subscription.id);
+                          setIsDeleteDialogOpen(true);
+                        }}
+                      >
+                        <Trash2 className="h-4 w-4" />
+                      </Button>
+                    </div>
+                  </CardContent>
+                </Card>
+              ))}
+            </div>
+          )}
+        </TabsContent>
+      </Tabs>
+
+      {/* Dialog: Criar/Editar Assinatura */}
+      <Dialog open={isDialogOpen} onOpenChange={setIsDialogOpen}>
+        <DialogContent>
+          <DialogHeader>
+            <DialogTitle>
+              {selectedSubscription ? 'Editar Assinatura' : 'Nova Assinatura'}
+            </DialogTitle>
+          </DialogHeader>
+          <form onSubmit={handleSubmit} className="space-y-4">
+            <div className="grid gap-4 sm:grid-cols-2">
+              <div className="space-y-2 sm:col-span-2">
+                <Label htmlFor="clientId">Cliente *</Label>
+                {!selectedSubscription && (
+                  <div className="relative mb-2">
+                    <Search className="absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-muted-foreground" />
+                    <Input
+                      placeholder="Pesquisar por nome ou telefone..."
+                      value={clientSearchTerm}
+                      onChange={(e) => setClientSearchTerm(e.target.value)}
+                      className="pl-10"
+                    />
+                  </div>
+                )}
+                <Select
+                  value={formData.clientId}
+                  onValueChange={(value) => setFormData({ ...formData, clientId: value })}
+                  disabled={!!selectedSubscription}
+                >
+                  <SelectTrigger>
+                    <SelectValue placeholder="Selecione um cliente" />
+                  </SelectTrigger>
+                  <SelectContent>
+                    {filteredClients.length === 0 ? (
+                      <div className="py-6 text-center text-sm text-muted-foreground">
+                        Nenhum cliente encontrado
+                      </div>
+                    ) : (
+                      filteredClients.map((client) => (
+                        <SelectItem key={client.id} value={client.id}>
+                          {client.name} - {client.phone}
+                        </SelectItem>
+                      ))
+                    )}
+                  </SelectContent>
+                </Select>
+              </div>
+
+              <div className="space-y-2">
+                <Label htmlFor="planName">Nome do Plano *</Label>
+                <Input
+                  id="planName"
+                  value={formData.planName}
+                  onChange={(e) => setFormData({ ...formData, planName: e.target.value })}
+                  placeholder="Ex: Plano Premium Mensal"
+                  required
+                />
+              </div>
+
+              <div className="space-y-2">
+                <Label htmlFor="amount">Valor (R$) *</Label>
+                <Input
+                  id="amount"
+                  type="number"
+                  step="0.01"
+                  min="0"
+                  value={formData.amount}
+                  onChange={(e) => setFormData({ ...formData, amount: e.target.value })}
+                  placeholder="0.00"
+                  required
+                />
+              </div>
+
+              <div className="space-y-2">
+                <Label htmlFor="billingDay">Dia do Vencimento *</Label>
+                <Input
+                  id="billingDay"
+                  type="number"
+                  min="1"
+                  max="31"
+                  value={formData.billingDay}
+                  onChange={(e) => setFormData({ ...formData, billingDay: e.target.value })}
+                  placeholder="1-31"
+                  required
+                />
+              </div>
+
+              <div className="space-y-2">
+                <Label htmlFor="usageLimit">Limite de Usos/Mês</Label>
+                <Input
+                  id="usageLimit"
+                  type="number"
+                  min="1"
+                  value={formData.usageLimit}
+                  onChange={(e) => setFormData({ ...formData, usageLimit: e.target.value })}
+                  placeholder="Deixe em branco para ilimitado"
+                />
+              </div>
+
+              {selectedSubscription && (
+                <div className="space-y-2">
+                  <Label htmlFor="status">Status</Label>
+                  <Select
+                    value={formData.status}
+                    onValueChange={(value: any) => setFormData({ ...formData, status: value })}
+                  >
+                    <SelectTrigger>
+                      <SelectValue />
+                    </SelectTrigger>
+                    <SelectContent>
+                      <SelectItem value="ACTIVE">Ativa</SelectItem>
+                      <SelectItem value="SUSPENDED">Suspensa</SelectItem>
+                      <SelectItem value="CANCELLED">Cancelada</SelectItem>
+                    </SelectContent>
+                  </Select>
+                </div>
+              )}
             </div>
 
             <div className="space-y-2">
-              <Label>Serviços Incluídos (JSON ou Texto)</Label>
-              <Textarea value={subFormData.servicesIncluded} onChange={e => setSubFormData({ ...subFormData, servicesIncluded: e.target.value })} className="bg-white/5 border-white/10" rows={3} />
-              <p className="text-xs text-gray-500">Para planos modelo, isso é preenchido automaticamente.</p>
+              <Label htmlFor="servicesIncluded">Serviços Incluídos</Label>
+              <Textarea
+                id="servicesIncluded"
+                value={formData.servicesIncluded}
+                onChange={(e) => setFormData({ ...formData, servicesIncluded: e.target.value })}
+                placeholder="Descreva os serviços incluídos na assinatura..."
+                rows={3}
+              />
             </div>
 
-            <DialogFooter className="mt-6">
-              <Button type="button" variant="ghost" onClick={() => setIsSubDialogOpen(false)}>Cancelar</Button>
-              <Button type="submit" className="bg-gold-gradient text-black font-bold">
+            <div className="space-y-2">
+              <Label htmlFor="observations">Observações</Label>
+              <Textarea
+                id="observations"
+                value={formData.observations}
+                onChange={(e) => setFormData({ ...formData, observations: e.target.value })}
+                placeholder="Observações adicionais..."
+                rows={2}
+              />
+            </div>
+
+            <DialogFooter>
+              <Button type="button" variant="outline" onClick={() => setIsDialogOpen(false)}>
+                Cancelar
+              </Button>
+              <Button type="submit" disabled={submitting} className="bg-gold text-white hover:bg-gold/90">
                 {submitting ? 'Salvando...' : 'Salvar'}
               </Button>
             </DialogFooter>
@@ -787,20 +903,76 @@ export default function AssinaturasPage() {
         </DialogContent>
       </Dialog>
 
-      {/* Alert Delete */}
+      {/* Dialog: Link de Pagamento Gerado */}
+      <Dialog open={isLinkDialogOpen} onOpenChange={setIsLinkDialogOpen}>
+        <DialogContent>
+          <DialogHeader>
+            <DialogTitle>Link de Pagamento Gerado</DialogTitle>
+          </DialogHeader>
+          {generatedLink && selectedSubscription && (
+            <div className="space-y-4">
+              <div className="space-y-2">
+                <Label>Cliente</Label>
+                <p className="text-sm font-medium">{selectedSubscription.client.name}</p>
+                <p className="text-sm text-muted-foreground">{selectedSubscription.client.phone}</p>
+              </div>
+
+              <div className="space-y-2">
+                <Label>Plano/Valor</Label>
+                <p className="text-sm">
+                  {selectedSubscription.planName} - R$ {selectedSubscription.amount.toFixed(2)}
+                </p>
+              </div>
+
+              <div className="space-y-2">
+                <Label>Link de Pagamento</Label>
+                <div className="flex gap-2">
+                  <Input value={generatedLink.linkUrl} readOnly className="flex-1" />
+                  <Button type="button" variant="outline" size="icon" onClick={handleCopyLink}>
+                    <Copy className="h-4 w-4" />
+                  </Button>
+                </div>
+              </div>
+
+              <div className="flex gap-2">
+                <Button
+                  type="button"
+                  onClick={handleSendWhatsApp}
+                  className="flex-1 bg-green-600 hover:bg-green-700 text-white"
+                >
+                  <MessageSquare className="mr-2 h-4 w-4" />
+                  Enviar pelo WhatsApp
+                </Button>
+                <Button
+                  type="button"
+                  variant="outline"
+                  onClick={() => setIsLinkDialogOpen(false)}
+                >
+                  Fechar
+                </Button>
+              </div>
+            </div>
+          )}
+        </DialogContent>
+      </Dialog>
+
+      {/* Dialog: Confirmar Exclusão */}
       <AlertDialog open={isDeleteDialogOpen} onOpenChange={setIsDeleteDialogOpen}>
-        <AlertDialogContent className="bg-black/95 border-white/10 text-white">
+        <AlertDialogContent>
           <AlertDialogHeader>
-            <AlertDialogTitle>Excluir item?</AlertDialogTitle>
-            <AlertDialogDescription>Essa ação não pode ser desfeita.</AlertDialogDescription>
+            <AlertDialogTitle>Confirmar exclusão</AlertDialogTitle>
+            <AlertDialogDescription>
+              Tem certeza que deseja excluir esta assinatura? Esta ação não pode ser desfeita.
+            </AlertDialogDescription>
           </AlertDialogHeader>
           <AlertDialogFooter>
-            <AlertDialogCancel className="text-black">Cancelar</AlertDialogCancel>
-            <AlertDialogAction onClick={handleDelete} className="bg-red-600">Excluir</AlertDialogAction>
+            <AlertDialogCancel>Cancelar</AlertDialogCancel>
+            <AlertDialogAction onClick={handleDelete} className="bg-red-600 hover:bg-red-700">
+              Excluir
+            </AlertDialogAction>
           </AlertDialogFooter>
         </AlertDialogContent>
       </AlertDialog>
-
     </div>
   );
 }

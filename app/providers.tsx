@@ -1,6 +1,9 @@
 "use client";
 
+import { SessionProvider } from "next-auth/react";
 import { useState, useEffect } from "react";
+
+import { Toaster } from "@/components/ui/sonner";
 
 export function Providers({ children }: { children: React.ReactNode }) {
   const [mounted, setMounted] = useState(false);
@@ -13,5 +16,10 @@ export function Providers({ children }: { children: React.ReactNode }) {
     return null;
   }
 
-  return <>{children}</>;
+  return (
+    <SessionProvider>
+      {children}
+      <Toaster />
+    </SessionProvider>
+  );
 }

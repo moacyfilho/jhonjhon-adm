@@ -1,17 +1,13 @@
 import { NextRequest, NextResponse } from "next/server";
-import { createClient } from "@/utils/supabase/server";
+import { getServerSession } from "next-auth";
+import { authOptions } from "@/lib/auth/auth-options";
 import { prisma } from "@/lib/db";
-import { createManausDate, getManausStartOfDay, getManausEndOfDay } from "@/lib/timezone";
-import { isServiceIncluded } from "@/lib/utils";
-
-export const dynamic = "force-dynamic";
+import { createManausDate } from "@/lib/timezone";
 
 export async function GET(request: NextRequest) {
   try {
-    const supabase = createClient();
-    const { data: { user } } = await supabase.auth.getUser();
-
-    if (!user) {
+    const session = await getServerSession(authOptions);
+    if (!session) {
       return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
     }
 
@@ -20,7 +16,6 @@ export async function GET(request: NextRequest) {
     const barberId = searchParams.get("barberId");
     const clientId = searchParams.get("clientId");
     const paymentMethod = searchParams.get("paymentMethod");
-    const status = searchParams.get("status");
     const startDate = searchParams.get("startDate");
     const endDate = searchParams.get("endDate");
 
@@ -45,33 +40,29 @@ export async function GET(request: NextRequest) {
       where.paymentMethod = paymentMethod;
     }
 
-    if (status) {
-      where.status = status;
-    }
-
     if (startDate && endDate) {
       // Converter datas para incluir todo o dia em Manaus (GMT-4)
       // Manaus 00:00 = UTC 04:00 do mesmo dia
       // Manaus 23:59 = UTC 03:59 do dia seguinte
       const startDateObj = new Date(startDate);
       const endDateObj = new Date(endDate);
-
+      
       // Início do dia em Manaus = 04:00 UTC do mesmo dia
       const startUTC = new Date(startDateObj);
       startUTC.setUTCHours(4, 0, 0, 0);
-
+      
       // Fim do dia em Manaus = 03:59:59 UTC do dia seguinte
       const endUTC = new Date(endDateObj);
       endUTC.setUTCDate(endUTC.getUTCDate() + 1);
       endUTC.setUTCHours(3, 59, 59, 999);
-
+      
       console.log('[Appointments API] Filtro de data:', {
         startDate,
         endDate,
         startUTC: startUTC.toISOString(),
         endUTC: endUTC.toISOString(),
       });
-
+      
       where.date = {
         gte: startUTC,
         lte: endUTC,
@@ -100,33 +91,7 @@ export async function GET(request: NextRequest) {
       },
     });
 
-    const sanitizedAppointments = appointments.map(appt => ({
-      ...appt,
-      totalAmount: Number(appt.totalAmount),
-      services: appt.services.map(s => ({
-        ...s,
-        price: Number(s.price),
-        service: {
-          ...s.service,
-          price: Number(s.service.price)
-        }
-      })),
-      products: appt.products.map(p => ({
-        ...p,
-        unitPrice: Number(p.unitPrice),
-        totalPrice: Number(p.totalPrice),
-        product: {
-          ...p.product,
-          price: Number(p.product.price)
-        }
-      })),
-      commission: appt.commission ? {
-        ...appt.commission,
-        amount: Number(appt.commission.amount)
-      } : null
-    }));
-
-    return NextResponse.json(sanitizedAppointments);
+    return NextResponse.json(appointments);
   } catch (error) {
     console.error("Error fetching appointments:", error);
     return NextResponse.json(
@@ -138,10 +103,8 @@ export async function GET(request: NextRequest) {
 
 export async function POST(request: NextRequest) {
   try {
-    const supabase = createClient();
-    const { data: { user } } = await supabase.auth.getUser();
-
-    if (!user) {
+    const session = await getServerSession(authOptions);
+    if (!session) {
       return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
     }
 
@@ -165,14 +128,14 @@ export async function POST(request: NextRequest) {
     // Converter hora local de Manaus (GMT-4) para UTC
     // A string vem como "2026-01-07T09:00:00" (9h local de Manaus)
     // Precisamos salvar como 13:00 UTC (9h + 4h)
-
+    
     // Parse da string de data/hora
     // Assumir que a hora na string é hora LOCAL de Manaus (não UTC)
     const [datePart, timePart] = date.split('T');
     const [hoursStr, minutesStr] = timePart.split(':');
     const hours = parseInt(hoursStr, 10);
     const minutes = parseInt(minutesStr, 10);
-
+    
     const appointmentDate = createManausDate(datePart, hours, minutes);
 
     console.log('[Appointments API] Conversão de timezone:', {
@@ -203,71 +166,23 @@ export async function POST(request: NextRequest) {
       );
     }
 
-    // Calcular duração total para verificar conflitos com bloqueios
-    const servicesToCheck = serviceIds && serviceIds.length > 0
-      ? await prisma.service.findMany({
-        where: { id: { in: serviceIds } },
-      })
-      : [];
-
-    // Se não houver serviços (apenas produtos?), duração é 0? Assumir 30min padrão?
-    // Regra atual: exige serviço ou produto. Se só produto, não ocupa agenda?
-    // Mas a lógica abaixo (linha 181 original) buscava serviços depois. Vamos buscar antes.
-
-    const minutesDuration = servicesToCheck.reduce((sum, s) => sum + s.duration, 0);
-    const apptEndTime = new Date(appointmentDate.getTime() + minutesDuration * 60000);
-
-    // Verificar se há bloqueios de horário (ScheduleBlock)
-    const dayStart = getManausStartOfDay(datePart);
-    const dayEnd = getManausEndOfDay(datePart);
-
-    const blocks = await prisma.scheduleBlock.findMany({
-      where: {
-        barberId,
-        date: {
-          gte: dayStart,
-          lte: dayEnd,
-        },
-      },
-    });
-
-    const hasBlockConflict = blocks.some(block => {
-      // block.startTime e endTime são strings "HH:mm"
-      // Converter para Date no dia correto
-      const [startH, startM] = block.startTime.split(':').map(Number);
-      const [endH, endM] = block.endTime.split(':').map(Number);
-
-      const blockStart = createManausDate(datePart, startH, startM);
-      const blockEnd = createManausDate(datePart, endH, endM);
-
-      // (StartA < EndB) && (EndA > StartB)
-      return appointmentDate < blockEnd && apptEndTime > blockStart;
-    });
-
-    if (hasBlockConflict) {
-      return NextResponse.json(
-        { error: "Este horário está bloqueado pelo administrador" },
-        { status: 400 }
-      );
-    }
-
     // Get services to calculate total
     const services = serviceIds && serviceIds.length > 0
       ? await prisma.service.findMany({
-        where: {
-          id: {
-            in: serviceIds,
+          where: {
+            id: {
+              in: serviceIds,
+            },
           },
-        },
-      })
+        })
       : [];
 
     // Get products if provided
     const productIds = productItems ? productItems.map((p: any) => p.productId) : [];
     const products = productIds.length > 0
       ? await prisma.product.findMany({
-        where: { id: { in: productIds } },
-      })
+          where: { id: { in: productIds } },
+        })
       : [];
 
     // Check if client has an active subscription
@@ -278,50 +193,22 @@ export async function POST(request: NextRequest) {
       },
     });
 
-    let activeSubscriptionWithPlan: any = activeSubscription;
-    if (activeSubscription && !activeSubscription.servicesIncluded && activeSubscription.planId) {
-      const plan = await prisma.plan.findUnique({ where: { id: activeSubscription.planId } });
-      if (plan) {
-        activeSubscriptionWithPlan = { ...activeSubscription, plan };
-      }
-    }
-
     const isSubscriptionAppointment = !!activeSubscription;
 
     // Calculate totals
-    const servicesData = serviceIds && serviceIds.length > 0
-      ? serviceIds.map((serviceId: string) => {
-        const service = services.find(s => s.id === serviceId);
-        let price = service?.price || 0;
-
-        if (isSubscriptionAppointment) {
-          // Se o nome do serviço está contido na descrição dos serviços incluídos, é grátis
-          const servicesIncluded = activeSubscriptionWithPlan?.servicesIncluded || activeSubscriptionWithPlan?.plan?.servicesIncluded;
-          if (isServiceIncluded(servicesIncluded, service?.name || "", service?.id)) {
-            price = 0;
-          }
-        }
-
-        return {
-          serviceId,
-          price,
-          duration: service?.duration || 0
-        };
-      })
-      : [];
-
-    const servicesTotal = servicesData.reduce((sum: number, s: { price: number }) => sum + s.price, 0);
-    const productsTotal = productItems
-      ? productItems.reduce((sum: number, item: { productId: string, quantity: number }) => {
-        const product = products.find(p => p.id === item.productId);
-        return sum + (product ? product.price * item.quantity : 0);
-      }, 0)
+    const servicesTotal = services.reduce((sum, service) => sum + service.price, 0);
+    const productsTotal = productItems 
+      ? productItems.reduce((sum: number, item: any) => {
+          const product = products.find(p => p.id === item.productId);
+          return sum + (product ? product.price * item.quantity : 0);
+        }, 0)
       : 0;
 
-    const totalAmount = servicesTotal + productsTotal;
+    // If client has active subscription, service is free (R$ 0.00)
+    const totalAmount = isSubscriptionAppointment ? productsTotal : (servicesTotal + productsTotal);
 
-    // Calculate worked hours based on service durations
-    const totalMinutes = servicesData.reduce((sum: number, s: { duration: number }) => sum + s.duration, 0);
+    // Calculate worked hours based on service durations (convert minutes to hours)
+    const totalMinutes = services.reduce((sum, service) => sum + service.duration, 0);
     const workedHours = totalMinutes / 60;
 
     // Get barber data
@@ -330,41 +217,18 @@ export async function POST(request: NextRequest) {
     });
 
     // Calculate commission
+    // For subscription appointments: pay hourly rate
+    // For regular appointments: pay percentage of services total
     let commissionAmount = 0;
     if (barber) {
       if (isSubscriptionAppointment) {
-        // Para agendamentos de assinatura, usamos uma lógica mista ou a taxa horária?
-        // Geralmente, se há serviços pagos, a comissão é sobre eles? Ou continua sendo taxa horária?
-        // O usuário não especificou, mas vamos manter a lógica de taxa horária se for assinante,
-        // ou talvez comissão sobre o que foi pago extra?
-        // Mantendo o comportamento anterior para assinantes (taxa horária), mas podemos ajustar se necessário.
+        // Commission based on hourly rate
         commissionAmount = workedHours * barber.hourlyRate;
       } else {
+        // Commission based on percentage (only on services, not products)
         commissionAmount = (servicesTotal * barber.commissionRate) / 100;
       }
     }
-
-    // Agrupar produtos para evitar duplicatas e erro de constraint
-    const productMap = new Map<string, { quantity: number, unitPrice: number }>();
-    if (productItems && Array.isArray(productItems)) {
-      productItems.forEach((item: { productId: string, quantity: number }) => {
-        const existing = productMap.get(item.productId);
-        if (existing) {
-          existing.quantity += item.quantity;
-        } else {
-          const dbProduct = products.find(p => p.id === item.productId);
-          productMap.set(item.productId, {
-            quantity: item.quantity,
-            unitPrice: dbProduct?.price || 0
-          });
-        }
-      });
-    }
-
-    const mergedProducts = Array.from(productMap.entries()).map(([productId, data]) => ({
-      productId,
-      ...data
-    }));
 
     // Create appointment with services and products in a transaction
     const appointment = await prisma.$transaction(async (tx) => {
@@ -381,19 +245,26 @@ export async function POST(request: NextRequest) {
           observations: notes || null,
           status: "SCHEDULED",
           onlineBookingId: onlineBookingId || null,
-          services: servicesData.length > 0 ? {
-            create: servicesData.map((s: { serviceId: string; price: number }) => ({
-              serviceId: s.serviceId,
-              price: s.price,
-            })),
+          services: serviceIds && serviceIds.length > 0 ? {
+            create: serviceIds.map((serviceId: string) => {
+              const service = services.find(s => s.id === serviceId);
+              return {
+                serviceId,
+                price: service?.price || 0,
+              };
+            }),
           } : undefined,
-          products: mergedProducts.length > 0 ? {
-            create: mergedProducts.map((productItem) => ({
-              productId: productItem.productId,
-              quantity: productItem.quantity,
-              unitPrice: productItem.unitPrice,
-              totalPrice: productItem.unitPrice * productItem.quantity,
-            })),
+          products: productItems && productItems.length > 0 ? {
+            create: productItems.map((item: any) => {
+              const product = products.find(p => p.id === item.productId);
+              const unitPrice = product?.price || 0;
+              return {
+                productId: item.productId,
+                quantity: item.quantity,
+                unitPrice: unitPrice,
+                totalPrice: unitPrice * item.quantity,
+              };
+            }),
           } : undefined,
         },
         include: {
@@ -413,8 +284,8 @@ export async function POST(request: NextRequest) {
       });
 
       // Update product stock
-      if (mergedProducts.length > 0) {
-        for (const item of mergedProducts) {
+      if (productItems && productItems.length > 0) {
+        for (const item of productItems) {
           await tx.product.update({
             where: { id: item.productId },
             data: {
@@ -426,21 +297,10 @@ export async function POST(request: NextRequest) {
         }
       }
 
-      // Criar comissão (sempre Criar agora, como PENDING)
-      if (commissionAmount > 0 && barber) {
-        await tx.commission.create({
-          data: {
-            appointmentId: newAppointment.id,
-            barberId: barber.id,
-            amount: commissionAmount,
-            status: "PENDING",
-          },
-        });
-      }
+      // Não criar comissão na criação do agendamento
+      // A comissão será criada quando o atendimento for finalizado (status = COMPLETED)
 
       return newAppointment;
-    }, {
-      timeout: 10000 // Timeout de 10s
     });
 
     return NextResponse.json(appointment);

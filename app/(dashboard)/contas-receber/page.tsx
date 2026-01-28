@@ -42,7 +42,7 @@ import { Plus, Pencil, Trash2, DollarSign, CheckCircle, Filter, MessageSquare, L
 import { format } from 'date-fns';
 import { ptBR } from 'date-fns/locale';
 import { toast } from 'sonner';
-import { useUser } from '@/hooks/use-user';
+import { useSession } from 'next-auth/react';
 
 interface Client {
   id: string;
@@ -96,9 +96,8 @@ const paymentMethodLabels: Record<string, string> = {
 };
 
 export default function ContasReceberPage() {
-  const { user } = useUser();
-  const [userRole, setUserRole] = useState<string | null>(null);
-  const isAdmin = userRole === 'ADMIN';
+  const { data: session } = useSession() || {};
+  const isAdmin = (session?.user as any)?.role === 'ADMIN';
 
   const [accounts, setAccounts] = useState<AccountReceivable[]>([]);
   const [loading, setLoading] = useState(true);
@@ -135,20 +134,7 @@ export default function ContasReceberPage() {
   useEffect(() => {
     fetchAccounts();
     fetchClients();
-    fetchUserRole();
   }, [filterStatus, filterCategory, showOnlySubscriptions]);
-
-  const fetchUserRole = async () => {
-    try {
-      const response = await fetch('/api/me');
-      if (response.ok) {
-        const data = await response.json();
-        setUserRole(data.role);
-      }
-    } catch (error) {
-      console.error('Erro ao buscar permissões:', error);
-    }
-  };
 
   const fetchClients = async () => {
     try {
@@ -428,20 +414,17 @@ export default function ContasReceberPage() {
   };
 
   return (
-    <div className="space-y-10">
-      {/* Header */}
+    <div className="p-6 space-y-6">
       <div className="flex items-center justify-between">
         <div>
-          <h1 className="text-4xl font-serif font-bold text-white mb-2">
-            Contas a <span className="text-gold-500">Receber</span>
-          </h1>
-          <p className="text-gray-500 font-medium">Gerencie as receitas da barbearia</p>
+          <h1 className="text-3xl font-bold text-gold">Contas a Receber</h1>
+          <p className="text-muted-foreground">Gerencie as receitas da barbearia</p>
         </div>
         <Button
-          className="bg-gold-gradient hover:scale-105 active:scale-95 text-black font-bold px-8 py-4 rounded-2xl transition-all shadow-gold h-auto"
+          className="bg-gold hover:bg-gold/90 text-white"
           onClick={() => setDialogOpen(true)}
         >
-          <Plus className="mr-2 h-5 w-5" />
+          <Plus className="mr-2 h-4 w-4" />
           Nova Conta
         </Button>
       </div>
@@ -588,7 +571,7 @@ export default function ContasReceberPage() {
               >
                 Cancelar
               </Button>
-              <Button type="submit" className="bg-gold-500 hover:bg-gold-600 text-black font-bold">
+              <Button type="submit" className="bg-gold hover:bg-gold/90 text-white">
                 {selectedAccount ? 'Atualizar' : 'Cadastrar'}
               </Button>
             </div>
@@ -597,172 +580,147 @@ export default function ContasReceberPage() {
       </Dialog>
 
       {/* Cards de Resumo */}
-      <div className="grid gap-6 md:grid-cols-3">
-        <div className="glass-panel p-6 rounded-3xl border-l-4 border-l-amber-500">
-          <div className="flex items-center gap-4">
-            <div className="w-16 h-16 rounded-2xl bg-amber-500/10 flex items-center justify-center border border-amber-500/20">
-              <DollarSign className="h-8 w-8 text-amber-500" />
+      <div className="grid gap-4 md:grid-cols-3">
+        <Card>
+          <CardHeader className="flex flex-row items-center justify-between pb-2">
+            <CardTitle className="text-sm font-medium">Total Pendente</CardTitle>
+            <DollarSign className="h-4 w-4 text-yellow-500" />
+          </CardHeader>
+          <CardContent>
+            <div className="text-2xl font-bold text-yellow-500">
+              R$ {getTotalPending().toFixed(2)}
             </div>
-            <div>
-              <p className="text-xs font-bold text-amber-500/60 uppercase tracking-widest">Total Pendente</p>
-              <p className="text-3xl font-serif font-bold text-amber-500">
-                R$ {getTotalPending().toFixed(2)}
-              </p>
-            </div>
-          </div>
-        </div>
+          </CardContent>
+        </Card>
 
-        <div className="glass-panel p-6 rounded-3xl border-l-4 border-l-green-500">
-          <div className="flex items-center gap-4">
-            <div className="w-16 h-16 rounded-2xl bg-green-500/10 flex items-center justify-center border border-green-500/20">
-              <CheckCircle className="h-8 w-8 text-green-500" />
+        <Card>
+          <CardHeader className="flex flex-row items-center justify-between pb-2">
+            <CardTitle className="text-sm font-medium">Total Recebido</CardTitle>
+            <CheckCircle className="h-4 w-4 text-green-500" />
+          </CardHeader>
+          <CardContent>
+            <div className="text-2xl font-bold text-green-500">
+              R$ {getTotalReceived().toFixed(2)}
             </div>
-            <div>
-              <p className="text-xs font-bold text-green-500/60 uppercase tracking-widest">Total Recebido</p>
-              <p className="text-3xl font-serif font-bold text-green-500">
-                R$ {getTotalReceived().toFixed(2)}
-              </p>
-            </div>
-          </div>
-        </div>
+          </CardContent>
+        </Card>
 
-        <div className="glass-panel p-6 rounded-3xl border-l-4 border-l-gold-500">
-          <div className="flex items-center gap-4">
-            <div className="w-16 h-16 rounded-2xl bg-gold-500/10 flex items-center justify-center border border-gold-500/20">
-              <Filter className="h-8 w-8 text-gold-500" />
-            </div>
-            <div>
-              <p className="text-xs font-bold text-gold-500/60 uppercase tracking-widest">Total de Contas</p>
-              <p className="text-3xl font-serif font-bold text-white">{accounts.length}</p>
-            </div>
-          </div>
-        </div>
+        <Card>
+          <CardHeader className="flex flex-row items-center justify-between pb-2">
+            <CardTitle className="text-sm font-medium">Total de Contas</CardTitle>
+            <Filter className="h-4 w-4 text-gold" />
+          </CardHeader>
+          <CardContent>
+            <div className="text-2xl font-bold">{accounts.length}</div>
+          </CardContent>
+        </Card>
       </div>
 
       {/* Filtros */}
-      <div className="glass-panel p-6 rounded-3xl">
-        <h3 className="text-lg font-serif font-bold text-white mb-4 flex items-center gap-2">
-          <Filter className="w-5 h-5 text-gold-500" />
-          Filtros
-        </h3>
-
-        {/* Filtro rápido de assinaturas */}
-        <div className="mb-4">
-          <Button
-            variant={showOnlySubscriptions ? "default" : "outline"}
-            onClick={() => {
-              setShowOnlySubscriptions(!showOnlySubscriptions);
-              if (!showOnlySubscriptions) {
-                setFilterCategory(undefined);
-              }
-            }}
-            className={showOnlySubscriptions
-              ? "bg-gold-500 text-black font-bold hover:bg-gold-600"
-              : "border-white/10 text-gray-400 hover:bg-white/5 hover:text-white"
-            }
-          >
-            <Filter className="mr-2 h-4 w-4" />
-            {showOnlySubscriptions ? "Mostrando apenas Assinaturas" : "Filtrar Assinaturas"}
-          </Button>
-        </div>
-
-        <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-          <div>
-            <Label className="text-gray-400 text-sm uppercase tracking-wide">Status</Label>
-            <Select
-              value={filterStatus}
-              onValueChange={(value) => setFilterStatus(value || undefined)}
-            >
-              <SelectTrigger className="mt-2 bg-white/5 border-white/10 text-white">
-                <SelectValue placeholder="Todos os status" />
-              </SelectTrigger>
-              <SelectContent>
-                <SelectItem value="all">Todos os status</SelectItem>
-                {Object.entries(statusLabels).map(([key, label]) => (
-                  <SelectItem key={key} value={key}>
-                    {label}
-                  </SelectItem>
-                ))}
-              </SelectContent>
-            </Select>
-          </div>
-
-          <div>
-            <Label className="text-gray-400 text-sm uppercase tracking-wide">Categoria</Label>
-            <Select
-              value={showOnlySubscriptions ? 'SUBSCRIPTION' : filterCategory}
-              onValueChange={(value) => {
-                setFilterCategory(value || undefined);
-                setShowOnlySubscriptions(false);
+      <Card>
+        <CardHeader>
+          <CardTitle>Filtros</CardTitle>
+        </CardHeader>
+        <CardContent>
+          {/* Filtro rápido de assinaturas */}
+          <div className="mb-4">
+            <Button
+              variant={showOnlySubscriptions ? "default" : "outline"}
+              onClick={() => {
+                setShowOnlySubscriptions(!showOnlySubscriptions);
+                if (!showOnlySubscriptions) {
+                  setFilterCategory(undefined); // Limpa filtro de categoria ao ativar
+                }
               }}
-              disabled={showOnlySubscriptions}
+              className={showOnlySubscriptions ? "bg-gold text-white hover:bg-gold/90" : ""}
             >
-              <SelectTrigger className="mt-2 bg-white/5 border-white/10 text-white">
-                <SelectValue placeholder="Todas as categorias" />
-              </SelectTrigger>
-              <SelectContent>
-                <SelectItem value="all">Todas as categorias</SelectItem>
-                {Object.entries(categoryLabels).map(([key, label]) => (
-                  <SelectItem key={key} value={key}>
-                    {label}
-                  </SelectItem>
-                ))}
-              </SelectContent>
-            </Select>
+              <Filter className="mr-2 h-4 w-4" />
+              {showOnlySubscriptions ? "Mostrando apenas Assinaturas" : "Filtrar Assinaturas"}
+            </Button>
           </div>
-        </div>
-      </div>
+
+          <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+            <div>
+              <Label>Status</Label>
+              <Select
+                value={filterStatus}
+                onValueChange={(value) => setFilterStatus(value || undefined)}
+              >
+                <SelectTrigger>
+                  <SelectValue placeholder="Todos os status" />
+                </SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="all">Todos os status</SelectItem>
+                  {Object.entries(statusLabels).map(([key, label]) => (
+                    <SelectItem key={key} value={key}>
+                      {label}
+                    </SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
+            </div>
+
+            <div>
+              <Label>Categoria</Label>
+              <Select
+                value={showOnlySubscriptions ? 'SUBSCRIPTION' : filterCategory}
+                onValueChange={(value) => {
+                  setFilterCategory(value || undefined);
+                  setShowOnlySubscriptions(false); // Desativa filtro rápido ao mudar categoria manualmente
+                }}
+                disabled={showOnlySubscriptions}
+              >
+                <SelectTrigger>
+                  <SelectValue placeholder="Todas as categorias" />
+                </SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="all">Todas as categorias</SelectItem>
+                  {Object.entries(categoryLabels).map(([key, label]) => (
+                    <SelectItem key={key} value={key}>
+                      {label}
+                    </SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
+            </div>
+          </div>
+        </CardContent>
+      </Card>
 
       {/* Tabela de Contas */}
-      <div className="glass-panel rounded-3xl overflow-hidden">
-        <div className="p-6 border-b border-white/5">
-          <h3 className="text-lg font-serif font-bold text-white">Lista de Contas</h3>
-        </div>
-        <div className="p-6">
+      <Card>
+        <CardHeader>
+          <CardTitle>Lista de Contas</CardTitle>
+        </CardHeader>
+        <CardContent>
           {loading ? (
-            <div className="flex flex-col items-center justify-center py-20 space-y-4">
-              <div className="w-10 h-10 border-2 border-gold-500 border-t-transparent rounded-full animate-spin" />
-              <p className="text-gold-500 font-serif italic">Carregando contas...</p>
-            </div>
+            <div className="text-center py-8">Carregando...</div>
           ) : accounts.length === 0 ? (
-            <div className="text-center py-20">
-              <div className="w-20 h-20 bg-white/5 rounded-full flex items-center justify-center mx-auto mb-6">
-                <DollarSign className="h-10 w-10 text-gray-600" />
-              </div>
-              <p className="text-gray-500 text-lg font-medium">Nenhuma conta encontrada</p>
+            <div className="text-center py-8 text-muted-foreground">
+              Nenhuma conta encontrada
             </div>
           ) : (
             <div className="overflow-x-auto">
               <Table>
                 <TableHeader>
-                  <TableRow className="border-white/5 hover:bg-transparent">
-                    <TableHead className="text-gold-500 font-bold uppercase text-xs tracking-wider">Descrição</TableHead>
-                    <TableHead className="text-gold-500 font-bold uppercase text-xs tracking-wider">Categoria</TableHead>
-                    <TableHead className="text-gold-500 font-bold uppercase text-xs tracking-wider">Pagador</TableHead>
-                    <TableHead className="text-gold-500 font-bold uppercase text-xs tracking-wider">Valor</TableHead>
-                    <TableHead className="text-gold-500 font-bold uppercase text-xs tracking-wider">Vencimento</TableHead>
-                    <TableHead className="text-gold-500 font-bold uppercase text-xs tracking-wider">Status</TableHead>
-                    <TableHead className="text-gold-500 font-bold uppercase text-xs tracking-wider text-right">Ações</TableHead>
+                  <TableRow>
+                    <TableHead>Descrição</TableHead>
+                    <TableHead>Categoria</TableHead>
+                    <TableHead>Pagador</TableHead>
+                    <TableHead>Valor</TableHead>
+                    <TableHead>Vencimento</TableHead>
+                    <TableHead>Status</TableHead>
+                    <TableHead className="text-right">Ações</TableHead>
                   </TableRow>
                 </TableHeader>
                 <TableBody>
                   {accounts.map((account) => (
-                    <TableRow key={account.id} className="border-white/5 hover:bg-white/5">
-                      <TableCell className="font-bold text-white">
-                        {(() => {
-                          let displayDesc = account.description;
-                          if (account.payer) {
-                            // Remove o nome do pagador do final da descrição se existir (com ou sem hífen/espaço antes)
-                            const regex = new RegExp(`\\s*[-–]?\\s*${account.payer.replace(/[.*+?^${}()|[\]\\]/g, '\\$&')}$`, 'i');
-                            displayDesc = displayDesc.replace(regex, '');
-                          }
-                          return displayDesc;
-                        })()}
-                      </TableCell>
-                      <TableCell className="text-gray-400">{categoryLabels[account.category]}</TableCell>
-                      <TableCell className="text-gray-400">{account.payer || '-'}</TableCell>
-                      <TableCell className="font-bold text-green-500">R$ {account.amount.toFixed(2)}</TableCell>
-                      <TableCell className="text-gray-400">
+                    <TableRow key={account.id}>
+                      <TableCell className="font-medium">{account.description}</TableCell>
+                      <TableCell>{categoryLabels[account.category]}</TableCell>
+                      <TableCell>{account.payer || '-'}</TableCell>
+                      <TableCell>R$ {account.amount.toFixed(2)}</TableCell>
+                      <TableCell>
                         {format(new Date(account.dueDate), "dd/MM/yyyy", { locale: ptBR })}
                       </TableCell>
                       <TableCell>
@@ -771,13 +729,13 @@ export default function ContasReceberPage() {
                         </Badge>
                       </TableCell>
                       <TableCell className="text-right">
-                        <div className="flex justify-end gap-1">
+                        <div className="flex justify-end gap-2">
                           {(account.status === 'PENDING' || account.status === 'OVERDUE') && (
                             <Button
                               size="sm"
-                              variant="ghost"
+                              variant="outline"
                               onClick={() => openPaymentDialog(account)}
-                              className="text-green-500 hover:text-green-400 hover:bg-green-500/10"
+                              className="text-green-600 hover:text-green-700"
                               title="Marcar como recebido"
                             >
                               <CheckCircle className="h-4 w-4" />
@@ -787,18 +745,18 @@ export default function ContasReceberPage() {
                             <>
                               <Button
                                 size="sm"
-                                variant="ghost"
+                                variant="outline"
                                 onClick={() => handleGeneratePaymentLink(account)}
-                                className="text-blue-500 hover:text-blue-400 hover:bg-blue-500/10"
+                                className="text-blue-600 hover:text-blue-700"
                                 title="Gerar e copiar link de pagamento"
                               >
                                 <LinkIcon className="h-4 w-4" />
                               </Button>
                               <Button
                                 size="sm"
-                                variant="ghost"
+                                variant="outline"
                                 onClick={() => handleSendWhatsApp(account)}
-                                className="text-green-500 hover:text-green-400 hover:bg-green-500/10"
+                                className="text-green-600 hover:text-green-700"
                                 title="Enviar link pelo WhatsApp"
                               >
                                 <MessageSquare className="h-4 w-4" />
@@ -808,9 +766,8 @@ export default function ContasReceberPage() {
                           {account.status !== 'PAID' && (
                             <Button
                               size="sm"
-                              variant="ghost"
+                              variant="outline"
                               onClick={() => openEditDialog(account)}
-                              className="text-gray-400 hover:text-white hover:bg-white/10"
                               title="Editar conta"
                             >
                               <Pencil className="h-4 w-4" />
@@ -819,9 +776,9 @@ export default function ContasReceberPage() {
                           {isAdmin && (
                             <Button
                               size="sm"
-                              variant="ghost"
+                              variant="outline"
                               onClick={() => openDeleteDialog(account)}
-                              className="text-gray-400 hover:text-red-500 hover:bg-red-500/10"
+                              className="text-red-600 hover:text-red-700"
                               title="Excluir conta"
                             >
                               <Trash2 className="h-4 w-4" />
@@ -835,8 +792,8 @@ export default function ContasReceberPage() {
               </Table>
             </div>
           )}
-        </div>
-      </div>
+        </CardContent>
+      </Card>
 
       {/* Dialog de Pagamento */}
       <Dialog open={paymentDialogOpen} onOpenChange={setPaymentDialogOpen}>
@@ -949,7 +906,11 @@ export default function ContasReceberPage() {
                   >
                     Cancelar
                   </Button>
-                  <Button type="submit" className="bg-green-600 hover:bg-green-700 text-white">
+                  <Button
+                    type="submit"
+                    className="bg-green-600 hover:bg-green-700 text-white"
+                    disabled={!paymentData.paymentMethod}
+                  >
                     <CheckCircle className="mr-2 h-4 w-4" />
                     Confirmar Recebimento
                   </Button>

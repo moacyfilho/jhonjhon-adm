@@ -4,8 +4,7 @@ import { useState } from "react";
 import Link from "next/link";
 import { usePathname } from "next/navigation";
 import { Menu, X, Scissors, LogOut } from "lucide-react";
-import { createClient } from "@/utils/supabase/client";
-import { useUser } from "@/hooks/use-user";
+import { signOut, useSession } from "next-auth/react";
 import { cn } from "@/lib/utils";
 import {
   LayoutDashboard,
@@ -46,13 +45,11 @@ const menuItems = [
 export function MobileHeader() {
   const [isOpen, setIsOpen] = useState(false);
   const pathname = usePathname();
-  const { user, loading } = useUser();
-  const supabase = createClient();
-  const userRole = user?.user_metadata?.role;
+  const { data: session } = useSession() || {};
+  const userRole = (session?.user as any)?.role;
 
   const handleLogout = async () => {
-    await supabase.auth.signOut();
-    window.location.href = "/login";
+    await signOut({ callbackUrl: "/login" });
   };
 
   return (
@@ -61,9 +58,9 @@ export function MobileHeader() {
       <header className="lg:hidden sticky top-0 z-50 bg-card border-b border-border px-4 py-3">
         <div className="flex items-center justify-between">
           <div className="flex items-center gap-2">
-            <img
-              src="/logo-mobile.png"
-              alt="Logo Jhon Jhon Barbearia - Sistema Administrativo Mobile"
+            <img 
+              src="/logo-mobile.png" 
+              alt="Logo Jhon Jhon Barbearia - Sistema Administrativo Mobile" 
               className="h-8 w-auto"
             />
           </div>
@@ -93,10 +90,10 @@ export function MobileHeader() {
             {/* User Info */}
             <div className="mb-6 p-4 bg-secondary rounded-lg">
               <p className="text-sm font-medium text-foreground">
-                {user?.user_metadata?.full_name || user?.email?.split('@')[0] || "Usuário"}
+                {session?.user?.name || "Usuário"}
               </p>
               <p className="text-xs text-muted-foreground mt-1">
-                {user?.email || ""}
+                {session?.user?.email || ""}
               </p>
               {userRole && (
                 <span className="inline-block mt-2 px-2 py-1 bg-primary/10 text-primary text-xs font-semibold rounded">

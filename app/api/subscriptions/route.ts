@@ -1,17 +1,13 @@
 import { NextRequest, NextResponse } from 'next/server';
-import { createClient } from '@/utils/supabase/server';
+import { getServerSession } from 'next-auth';
+import { authOptions } from '@/lib/auth/auth-options';
 import { prisma } from '@/lib/db';
-import { asaas } from '@/lib/asaas';
-
-export const dynamic = 'force-dynamic';
 
 // GET - Listar assinaturas
 export async function GET(request: NextRequest) {
   try {
-    const supabase = createClient();
-    const { data: { user } } = await supabase.auth.getUser();
-
-    if (!user) {
+    const session = await getServerSession(authOptions);
+    if (!session) {
       return NextResponse.json({ error: 'Não autorizado' }, { status: 401 });
     }
 
@@ -43,7 +39,6 @@ export async function GET(request: NextRequest) {
       where,
       include: {
         client: true,
-        plan: true,
         usageHistory: {
           orderBy: { usedDate: 'desc' },
           take: 5,
@@ -65,17 +60,14 @@ export async function GET(request: NextRequest) {
 // POST - Criar assinatura
 export async function POST(request: NextRequest) {
   try {
-    const supabase = createClient();
-    const { data: { user } } = await supabase.auth.getUser();
-
-    if (!user) {
+    const session = await getServerSession(authOptions);
+    if (!session) {
       return NextResponse.json({ error: 'Não autorizado' }, { status: 401 });
     }
 
     const body = await request.json();
     const {
       clientId,
-      planId,
       planName,
       amount,
       billingDay,
@@ -132,73 +124,25 @@ export async function POST(request: NextRequest) {
       const currentDay = now.getDate();
       const currentMonth = now.getMonth();
       const currentYear = now.getFullYear();
-
+      
       // Se o billingDay já passou neste mês, usar próximo mês
       let targetMonth = currentDay >= billingDay ? currentMonth + 1 : currentMonth;
       let targetYear = currentYear;
-
+      
       // Ajustar ano se passar de dezembro
       if (targetMonth > 11) {
         targetMonth = 0;
         targetYear++;
       }
-
+      
       // Ajustar dia para meses com menos dias
       const lastDayOfMonth = new Date(targetYear, targetMonth + 1, 0).getDate();
       const adjustedDay = Math.min(billingDay, lastDayOfMonth);
-
+      
       return new Date(targetYear, targetMonth, adjustedDay);
     };
 
     const nextDueDate = calculateNextDueDate(billingDay);
-
-    let asaasSubscriptionId: string | null = null;
-
-    // Integração Asaas (se configurado)
-    if (process.env.ASAAS_API_KEY) {
-      try {
-        // 1. Garantir Cliente no Asaas
-        let asaasCustomerId = client.asaasCustomerId;
-        if (!asaasCustomerId) {
-          const asaasCustomer = await asaas.createCustomer({
-            name: client.name,
-            phone: client.phone,
-            mobilePhone: client.phone,
-            externalReference: client.id
-          });
-          asaasCustomerId = asaasCustomer.id;
-          // Atualizar cliente localmente
-          await prisma.client.update({
-            where: { id: client.id },
-            data: { asaasCustomerId }
-          });
-        }
-
-        // 2. Criar Assinatura no Asaas
-        // Formatar data para YYYY-MM-DD
-        const nextDueDateStr = nextDueDate.toISOString().split('T')[0];
-
-        const asaasSub = await asaas.createSubscription({
-          customer: asaasCustomerId!,
-          billingType: 'PIX', // Default to PIX for now, can be parameterized
-          value: parseFloat(amount),
-          nextDueDate: nextDueDateStr,
-          cycle: 'MONTHLY',
-          description: `Assinatura ${planName}`
-        });
-
-        asaasSubscriptionId = asaasSub.id;
-
-      } catch (error) {
-        console.error('Erro na integração Asaas:', error);
-        // Opcional: Retornar erro ou continuar apenas localmente?
-        // Vamos retornar erro para garantir integridade se o usuário espera integração
-        return NextResponse.json(
-          { error: 'Erro ao criar assinatura no Asaas: ' + (error as Error).message },
-          { status: 500 }
-        );
-      }
-    }
 
     // Criar assinatura e conta a receber em uma transação
     const result = await prisma.$transaction(async (tx) => {
@@ -206,14 +150,12 @@ export async function POST(request: NextRequest) {
       const subscription = await tx.subscription.create({
         data: {
           clientId,
-          planId: planId === 'custom' ? null : planId,
           planName,
           amount,
           billingDay,
           servicesIncluded,
           usageLimit: usageLimit || null,
           observations,
-          asaasSubscriptionId, // Salvar ID do Asaas
         },
         include: {
           client: true,
@@ -223,7 +165,7 @@ export async function POST(request: NextRequest) {
       // Criar conta a receber automaticamente
       const accountReceivable = await tx.accountReceivable.create({
         data: {
-          description: `${planName}`,
+          description: `Assinatura - ${planName}`,
           category: 'SUBSCRIPTION',
           payer: client.name,
           clientId: clientId,
@@ -232,7 +174,6 @@ export async function POST(request: NextRequest) {
           dueDate: nextDueDate,
           status: 'PENDING',
           observations: `Criado automaticamente para assinatura: ${planName}`,
-          subscriptionId: subscription.id,
         },
       });
 

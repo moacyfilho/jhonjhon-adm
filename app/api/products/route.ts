@@ -1,16 +1,13 @@
-import { NextRequest, NextResponse } from 'next/server';
-import { createClient } from '@/utils/supabase/server';
+import { NextResponse } from 'next/server';
+import { getServerSession } from 'next-auth';
+import { authOptions } from '@/lib/auth/auth-options';
 import { prisma } from '@/lib/db';
 
-export const dynamic = 'force-dynamic';
-
 // GET - Listar produtos
-export async function GET(request: NextRequest) {
+export async function GET(request: Request) {
   try {
-    const supabase = createClient();
-    const { data: { user } } = await supabase.auth.getUser();
-
-    if (!user) {
+    const session = await getServerSession(authOptions);
+    if (!session) {
       return NextResponse.json({ error: 'Não autorizado' }, { status: 401 });
     }
 
@@ -59,17 +56,15 @@ export async function GET(request: NextRequest) {
 }
 
 // POST - Criar novo produto
-export async function POST(request: NextRequest) {
+export async function POST(request: Request) {
   try {
-    const supabase = createClient();
-    const { data: { user } } = await supabase.auth.getUser();
-
-    if (!user) {
+    const session = await getServerSession(authOptions);
+    if (!session) {
       return NextResponse.json({ error: 'Não autorizado' }, { status: 401 });
     }
 
     const data = await request.json();
-    const { name, description, price, costPrice, stock, unit, category, isCommissioned, commissionPercentage } = data;
+    const { name, description, price, stock, unit, category } = data;
 
     // Validações
     if (!name || !price) {
@@ -98,12 +93,9 @@ export async function POST(request: NextRequest) {
         name,
         description: description || null,
         price: parseFloat(price),
-        costPrice: costPrice ? parseFloat(costPrice) : 0,
         stock: stock !== undefined ? parseFloat(stock) : 0,
         unit: unit || 'un',
         category: category || null,
-        isCommissioned: isCommissioned || false,
-        commissionPercentage: commissionPercentage ? parseFloat(commissionPercentage) : 0,
         isActive: true,
       },
     });

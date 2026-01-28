@@ -53,17 +53,6 @@ export function getManausTimeString(date: Date): string {
 }
 
 /**
- * Extrai a data (YYYY-MM-DD) de uma data no fuso de Manaus
- */
-export function getManausDateString(date: Date): string {
-  const manausDate = toManausTime(date);
-  const year = manausDate.getUTCFullYear();
-  const month = String(manausDate.getUTCMonth() + 1).padStart(2, '0');
-  const day = String(manausDate.getUTCDate()).padStart(2, '0');
-  return `${year}-${month}-${day}`;
-}
-
-/**
  * Retorna o início do dia (00:00:00) no fuso de Manaus
  */
 export function getManausStartOfDay(dateStr: string): Date {
