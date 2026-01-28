@@ -1,32 +1,56 @@
 import { NextResponse } from 'next/server';
-import { prisma } from '@/lib/db';
 
 export const dynamic = 'force-dynamic';
 
 export async function GET() {
     try {
-        // Tenta uma query simples
-        const userCount = await prisma.user.count();
+        console.log("Starting DB Connection Test...");
+
+        // 1. Check Environment Variables
         const envUrl = process.env.DATABASE_URL;
+        const nextAuthUrl = process.env.NEXTAUTH_URL;
+        const nextAuthSecret = process.env.NEXTAUTH_SECRET;
 
-        // Obscurece a senha para segurança se mostrar na tela
-        const safeUrl = envUrl ? envUrl.replace(/:[^:]*@/, ':****@') : 'UNDEFINED';
+        const envStatus = {
+            DATABASE_URL: envUrl ? (envUrl.includes("supabase") ? "Calculated: Supabase" : "Present") : "MISSING",
+            NEXTAUTH_URL: nextAuthUrl || "MISSING",
+            NEXTAUTH_SECRET: nextAuthSecret ? "Present" : "MISSING",
+        };
 
-        return NextResponse.json({
-            status: 'success',
-            message: 'Database connection working',
-            userCount,
-            databaseUrlConfigured: !!envUrl,
-            maskedUrl: safeUrl
-        });
+        if (!envUrl) {
+            throw new Error("Critical: DATABASE_URL is missing in environment variables.");
+        }
+
+        // 2. Dynamic Import and Instantiation to catch binary errors
+        const { PrismaClient } = await import('@prisma/client');
+        const prisma = new PrismaClient();
+
+        try {
+            // 3. Attempt Connection
+            const userCount = await prisma.user.count();
+            await prisma.$disconnect();
+
+            return NextResponse.json({
+                status: 'success',
+                message: 'Database connection SUCCESSFUL',
+                count: userCount,
+                envStatus
+            });
+        } catch (dbError: any) {
+            await prisma.$disconnect();
+            throw dbError;
+        }
+
     } catch (error: any) {
-        console.error('Test DB Error:', error);
+        console.error('Test DB Critical Error:', error);
         return NextResponse.json({
             status: 'error',
+            error_type: error.name,
             message: error.message,
             stack: error.stack,
-            code: error.code,
-            meta: error.meta
-        }, { status: 500 });
+            env_check: {
+                DATABASE_URL: process.env.DATABASE_URL ? "Defined (Hidden for security)" : "UNDEFINED - Please set in Netlify"
+            }
+        }, { status: 200 }); // Return 200 even on error so we see the JSON
     }
 }
