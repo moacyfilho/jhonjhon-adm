@@ -2,6 +2,8 @@ import { NextRequest, NextResponse } from 'next/server';
 import jwt from 'jsonwebtoken';
 import { prisma } from '@/lib/db';
 
+export const dynamic = 'force-dynamic';
+
 const JWT_SECRET = process.env.NEXTAUTH_SECRET || 'fallback-secret-key';
 
 interface JWTPayload {
@@ -15,7 +17,7 @@ export async function GET(request: NextRequest) {
   try {
     // Extrair token do header Authorization
     const authHeader = request.headers.get('authorization');
-    
+
     if (!authHeader || !authHeader.startsWith('Bearer ')) {
       return NextResponse.json(
         { error: 'Token não fornecido' },
