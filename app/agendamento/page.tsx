@@ -85,6 +85,13 @@ export default function AgendamentoPage() {
     calculateMaxDate();
   }, []);
 
+  // Auto-seleciona o primeiro barbeiro quando a lista carregar
+  useEffect(() => {
+    if (barbers.length > 0 && !formData.barberId) {
+      setFormData(prev => ({ ...prev, barberId: barbers[0].id }));
+    }
+  }, [barbers]);
+
   const calculateMaxDate = () => {
     // Padrão: 30 dias no futuro (será atualizado pela API se houver configurações)
     const today = new Date();
@@ -197,11 +204,6 @@ export default function AgendamentoPage() {
       const data = await response.json();
       console.log('Barbeiros carregados:', data);
       setBarbers(data);
-
-      // Auto-seleciona o primeiro barbeiro se nenhum estiver selecionado
-      if (data.length > 0 && !formData.barberId) {
-        setFormData(prev => ({ ...prev, barberId: data[0].id }));
-      }
     } catch (error) {
       console.error(error);
       toast.error('Erro ao carregar barbeiros');
