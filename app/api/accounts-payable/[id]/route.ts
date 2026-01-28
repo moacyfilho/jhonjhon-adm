@@ -8,7 +8,7 @@ export const dynamic = 'force-dynamic';
 // PUT - Atualizar conta a pagar
 export async function PUT(
   request: NextRequest,
-  { params }: { params: { id: string } }
+  { params }: { params: Promise<{ id: string }> }
 ) {
   try {
     const session = await getServerSession(authOptions);
@@ -16,6 +16,7 @@ export async function PUT(
       return NextResponse.json({ error: 'Não autorizado' }, { status: 401 });
     }
 
+    const { id } = await params;
     const body = await request.json();
     const { description, category, supplier, amount, dueDate, paymentDate, status, paymentMethod, observations } = body;
 
@@ -28,7 +29,7 @@ export async function PUT(
     if (dueDate !== undefined) updateData.dueDate = new Date(dueDate);
     if (status !== undefined) updateData.status = status;
     if (observations !== undefined) updateData.observations = observations || null;
-    
+
     // Se estiver marcando como pago
     if (status === 'PAID') {
       updateData.paymentDate = paymentDate ? new Date(paymentDate) : new Date();
@@ -36,7 +37,7 @@ export async function PUT(
     }
 
     const account = await prisma.accountPayable.update({
-      where: { id: params.id },
+      where: { id },
       data: updateData,
     });
 
@@ -50,7 +51,7 @@ export async function PUT(
 // DELETE - Excluir conta a pagar
 export async function DELETE(
   request: NextRequest,
-  { params }: { params: { id: string } }
+  { params }: { params: Promise<{ id: string }> }
 ) {
   try {
     const session = await getServerSession(authOptions);
@@ -58,8 +59,10 @@ export async function DELETE(
       return NextResponse.json({ error: 'Não autorizado' }, { status: 401 });
     }
 
+    const { id } = await params;
+
     await prisma.accountPayable.delete({
-      where: { id: params.id },
+      where: { id },
     });
 
     return NextResponse.json({ success: true });

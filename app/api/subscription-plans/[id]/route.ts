@@ -8,7 +8,7 @@ export const dynamic = 'force-dynamic';
 // GET - Buscar plano por ID
 export async function GET(
     request: NextRequest,
-    { params }: { params: { id: string } }
+    { params }: { params: Promise<{ id: string }> }
 ) {
     try {
         const session = await getServerSession(authOptions);
@@ -16,8 +16,10 @@ export async function GET(
             return NextResponse.json({ error: 'Não autorizado' }, { status: 401 });
         }
 
+        const { id } = await params;
+
         const plan = await prisma.subscriptionPlan.findUnique({
-            where: { id: params.id },
+            where: { id },
             include: {
                 _count: {
                     select: { subscriptions: true }
@@ -45,7 +47,7 @@ export async function GET(
 // PUT - Atualizar plano
 export async function PUT(
     request: NextRequest,
-    { params }: { params: { id: string } }
+    { params }: { params: Promise<{ id: string }> }
 ) {
     try {
         const session = await getServerSession(authOptions);
@@ -53,6 +55,7 @@ export async function PUT(
             return NextResponse.json({ error: 'Não autorizado' }, { status: 401 });
         }
 
+        const { id } = await params;
         const body = await request.json();
         const { name, description, price, durationDays, servicesIncluded, usageLimit, isActive } = body;
 
@@ -64,7 +67,7 @@ export async function PUT(
         }
 
         const plan = await prisma.subscriptionPlan.update({
-            where: { id: params.id },
+            where: { id },
             data: {
                 name,
                 description: description || null,
@@ -89,7 +92,7 @@ export async function PUT(
 // DELETE - Deletar plano
 export async function DELETE(
     request: NextRequest,
-    { params }: { params: { id: string } }
+    { params }: { params: Promise<{ id: string }> }
 ) {
     try {
         const session = await getServerSession(authOptions);
@@ -97,10 +100,12 @@ export async function DELETE(
             return NextResponse.json({ error: 'Não autorizado' }, { status: 401 });
         }
 
+        const { id } = await params;
+
         // Verificar se há assinaturas ativas usando este plano
         const subscriptionsCount = await prisma.subscription.count({
             where: {
-                planId: params.id,
+                planId: id,
                 status: 'ACTIVE'
             }
         });
@@ -113,7 +118,7 @@ export async function DELETE(
         }
 
         await prisma.subscriptionPlan.delete({
-            where: { id: params.id },
+            where: { id },
         });
 
         return NextResponse.json({ message: 'Plano excluído com sucesso' });

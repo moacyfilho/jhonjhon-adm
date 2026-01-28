@@ -6,7 +6,7 @@ import { prisma } from '@/lib/db';
 // GET - Buscar agendamento por ID
 export async function GET(
   request: NextRequest,
-  { params }: { params: { id: string } }
+  { params }: { params: Promise<{ id: string }> }
 ) {
   try {
     const session = await getServerSession(authOptions);
@@ -14,8 +14,10 @@ export async function GET(
       return NextResponse.json({ error: 'Não autorizado' }, { status: 401 });
     }
 
+    const { id } = await params;
+
     const booking = await prisma.onlineBooking.findUnique({
-      where: { id: params.id },
+      where: { id },
       include: {
         service: true,
         barber: true,
@@ -43,7 +45,7 @@ export async function GET(
 // PATCH - Atualizar status do agendamento
 export async function PATCH(
   request: NextRequest,
-  { params }: { params: { id: string } }
+  { params }: { params: Promise<{ id: string }> }
 ) {
   try {
     const session = await getServerSession(authOptions);
@@ -51,11 +53,12 @@ export async function PATCH(
       return NextResponse.json({ error: 'Não autorizado' }, { status: 401 });
     }
 
+    const { id } = await params;
     const body = await request.json();
     const { status, observations, barberId } = body;
 
     const booking = await prisma.onlineBooking.findUnique({
-      where: { id: params.id },
+      where: { id },
     });
 
     if (!booking) {
@@ -71,7 +74,7 @@ export async function PATCH(
     if (barberId !== undefined) updateData.barberId = barberId;
 
     const updatedBooking = await prisma.onlineBooking.update({
-      where: { id: params.id },
+      where: { id },
       data: updateData,
       include: {
         service: true,
@@ -93,7 +96,7 @@ export async function PATCH(
 // DELETE - Excluir agendamento
 export async function DELETE(
   request: NextRequest,
-  { params }: { params: { id: string } }
+  { params }: { params: Promise<{ id: string }> }
 ) {
   try {
     const session = await getServerSession(authOptions);
@@ -101,8 +104,10 @@ export async function DELETE(
       return NextResponse.json({ error: 'Não autorizado' }, { status: 401 });
     }
 
+    const { id } = await params;
+
     const booking = await prisma.onlineBooking.findUnique({
-      where: { id: params.id },
+      where: { id },
     });
 
     if (!booking) {
@@ -113,7 +118,7 @@ export async function DELETE(
     }
 
     await prisma.onlineBooking.delete({
-      where: { id: params.id },
+      where: { id },
     });
 
     return NextResponse.json({ message: 'Agendamento excluído com sucesso' });

@@ -6,7 +6,7 @@ import { prisma } from '@/lib/db';
 // GET - Buscar assinatura por ID
 export async function GET(
   request: NextRequest,
-  { params }: { params: { id: string } }
+  { params }: { params: Promise<{ id: string }> }
 ) {
   try {
     const session = await getServerSession(authOptions);
@@ -14,8 +14,10 @@ export async function GET(
       return NextResponse.json({ error: 'Não autorizado' }, { status: 401 });
     }
 
+    const { id } = await params;
+
     const subscription = await prisma.subscription.findUnique({
-      where: { id: params.id },
+      where: { id },
       include: {
         client: true,
         usageHistory: {
@@ -44,7 +46,7 @@ export async function GET(
 // PATCH - Atualizar assinatura
 export async function PATCH(
   request: NextRequest,
-  { params }: { params: { id: string } }
+  { params }: { params: Promise<{ id: string }> }
 ) {
   try {
     const session = await getServerSession(authOptions);
@@ -52,6 +54,7 @@ export async function PATCH(
       return NextResponse.json({ error: 'Não autorizado' }, { status: 401 });
     }
 
+    const { id } = await params;
     const body = await request.json();
     const {
       planName,
@@ -66,7 +69,7 @@ export async function PATCH(
 
     // Verificar se a assinatura existe
     const existingSubscription = await prisma.subscription.findUnique({
-      where: { id: params.id },
+      where: { id },
     });
 
     if (!existingSubscription) {
@@ -96,7 +99,7 @@ export async function PATCH(
     if (endDate !== undefined) updateData.endDate = endDate ? new Date(endDate) : null;
 
     const subscription = await prisma.subscription.update({
-      where: { id: params.id },
+      where: { id },
       data: updateData,
       include: {
         client: true,
@@ -116,7 +119,7 @@ export async function PATCH(
 // DELETE - Excluir assinatura
 export async function DELETE(
   request: NextRequest,
-  { params }: { params: { id: string } }
+  { params }: { params: Promise<{ id: string }> }
 ) {
   try {
     const session = await getServerSession(authOptions);
@@ -124,8 +127,10 @@ export async function DELETE(
       return NextResponse.json({ error: 'Não autorizado' }, { status: 401 });
     }
 
+    const { id } = await params;
+
     const subscription = await prisma.subscription.findUnique({
-      where: { id: params.id },
+      where: { id },
     });
 
     if (!subscription) {
@@ -136,7 +141,7 @@ export async function DELETE(
     }
 
     await prisma.subscription.delete({
-      where: { id: params.id },
+      where: { id },
     });
 
     return NextResponse.json({ message: 'Assinatura excluída com sucesso' });

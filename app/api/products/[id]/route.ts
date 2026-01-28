@@ -6,7 +6,7 @@ import { prisma } from '@/lib/db';
 // PUT - Atualizar produto
 export async function PUT(
   request: Request,
-  { params }: { params: { id: string } }
+  { params }: { params: Promise<{ id: string }> }
 ) {
   try {
     const session = await getServerSession(authOptions);
@@ -14,7 +14,7 @@ export async function PUT(
       return NextResponse.json({ error: 'Não autorizado' }, { status: 401 });
     }
 
-    const { id } = params;
+    const { id } = await params;
     const data = await request.json();
     const { name, description, price, stock, unit, category, isActive } = data;
 
@@ -67,7 +67,7 @@ export async function PUT(
 // DELETE - Excluir produto
 export async function DELETE(
   request: Request,
-  { params }: { params: { id: string } }
+  { params }: { params: Promise<{ id: string }> }
 ) {
   try {
     const session = await getServerSession(authOptions);
@@ -75,7 +75,7 @@ export async function DELETE(
       return NextResponse.json({ error: 'Não autorizado' }, { status: 401 });
     }
 
-    const { id } = params;
+    const { id } = await params;
 
     // Verificar se produto existe
     const existingProduct = await prisma.product.findUnique({
@@ -98,9 +98,9 @@ export async function DELETE(
         data: { isActive: false },
       });
       console.log('Produto desativado (tinha vendas):', product);
-      return NextResponse.json({ 
+      return NextResponse.json({
         message: 'Produto desativado (não pode ser excluído pois possui vendas registradas)',
-        product 
+        product
       });
     }
 

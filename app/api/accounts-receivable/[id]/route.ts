@@ -8,7 +8,7 @@ export const dynamic = 'force-dynamic';
 // PUT - Atualizar conta a receber
 export async function PUT(
   request: NextRequest,
-  { params }: { params: { id: string } }
+  { params }: { params: Promise<{ id: string }> }
 ) {
   try {
     const session = await getServerSession(authOptions);
@@ -16,6 +16,7 @@ export async function PUT(
       return NextResponse.json({ error: 'Não autorizado' }, { status: 401 });
     }
 
+    const { id } = await params;
     const body = await request.json();
     const { description, category, payer, amount, dueDate, paymentDate, status, paymentMethod, observations } = body;
 
@@ -28,7 +29,7 @@ export async function PUT(
     if (dueDate !== undefined) updateData.dueDate = new Date(dueDate);
     if (status !== undefined) updateData.status = status;
     if (observations !== undefined) updateData.observations = observations || null;
-    
+
     // Se estiver marcando como recebido
     if (status === 'PAID') {
       updateData.paymentDate = paymentDate ? new Date(paymentDate) : new Date();
@@ -37,35 +38,35 @@ export async function PUT(
 
     // Buscar conta antes de atualizar para verificar se é assinatura
     const existingAccount = await prisma.accountReceivable.findUnique({
-      where: { id: params.id },
+      where: { id },
       include: {
         subscription: true,
       },
     });
 
     const account = await prisma.accountReceivable.update({
-      where: { id: params.id },
+      where: { id },
       data: updateData,
     });
 
     // 🔄 RECORRÊNCIA AUTOMÁTICA: Se for assinatura e foi marcada como paga
     if (
-      existingAccount && 
-      existingAccount.category === 'SUBSCRIPTION' && 
-      status === 'PAID' && 
+      existingAccount &&
+      existingAccount.category === 'SUBSCRIPTION' &&
+      status === 'PAID' &&
       existingAccount.subscriptionId
     ) {
       try {
         console.log(`🔄 Criando recorrência para assinatura ${existingAccount.subscriptionId}...`);
-        
+
         const subscription = existingAccount.subscription;
-        
+
         if (subscription && subscription.status === 'ACTIVE') {
           // Calcular próxima data de vencimento (próximo mês, mesmo dia)
           const currentDueDate = new Date(existingAccount.dueDate);
           const nextDueDate = new Date(currentDueDate);
           nextDueDate.setMonth(nextDueDate.getMonth() + 1);
-          
+
           // Ajustar se o dia não existir no próximo mês (ex: 31 de fevereiro -> 28/29 de fevereiro)
           if (nextDueDate.getDate() !== currentDueDate.getDate()) {
             nextDueDate.setDate(0); // Vai para o último dia do mês anterior
@@ -105,7 +106,7 @@ export async function PUT(
 // DELETE - Excluir conta a receber
 export async function DELETE(
   request: NextRequest,
-  { params }: { params: { id: string } }
+  { params }: { params: Promise<{ id: string }> }
 ) {
   try {
     const session = await getServerSession(authOptions);
@@ -113,8 +114,10 @@ export async function DELETE(
       return NextResponse.json({ error: 'Não autorizado' }, { status: 401 });
     }
 
+    const { id } = await params;
+
     await prisma.accountReceivable.delete({
-      where: { id: params.id },
+      where: { id },
     });
 
     return NextResponse.json({ success: true });

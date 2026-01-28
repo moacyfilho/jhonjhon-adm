@@ -5,7 +5,7 @@ import { prisma } from "@/lib/db";
 
 export async function PUT(
   request: NextRequest,
-  { params }: { params: { id: string } }
+  { params }: { params: Promise<{ id: string }> }
 ) {
   try {
     const session = await getServerSession(authOptions);
@@ -21,9 +21,11 @@ export async function PUT(
       );
     }
 
+    const { id } = await params;
+
     const commission = await prisma.commission.update({
-      where: { id: params.id },
-      data: { 
+      where: { id },
+      data: {
         status: "PAID",
         paidAt: new Date(),
       },

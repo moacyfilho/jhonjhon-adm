@@ -6,7 +6,7 @@ import { prisma } from '@/lib/db';
 
 export async function PUT(
   request: NextRequest,
-  { params }: { params: { id: string } }
+  { params }: { params: Promise<{ id: string }> }
 ) {
   try {
     const session = await getServerSession(authOptions);
@@ -26,6 +26,7 @@ export async function PUT(
       );
     }
 
+    const { id } = await params;
     const { password } = await request.json();
 
     if (!password || password.length < 6) {
@@ -37,7 +38,7 @@ export async function PUT(
 
     // Verificar se o barbeiro existe
     const barber = await prisma.barber.findUnique({
-      where: { id: params.id },
+      where: { id },
     });
 
     if (!barber) {
@@ -52,11 +53,11 @@ export async function PUT(
 
     // Atualizar senha
     await prisma.barber.update({
-      where: { id: params.id },
+      where: { id },
       data: { password: hashedPassword },
     });
 
-    return NextResponse.json({ 
+    return NextResponse.json({
       success: true,
       message: 'Senha definida com sucesso',
     });

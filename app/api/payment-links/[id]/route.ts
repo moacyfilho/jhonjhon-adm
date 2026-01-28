@@ -6,7 +6,7 @@ import { prisma } from '@/lib/db';
 // GET - Buscar link de pagamento por ID
 export async function GET(
   request: NextRequest,
-  { params }: { params: { id: string } }
+  { params }: { params: Promise<{ id: string }> }
 ) {
   try {
     const session = await getServerSession(authOptions);
@@ -14,8 +14,10 @@ export async function GET(
       return NextResponse.json({ error: 'Não autorizado' }, { status: 401 });
     }
 
+    const { id } = await params;
+
     const paymentLink = await prisma.paymentLink.findUnique({
-      where: { id: params.id },
+      where: { id },
       include: {
         accountReceivable: {
           include: {
@@ -45,7 +47,7 @@ export async function GET(
 // PATCH - Atualizar link de pagamento (marcar como enviado, pago, etc.)
 export async function PATCH(
   request: NextRequest,
-  { params }: { params: { id: string } }
+  { params }: { params: Promise<{ id: string }> }
 ) {
   try {
     const session = await getServerSession(authOptions);
@@ -53,11 +55,12 @@ export async function PATCH(
       return NextResponse.json({ error: 'Não autorizado' }, { status: 401 });
     }
 
+    const { id } = await params;
     const body = await request.json();
     const { status, sentAt, observations } = body;
 
     const existingLink = await prisma.paymentLink.findUnique({
-      where: { id: params.id },
+      where: { id },
     });
 
     if (!existingLink) {
@@ -73,7 +76,7 @@ export async function PATCH(
     if (observations !== undefined) updateData.observations = observations;
 
     const paymentLink = await prisma.paymentLink.update({
-      where: { id: params.id },
+      where: { id },
       data: updateData,
       include: {
         accountReceivable: {
@@ -97,7 +100,7 @@ export async function PATCH(
 // DELETE - Excluir link de pagamento
 export async function DELETE(
   request: NextRequest,
-  { params }: { params: { id: string } }
+  { params }: { params: Promise<{ id: string }> }
 ) {
   try {
     const session = await getServerSession(authOptions);
@@ -105,8 +108,10 @@ export async function DELETE(
       return NextResponse.json({ error: 'Não autorizado' }, { status: 401 });
     }
 
+    const { id } = await params;
+
     const paymentLink = await prisma.paymentLink.findUnique({
-      where: { id: params.id },
+      where: { id },
     });
 
     if (!paymentLink) {
@@ -117,7 +122,7 @@ export async function DELETE(
     }
 
     await prisma.paymentLink.delete({
-      where: { id: params.id },
+      where: { id },
     });
 
     return NextResponse.json({ message: 'Link de pagamento excluído com sucesso' });

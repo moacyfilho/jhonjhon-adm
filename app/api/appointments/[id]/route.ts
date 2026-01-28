@@ -5,7 +5,7 @@ import { prisma } from "@/lib/db";
 
 export async function GET(
   request: NextRequest,
-  { params }: { params: { id: string } }
+  { params }: { params: Promise<{ id: string }> }
 ) {
   try {
     const session = await getServerSession(authOptions);
@@ -13,8 +13,10 @@ export async function GET(
       return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
     }
 
+    const { id } = await params;
+
     const appointment = await prisma.appointment.findUnique({
-      where: { id: params.id },
+      where: { id },
       include: {
         client: true,
         barber: true,
@@ -50,13 +52,15 @@ export async function GET(
 
 export async function PATCH(
   request: NextRequest,
-  { params }: { params: { id: string } }
+  { params }: { params: Promise<{ id: string }> }
 ) {
   try {
     const session = await getServerSession(authOptions);
     if (!session) {
       return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
     }
+
+    const { id } = await params;
 
     const body = await request.json();
     const { date, barberId, status, serviceIds, productItems, paymentMethod } = body;
@@ -70,42 +74,42 @@ export async function PATCH(
     // Se serviceIds ou productItems foi fornecido, atualizar serviços/produtos
     if ((serviceIds && Array.isArray(serviceIds)) || (productItems && Array.isArray(productItems))) {
       // Buscar os preços dos serviços
-      const services = serviceIds && serviceIds.length > 0 
+      const services = serviceIds && serviceIds.length > 0
         ? await prisma.service.findMany({
-            where: { id: { in: serviceIds } },
-          })
+          where: { id: { in: serviceIds } },
+        })
         : [];
 
       // Buscar os produtos se fornecidos
       const productIds = productItems ? productItems.map((p: any) => p.productId) : [];
       const products = productIds.length > 0
         ? await prisma.product.findMany({
-            where: { id: { in: productIds } },
-          })
+          where: { id: { in: productIds } },
+        })
         : [];
 
       // Buscar o barbeiro atual ou o novo barbeiro
       const appointment = await prisma.appointment.findUnique({
-        where: { id: params.id },
+        where: { id },
         include: { barber: true, commission: true },
       });
 
-      const barber = barberId 
+      const barber = barberId
         ? await prisma.barber.findUnique({ where: { id: barberId } })
         : appointment?.barber;
 
       // Calcular totais
       const servicesTotal = services.reduce((sum, s) => sum + s.price, 0);
-      const productsTotal = productItems 
+      const productsTotal = productItems
         ? productItems.reduce((sum: number, item: any) => {
-            const product = products.find(p => p.id === item.productId);
-            return sum + (product ? product.price * item.quantity : 0);
-          }, 0)
+          const product = products.find(p => p.id === item.productId);
+          return sum + (product ? product.price * item.quantity : 0);
+        }, 0)
         : 0;
-      
+
       const totalAmount = servicesTotal + productsTotal;
-      const commissionAmount = barber 
-        ? (servicesTotal * barber.commissionRate) / 100 
+      const commissionAmount = barber
+        ? (servicesTotal * barber.commissionRate) / 100
         : 0;
 
       // Calculate worked hours based on service durations (convert minutes to hours)
@@ -119,12 +123,12 @@ export async function PATCH(
       const updatedAppointment = await prisma.$transaction(async (tx) => {
         // Deletar os serviços antigos
         await tx.appointmentService.deleteMany({
-          where: { appointmentId: params.id },
+          where: { appointmentId: id },
         });
 
         // Deletar os produtos antigos
         await tx.appointmentProduct.deleteMany({
-          where: { appointmentId: params.id },
+          where: { appointmentId: id },
         });
 
         // Criar os novos serviços
@@ -133,7 +137,7 @@ export async function PATCH(
             data: serviceIds.map((serviceId: string) => {
               const service = services.find(s => s.id === serviceId);
               return {
-                appointmentId: params.id,
+                appointmentId: id,
                 serviceId,
                 price: service?.price || 0,
               };
@@ -148,7 +152,7 @@ export async function PATCH(
               const product = products.find(p => p.id === item.productId);
               const unitPrice = product?.price || 0;
               return {
-                appointmentId: params.id,
+                appointmentId: id,
                 productId: item.productId,
                 quantity: item.quantity,
                 unitPrice: unitPrice,
@@ -173,7 +177,7 @@ export async function PATCH(
         // Atualizar ou criar a comissão se houver mudança no valor de serviços
         if (appointment?.commission) {
           await tx.commission.update({
-            where: { appointmentId: params.id },
+            where: { appointmentId: id },
             data: {
               amount: commissionAmount,
             },
@@ -181,7 +185,7 @@ export async function PATCH(
         } else if (commissionAmount > 0 && barber) {
           await tx.commission.create({
             data: {
-              appointmentId: params.id,
+              appointmentId: id,
               barberId: barber.id,
               amount: commissionAmount,
             },
@@ -190,7 +194,7 @@ export async function PATCH(
 
         // Atualizar o appointment
         return await tx.appointment.update({
-          where: { id: params.id },
+          where: { id },
           data: updateData,
           include: {
             client: true,
@@ -214,7 +218,7 @@ export async function PATCH(
 
     // Se não tem serviceIds, apenas atualizar os campos normais
     const appointment = await prisma.appointment.update({
-      where: { id: params.id },
+      where: { id },
       data: updateData,
       include: {
         client: true,
@@ -244,7 +248,7 @@ export async function PATCH(
 
 export async function DELETE(
   request: NextRequest,
-  { params }: { params: { id: string } }
+  { params }: { params: Promise<{ id: string }> }
 ) {
   try {
     const session = await getServerSession(authOptions);
@@ -252,8 +256,10 @@ export async function DELETE(
       return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
     }
 
+    const { id } = await params;
+
     await prisma.appointment.delete({
-      where: { id: params.id },
+      where: { id },
     });
 
     return NextResponse.json({ success: true });
