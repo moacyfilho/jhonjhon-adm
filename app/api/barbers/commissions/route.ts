@@ -2,6 +2,8 @@ import { NextRequest, NextResponse } from 'next/server';
 import jwt from 'jsonwebtoken';
 import { prisma } from '@/lib/db';
 
+export const dynamic = 'force-dynamic';
+
 const JWT_SECRET = process.env.NEXTAUTH_SECRET || 'fallback-secret-key';
 
 interface JWTPayload {
@@ -11,7 +13,7 @@ interface JWTPayload {
 
 function verifyBarberToken(request: NextRequest): string | null {
   const authHeader = request.headers.get('authorization');
-  
+
   if (!authHeader || !authHeader.startsWith('Bearer ')) {
     return null;
   }
@@ -32,7 +34,7 @@ function verifyBarberToken(request: NextRequest): string | null {
 export async function GET(request: NextRequest) {
   try {
     const barberId = verifyBarberToken(request);
-    
+
     if (!barberId) {
       return NextResponse.json(
         { error: 'Não autorizado' },
