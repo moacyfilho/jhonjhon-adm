@@ -197,6 +197,11 @@ export default function AgendamentoPage() {
       const data = await response.json();
       console.log('Barbeiros carregados:', data);
       setBarbers(data);
+
+      // Auto-seleciona o primeiro barbeiro se nenhum estiver selecionado
+      if (data.length > 0 && !formData.barberId) {
+        setFormData(prev => ({ ...prev, barberId: data[0].id }));
+      }
     } catch (error) {
       console.error(error);
       toast.error('Erro ao carregar barbeiros');
