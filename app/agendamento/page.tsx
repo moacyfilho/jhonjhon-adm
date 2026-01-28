@@ -588,29 +588,32 @@ export default function AgendamentoPage() {
                     </div>
 
                     <div className="space-y-4">
-                      <Label className="text-gray-300 font-medium">Escolha seu Profissional (opcional)</Label>
-                      <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4">
+                      <Label className="text-gray-300 font-medium text-lg">Escolha seu Profissional (opcional)</Label>
+                      <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-6">
                         {/* Opção "Qualquer profissional" */}
                         <div
                           className={`
-                            relative p-4 rounded-lg border cursor-pointer transition-all
+                            relative rounded-xl border-2 cursor-pointer transition-all overflow-hidden group
                             ${!formData.barberId
-                              ? 'bg-gold/20 border-gold/60 ring-2 ring-gold/40'
-                              : 'bg-gray-900/70 border-gold/20 hover:bg-gold/10'}
+                              ? 'border-gold shadow-lg shadow-gold/20'
+                              : 'border-gray-700 hover:border-gold/50'}
                           `}
                           onClick={() => setFormData({ ...formData, barberId: '' })}
                         >
-                          <div className="flex flex-col items-center text-center space-y-3">
-                            <div className="relative w-24 h-24 rounded-full overflow-hidden border-2 border-gold/30 bg-gradient-to-br from-gold/20 to-gray-800 flex items-center justify-center">
-                              <User className="h-12 w-12 text-gold" />
-                            </div>
-                            <div>
-                              <p className={`font-medium ${!formData.barberId ? 'text-white' : 'text-gray-300'}`}>
-                                Qualquer Profissional
-                              </p>
-                              <p className="text-xs text-gray-400 mt-1">Disponibilidade máxima</p>
-                            </div>
+                          <div className="aspect-square bg-gradient-to-br from-gold/20 to-gray-800 flex items-center justify-center">
+                            <User className="h-16 w-16 text-gold" />
                           </div>
+                          <div className={`p-3 text-center ${!formData.barberId ? 'bg-gold/20' : 'bg-gray-900/90'}`}>
+                            <p className={`font-semibold ${!formData.barberId ? 'text-white' : 'text-gray-300'}`}>
+                              Qualquer Profissional
+                            </p>
+                            <p className="text-xs text-gray-400 mt-1">Melhor disponibilidade</p>
+                          </div>
+                          {!formData.barberId && (
+                            <div className="absolute top-3 right-3 bg-gold rounded-full p-1">
+                              <CheckCircle2 className="h-5 w-5 text-black" />
+                            </div>
+                          )}
                         </div>
 
                         {/* Cards dos barbeiros */}
@@ -622,37 +625,36 @@ export default function AgendamentoPage() {
                             <div
                               key={barber.id}
                               className={`
-                                relative p-4 rounded-lg border cursor-pointer transition-all
+                                relative rounded-xl border-2 cursor-pointer transition-all overflow-hidden group
                                 ${isSelected
-                                  ? 'bg-gold/20 border-gold/60 ring-2 ring-gold/40'
-                                  : 'bg-gray-900/70 border-gold/20 hover:bg-gold/10'}
+                                  ? 'border-gold shadow-lg shadow-gold/20'
+                                  : 'border-gray-700 hover:border-gold/50'}
                               `}
                               onClick={() => setFormData({ ...formData, barberId: barber.id })}
                             >
-                              <div className="flex flex-col items-center text-center space-y-3">
-                                <div className="relative w-24 h-24 rounded-full overflow-hidden border-2 border-gold/30">
-                                  {photo ? (
-                                    <Image
-                                      src={photo}
-                                      alt={barber.name}
-                                      fill
-                                      className="object-cover"
-                                    />
-                                  ) : (
-                                    <div className="w-full h-full bg-gradient-to-br from-gold/20 to-gray-800 flex items-center justify-center">
-                                      <User className="h-12 w-12 text-gold" />
-                                    </div>
-                                  )}
-                                </div>
-                                <div>
-                                  <p className={`font-medium ${isSelected ? 'text-white' : 'text-gray-300'}`}>
-                                    {barber.name}
-                                  </p>
-                                </div>
+                              <div className="aspect-square relative overflow-hidden">
+                                {photo ? (
+                                  <Image
+                                    src={photo}
+                                    alt={barber.name}
+                                    fill
+                                    className={`object-cover transition-all duration-300 ${isSelected ? 'grayscale-0 scale-105' : 'grayscale hover:grayscale-0'
+                                      }`}
+                                  />
+                                ) : (
+                                  <div className="w-full h-full bg-gradient-to-br from-gold/20 to-gray-800 flex items-center justify-center">
+                                    <User className="h-16 w-16 text-gold" />
+                                  </div>
+                                )}
+                              </div>
+                              <div className={`p-3 text-center ${isSelected ? 'bg-gold/20' : 'bg-gray-900/90'}`}>
+                                <p className={`font-semibold ${isSelected ? 'text-white' : 'text-gray-300'}`}>
+                                  {barber.name}
+                                </p>
                               </div>
                               {isSelected && (
-                                <div className="absolute top-2 right-2">
-                                  <CheckCircle2 className="h-5 w-5 text-gold" />
+                                <div className="absolute top-3 right-3 bg-gold rounded-full p-1">
+                                  <CheckCircle2 className="h-5 w-5 text-black" />
                                 </div>
                               )}
                             </div>
