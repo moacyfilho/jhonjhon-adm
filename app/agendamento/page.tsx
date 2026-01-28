@@ -588,34 +588,8 @@ export default function AgendamentoPage() {
                     </div>
 
                     <div className="space-y-4">
-                      <Label className="text-gray-300 font-medium text-lg">Escolha seu Profissional (opcional)</Label>
+                      <Label className="text-gray-300 font-medium text-lg">Escolha seu Profissional *</Label>
                       <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-6">
-                        {/* Opção "Qualquer profissional" */}
-                        <div
-                          className={`
-                            relative rounded-xl border-2 cursor-pointer transition-all overflow-hidden group
-                            ${!formData.barberId
-                              ? 'border-gold shadow-lg shadow-gold/20'
-                              : 'border-gray-700 hover:border-gold/50'}
-                          `}
-                          onClick={() => setFormData({ ...formData, barberId: '' })}
-                        >
-                          <div className="aspect-square bg-gradient-to-br from-gold/20 to-gray-800 flex items-center justify-center">
-                            <User className="h-16 w-16 text-gold" />
-                          </div>
-                          <div className={`p-3 text-center ${!formData.barberId ? 'bg-gold/20' : 'bg-gray-900/90'}`}>
-                            <p className={`font-semibold ${!formData.barberId ? 'text-white' : 'text-gray-300'}`}>
-                              Qualquer Profissional
-                            </p>
-                            <p className="text-xs text-gray-400 mt-1">Melhor disponibilidade</p>
-                          </div>
-                          {!formData.barberId && (
-                            <div className="absolute top-3 right-3 bg-gold rounded-full p-1">
-                              <CheckCircle2 className="h-5 w-5 text-black" />
-                            </div>
-                          )}
-                        </div>
-
                         {/* Cards dos barbeiros */}
                         {barbers.map((barber) => {
                           const photo = getBarberPhoto(barber.name);
