@@ -174,6 +174,7 @@ model Service {
   updatedAt           DateTime             @updatedAt
   appointmentServices AppointmentService[]
   onlineBookings      OnlineBooking[]
+  onlineBookingServices OnlineBookingService[]
 }
 
 model Appointment {
@@ -351,7 +352,7 @@ model OnlineBooking {
   clientName      String              // Nome informado pelo cliente
   clientPhone     String              // Telefone informado
   clientEmail     String?
-  serviceId       String
+  serviceId       String?             // Tornado opcional para suportar múltiplos serviços
   barberId        String?             // Opcional: cliente pode escolher
   scheduledDate   DateTime            // Data/hora do agendamento
   status          OnlineBookingStatus @default(PENDING)
@@ -360,8 +361,19 @@ model OnlineBooking {
   createdAt       DateTime            @default(now())
   updatedAt       DateTime            @updatedAt
   client          Client?             @relation(fields: [clientId], references: [id])
-  service         Service             @relation(fields: [serviceId], references: [id])
+  service         Service?            @relation(fields: [serviceId], references: [id]) // tornado opcional
+  services        OnlineBookingService[] // Relação N:N através de tabela associativa
   barber          Barber?             @relation(fields: [barberId], references: [id])
+}
+
+model OnlineBookingService {
+  id              String        @id @default(cuid())
+  onlineBookingId String
+  serviceId       String
+  price           Float         // Preço do serviço no momento do agendamento
+  createdAt       DateTime      @default(now())
+  onlineBooking   OnlineBooking @relation(fields: [onlineBookingId], references: [id], onDelete: Cascade)
+  service         Service       @relation(fields: [serviceId], references: [id])
 }
 
 // Configurações de disponibilidade para agendamento online

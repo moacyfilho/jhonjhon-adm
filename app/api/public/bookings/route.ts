@@ -11,29 +11,38 @@ export async function POST(request: NextRequest) {
       clientName,
       clientPhone,
       clientEmail,
-      serviceId,
+      serviceIds, // Agora aceita array de IDs
+      serviceId, // Mantido para compatibilidade (se vier apenas um)
       barberId,
       scheduledDate,
       isSubscriber: clientDeclaredSubscriber, // Cliente pode declarar se é assinante
       observations,
     } = body;
 
+    // Normaliza para array de IDs
+    const targetServiceIds: string[] = Array.isArray(serviceIds)
+      ? serviceIds
+      : (serviceId ? [serviceId] : []);
+
     // Validações
-    if (!clientName || !clientPhone || !serviceId || !scheduledDate) {
+    if (!clientName || !clientPhone || targetServiceIds.length === 0 || !scheduledDate) {
       return NextResponse.json(
-        { error: 'Campos obrigatórios: clientName, clientPhone, serviceId, scheduledDate' },
+        { error: 'Campos obrigatórios: clientName, clientPhone, serviceIds (pelo menos um), scheduledDate' },
         { status: 400 }
       );
     }
 
-    // Verificar se o serviço existe e está ativo
-    const service = await prisma.service.findUnique({
-      where: { id: serviceId },
+    // Verificar se os serviços existem e estão ativos
+    const services = await prisma.service.findMany({
+      where: {
+        id: { in: targetServiceIds },
+        isActive: true,
+      },
     });
 
-    if (!service || !service.isActive) {
+    if (services.length !== targetServiceIds.length) {
       return NextResponse.json(
-        { error: 'Serviço não encontrado ou inativo' },
+        { error: 'Um ou mais serviços não encontrados ou inativos' },
         { status: 404 }
       );
     }
@@ -56,15 +65,15 @@ export async function POST(request: NextRequest) {
     // Extrai componentes da data/hora da string (formato: "2026-01-06T18:00:00")
     const [datePart, timePart] = scheduledDate.split('T');
     const [hourStr, minuteStr] = timePart.split(':');
-    
+
     const requestedHour = parseInt(hourStr);
     const requestedMinute = parseInt(minuteStr);
-    
+
     // Cria Date considerando horário de Manaus (GMT-4)
     // Exemplo: Cliente seleciona 18:00 em Manaus → será salvo como 22:00 UTC
     const requestedDateTime = createManausDate(datePart, requestedHour, requestedMinute);
     const requestedTimeSlot = `${String(requestedHour).padStart(2, '0')}:${String(requestedMinute).padStart(2, '0')}`;
-    
+
     console.log(`[bookings] Data/hora recebida: ${scheduledDate}`);
     console.log(`[bookings] Data/hora criada (Manaus → UTC): ${requestedDateTime.toISOString()}`);
     console.log(`[bookings] Horário solicitado (local Manaus): ${requestedTimeSlot}`);
@@ -82,7 +91,7 @@ export async function POST(request: NextRequest) {
 
     if (conflictingOnlineBooking) {
       return NextResponse.json(
-        { 
+        {
           error: 'Horário já ocupado por outro agendamento online',
           slot: requestedTimeSlot,
         },
@@ -103,7 +112,7 @@ export async function POST(request: NextRequest) {
 
     if (conflictingAppointment) {
       return NextResponse.json(
-        { 
+        {
           error: 'Horário já ocupado por um atendimento',
           slot: requestedTimeSlot,
         },
@@ -150,15 +159,27 @@ export async function POST(request: NextRequest) {
         clientName,
         clientPhone,
         clientEmail,
-        serviceId,
+        // Mantemos o serviceId para compatibilidade, usando o primeiro serviço
+        serviceId: services[0].id,
         barberId: barberId || null,
         scheduledDate: requestedDateTime, // Usa o Date já criado sem conversão
         isSubscriber,
         observations,
         status: 'PENDING',
+        // Cria os registros na tabela associativa
+        services: {
+          create: services.map(service => ({
+            serviceId: service.id,
+            price: service.price
+          }))
+        }
       },
       include: {
-        service: true,
+        services: {
+          include: {
+            service: true
+          }
+        },
         barber: true,
         client: true,
       },
@@ -166,12 +187,16 @@ export async function POST(request: NextRequest) {
 
     // Enviar notificações WhatsApp (não aguardar para não bloquear a resposta)
     console.log(`\ud83d\udce7 Enviando notificações WhatsApp para agendamento ${booking.id}...`);
-    
+
+    // Formata nomes dos serviços para notificação
+    const serviceNames = services.map(s => s.name).join(' + ');
+    const totalPrice = services.reduce((sum, s) => sum + s.price, 0);
+
     sendBookingNotifications({
       clientName: booking.clientName,
       clientPhone: booking.clientPhone,
-      serviceName: booking.service.name,
-      servicePrice: booking.service.price,
+      serviceName: serviceNames, // Envia nomes combinados
+      servicePrice: totalPrice, // Envia preço total
       barberName: booking.barber?.name,
       scheduledDate: booking.scheduledDate,
       bookingId: booking.id,
@@ -181,7 +206,7 @@ export async function POST(request: NextRequest) {
       } else {
         console.error(`\u274c Falha ao enviar notificação para o cliente: ${result.clientNotification.error}`);
       }
-      
+
       if (result.barbershopNotification.success) {
         console.log(`\u2705 Notificação enviada para a barbearia`);
       } else {

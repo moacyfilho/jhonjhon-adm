@@ -45,11 +45,11 @@ interface TimeSlot {
 // Mapeamento de fotos dos barbeiros
 const getBarberPhoto = (barberName: string): string | null => {
   const name = barberName.toLowerCase().trim();
-  
+
   if (name.includes('jhon')) return '/barbers/jhonjhon.jpeg';
   if (name.includes('maikon') || name.includes('maykon')) return '/barbers/maykon.jpeg';
   if (name.includes('eduardo')) return '/barbers/eduardo.jpeg';
-  
+
   return null;
 };
 
@@ -68,7 +68,7 @@ export default function AgendamentoPage() {
     clientPhone: '',
     clientEmail: '',
     isSubscriber: false,
-    serviceId: '',
+    serviceIds: [] as string[], // Modificado para array de IDs
     barberId: '',
     scheduledDate: '',
     scheduledTime: '',
@@ -112,12 +112,12 @@ export default function AgendamentoPage() {
   const handleDateChange = (value: string) => {
     // Remove tudo que não é número
     let numbers = value.replace(/\D/g, '');
-    
+
     // Limita a 8 dígitos (ddmmaaaa)
     if (numbers.length > 8) {
       numbers = numbers.slice(0, 8);
     }
-    
+
     // Formata conforme o usuário digita
     let formatted = '';
     if (numbers.length > 0) {
@@ -129,19 +129,19 @@ export default function AgendamentoPage() {
         formatted += '/' + numbers.slice(4, 8); // aaaa
       }
     }
-    
+
     setDisplayDate(formatted);
-    
+
     // Se a data está completa (8 dígitos), valida e converte para ISO
     if (numbers.length === 8) {
       const day = parseInt(numbers.slice(0, 2));
       const month = parseInt(numbers.slice(2, 4));
       const year = parseInt(numbers.slice(4, 8));
-      
+
       // Validação básica
       if (day >= 1 && day <= 31 && month >= 1 && month <= 12 && year >= 2000) {
         const isoDate = `${year}-${month.toString().padStart(2, '0')}-${day.toString().padStart(2, '0')}`;
-        
+
         // Valida se a data é válida
         const testDate = new Date(isoDate);
         if (!isNaN(testDate.getTime())) {
@@ -222,7 +222,7 @@ export default function AgendamentoPage() {
       const data = await response.json();
       console.log('Horários disponíveis:', data);
       setAvailableSlots(data.slots || []);
-      
+
       // Limpar horário selecionado se não estiver mais disponível
       if (formData.scheduledTime) {
         const selectedSlot = (data.slots || []).find((slot: TimeSlot) => slot.time === formData.scheduledTime);
@@ -239,14 +239,27 @@ export default function AgendamentoPage() {
     }
   };
 
+  const handleServiceToggle = (serviceId: string) => {
+    const currentIds = [...formData.serviceIds];
+    const index = currentIds.indexOf(serviceId);
+
+    if (index >= 0) {
+      currentIds.splice(index, 1);
+    } else {
+      currentIds.push(serviceId);
+    }
+
+    setFormData({ ...formData, serviceIds: currentIds });
+  };
+
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     setSubmitting(true);
 
     try {
       // Validações
-      if (!formData.clientName || !formData.clientPhone || !formData.serviceId || !formData.scheduledDate || !formData.scheduledTime) {
-        toast.error('Preencha todos os campos obrigatórios');
+      if (!formData.clientName || !formData.clientPhone || formData.serviceIds.length === 0 || !formData.scheduledDate || !formData.scheduledTime) {
+        toast.error('Preencha todos os campos obrigatórios (incluindo pelo menos um serviço)');
         setSubmitting(false);
         return;
       }
@@ -271,7 +284,7 @@ export default function AgendamentoPage() {
           clientPhone: formData.clientPhone,
           clientEmail: formData.clientEmail,
           isSubscriber: formData.isSubscriber,
-          serviceId: formData.serviceId,
+          serviceIds: formData.serviceIds, // Envia lista de IDs
           barberId: formData.barberId || null,
           scheduledDate: scheduledDateString,
           observations: formData.observations,
@@ -280,7 +293,7 @@ export default function AgendamentoPage() {
 
       if (!response.ok) {
         const error = await response.json();
-        
+
         // Se for erro 409 (conflito de horário), recarregar horários disponíveis
         if (response.status === 409) {
           toast.error('Ops! Este horário acabou de ser reservado por outra pessoa. Por favor, escolha outro horário.');
@@ -293,20 +306,20 @@ export default function AgendamentoPage() {
           setSubmitting(false);
           return;
         }
-        
+
         throw new Error(error.error || 'Erro ao criar agendamento');
       }
 
       setSuccess(true);
       toast.success('Agendamento realizado com sucesso!');
-      
+
       // Reset completo do formulário
       setFormData({
         clientName: '',
         clientPhone: '',
         clientEmail: '',
         isSubscriber: false,
-        serviceId: '',
+        serviceIds: [],
         barberId: '',
         scheduledDate: '',
         scheduledTime: '',
@@ -323,7 +336,13 @@ export default function AgendamentoPage() {
     }
   };
 
-  const selectedService = services.find(s => s.id === formData.serviceId);
+  const selectedServicesTotal = services
+    .filter(s => formData.serviceIds.includes(s.id))
+    .reduce((sum, s) => sum + s.price, 0);
+
+  const selectedServicesDuration = services
+    .filter(s => formData.serviceIds.includes(s.id))
+    .reduce((sum, s) => sum + s.duration, 0);
 
   if (success) {
     return (
@@ -350,7 +369,7 @@ export default function AgendamentoPage() {
                   clientPhone: '',
                   clientEmail: '',
                   isSubscriber: false,
-                  serviceId: '',
+                  serviceIds: [],
                   barberId: '',
                   scheduledDate: '',
                   scheduledTime: '',
@@ -398,7 +417,7 @@ export default function AgendamentoPage() {
               Agende seu Horário
             </h1>
             <p className="text-lg md:text-xl text-gray-300 max-w-2xl mx-auto">
-              Escolha o serviço, profissional e horário ideal para você
+              Escolha os serviços, profissional e horário ideal para você
             </p>
           </div>
 
@@ -422,11 +441,11 @@ export default function AgendamentoPage() {
                 <Alert>
                   <AlertCircle className="h-4 w-4" />
                   <AlertDescription>
-                    {services.length === 0 && barbers.length === 0 
+                    {services.length === 0 && barbers.length === 0
                       ? 'No momento não há serviços ou profissionais disponíveis para agendamento online. Por favor, entre em contato conosco diretamente.'
                       : services.length === 0
-                      ? 'No momento não há serviços disponíveis para agendamento online.'
-                      : 'No momento não há profissionais disponíveis para agendamento online.'}
+                        ? 'No momento não há serviços disponíveis para agendamento online.'
+                        : 'No momento não há profissionais disponíveis para agendamento online.'}
                   </AlertDescription>
                 </Alert>
               ) : (
@@ -437,7 +456,7 @@ export default function AgendamentoPage() {
                       <User className="h-6 w-6" />
                       Suas Informações
                     </h3>
-                    
+
                     <div className="grid gap-6 md:grid-cols-2">
                       <div className="space-y-2">
                         <Label htmlFor="clientName" className="text-gray-300 font-medium">
@@ -488,14 +507,14 @@ export default function AgendamentoPage() {
                           <Checkbox
                             id="isSubscriber"
                             checked={formData.isSubscriber}
-                            onCheckedChange={(checked) => 
+                            onCheckedChange={(checked) =>
                               setFormData({ ...formData, isSubscriber: checked === true })
                             }
                             className="mt-1 border-gold/40 data-[state=checked]:bg-gold data-[state=checked]:border-gold h-5 w-5"
                           />
                           <div className="flex-1">
-                            <Label 
-                              htmlFor="isSubscriber" 
+                            <Label
+                              htmlFor="isSubscriber"
                               className="text-base font-medium text-gray-200 cursor-pointer block mb-1"
                             >
                               ✨ Sou assinante da Jhon Jhon Barbearia
@@ -509,33 +528,63 @@ export default function AgendamentoPage() {
                     </div>
                   </div>
 
-                  {/* Serviço */}
+                  {/* Serviços */}
                   <div className="space-y-6 bg-gradient-to-br from-gray-900/50 to-black/50 p-6 rounded-lg border border-gold/10">
                     <h3 className="text-xl font-semibold text-gold flex items-center gap-3">
                       <Scissors className="h-6 w-6" />
-                      Serviço Desejado
+                      Serviços Desejados
                     </h3>
-                    
-                    <div className="space-y-2">
-                      <Label htmlFor="serviceId" className="text-gray-300 font-medium">Escolha o Serviço *</Label>
-                      <Select
-                        value={formData.serviceId}
-                        onValueChange={(value) => setFormData({ ...formData, serviceId: value })}
-                      >
-                        <SelectTrigger className="bg-gray-900/70 border-gold/30 focus:border-gold text-white h-12">
-                          <SelectValue placeholder="Selecione um serviço" />
-                        </SelectTrigger>
-                        <SelectContent className="bg-gray-900 border-gold/30">
-                          {services.map((service) => (
-                            <SelectItem key={service.id} value={service.id} className="text-white hover:bg-gold/20">
-                              {service.name} - R$ {service.price.toFixed(2)} ({service.duration}min)
-                            </SelectItem>
-                          ))}
-                        </SelectContent>
-                      </Select>
-                      {selectedService && selectedService.description && (
-                        <p className="text-sm text-gray-400 mt-2 p-3 bg-gold/5 rounded border border-gold/10">{selectedService.description}</p>
-                      )}
+
+                    <div className="space-y-4">
+                      <Label className="text-gray-300 font-medium">Escolha os Serviços *</Label>
+                      <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
+                        {services.map((service) => (
+                          <div
+                            key={service.id}
+                            className={`
+                              flex items-start space-x-3 p-4 rounded-lg border cursor-pointer transition-all
+                              ${formData.serviceIds.includes(service.id)
+                                ? 'bg-gold/20 border-gold/60'
+                                : 'bg-gray-900/70 border-gold/20 hover:bg-gold/10'}
+                            `}
+                            onClick={() => handleServiceToggle(service.id)}
+                          >
+                            <Checkbox
+                              checked={formData.serviceIds.includes(service.id)}
+                              onCheckedChange={() => handleServiceToggle(service.id)}
+                              className="mt-1 border-gold/50 data-[state=checked]:bg-gold data-[state=checked]:border-gold"
+                            />
+                            <div className="flex-1">
+                              <div className="flex justify-between items-center mb-1">
+                                <span className={`font-medium ${formData.serviceIds.includes(service.id) ? 'text-white' : 'text-gray-300'}`}>
+                                  {service.name}
+                                </span>
+                                <span className="text-gold font-bold">R$ {service.price.toFixed(2)}</span>
+                              </div>
+                              <p className="text-sm text-gray-500">{service.duration} min</p>
+                              {service.description && (
+                                <p className="text-xs text-gray-400 mt-1">{service.description}</p>
+                              )}
+                            </div>
+                          </div>
+                        ))}
+                      </div>
+
+                      {/* Resumo da seleção */}
+                      <div className="mt-4 p-4 bg-gray-900 rounded-lg border border-gold/20 flex justify-between items-center">
+                        <div>
+                          <p className="text-sm text-gray-400">Selecionados:</p>
+                          <p className="text-white font-medium">{formData.serviceIds.length} serviço(s)</p>
+                        </div>
+                        <div className="text-right">
+                          <p className="text-sm text-gray-400">Duração estimada:</p>
+                          <p className="text-white font-medium">{selectedServicesDuration} min</p>
+                        </div>
+                        <div className="text-right">
+                          <p className="text-sm text-gray-400">Total estimado:</p>
+                          <p className="text-gold font-bold text-xl">R$ {selectedServicesTotal.toFixed(2)}</p>
+                        </div>
+                      </div>
                     </div>
 
                     <div className="space-y-2">
@@ -580,7 +629,7 @@ export default function AgendamentoPage() {
                       <CalendarIcon className="h-6 w-6" />
                       Data e Horário
                     </h3>
-                    
+
                     <div className="space-y-4">
                       <div className="space-y-2">
                         <Label htmlFor="scheduledDate">Escolha a Data *</Label>
@@ -659,8 +708,8 @@ export default function AgendamentoPage() {
                                     formData.scheduledTime === slot.time
                                       ? 'bg-gold text-white hover:bg-gold/90'
                                       : !slot.available
-                                      ? 'bg-red-900/30 border-red-500/50 text-red-400 hover:bg-red-900/30 cursor-not-allowed opacity-70'
-                                      : 'bg-gray-900/50 border-gold/20 hover:bg-gold/20'
+                                        ? 'bg-red-900/30 border-red-500/50 text-red-400 hover:bg-red-900/30 cursor-not-allowed opacity-70'
+                                        : 'bg-gray-900/50 border-gold/20 hover:bg-gold/20'
                                   }
                                   onClick={() => slot.available && setFormData({ ...formData, scheduledTime: slot.time })}
                                 >
