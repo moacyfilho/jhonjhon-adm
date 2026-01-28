@@ -12,7 +12,7 @@ async function main() {
 
   // 1. Criar usuários
   console.log('Creating users...');
-  
+
   // Usuário de teste (não mencionar ao usuário)
   const testUser = await prisma.user.upsert({
     where: { email: 'john@doe.com' },
@@ -27,10 +27,10 @@ async function main() {
 
   // Usuário admin visível
   const adminUser = await prisma.user.upsert({
-    where: { email: 'admin@jhonjhon.com' },
+    where: { email: 'Admin@jhonjhon.com' },
     update: {},
     create: {
-      email: 'admin@jhonjhon.com',
+      email: 'Admin@jhonjhon.com',
       name: 'Administrador',
       password: hashedAdminPassword,
       role: 'ADMIN',
@@ -53,7 +53,7 @@ async function main() {
 
   // 2. Criar barbeiros
   console.log('Creating barbers...');
-  
+
   const barber1 = await prisma.barber.create({
     data: {
       name: 'Carlos Silva',
@@ -88,7 +88,7 @@ async function main() {
 
   // 3. Criar serviços
   console.log('Creating services...');
-  
+
   const service1 = await prisma.service.create({
     data: {
       name: 'Corte Tradicional',
@@ -153,7 +153,7 @@ async function main() {
 
   // 4. Criar clientes
   console.log('Creating clients...');
-  
+
   const client1 = await prisma.client.create({
     data: {
       name: 'João da Silva',
@@ -196,7 +196,7 @@ async function main() {
 
   // 5. Criar alguns atendimentos de exemplo (últimos 30 dias)
   console.log('Creating sample appointments...');
-  
+
   const now = new Date();
   const dates = [
     new Date(now.getTime() - 1 * 24 * 60 * 60 * 1000), // 1 dia atrás
