@@ -113,10 +113,13 @@ export async function DELETE(
     });
 
     return NextResponse.json({ message: "Barbeiro excluído com sucesso" });
-  } catch (error) {
+  } catch (error: any) {
     console.error("Error deleting barber:", error);
     return NextResponse.json(
-      { error: "Erro ao excluir barbeiro" },
+      {
+        error: "Erro ao excluir barbeiro",
+        details: error?.message || "Unknown error"
+      },
       { status: 500 }
     );
   }
