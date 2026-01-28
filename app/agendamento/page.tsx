@@ -1,17 +1,10 @@
 'use client';
 
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useCallback } from 'react';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
-import {
-  Select,
-  SelectContent,
-  SelectItem,
-  SelectTrigger,
-  SelectValue,
-} from '@/components/ui/select';
 import { Textarea } from '@/components/ui/textarea';
 import { Checkbox } from '@/components/ui/checkbox';
 import { Calendar as CalendarIcon, Clock, User, Phone, Mail, Scissors, CheckCircle2, Loader2, AlertCircle } from 'lucide-react';
@@ -65,6 +58,7 @@ const getBarberPhoto = (barberName: string): string | null => {
 
 
 export default function AgendamentoPage() {
+  const [mounted, setMounted] = useState(false);
   const [services, setServices] = useState<Service[]>([]);
   const [barbers, setBarbers] = useState<Barber[]>([]);
   const [availableSlots, setAvailableSlots] = useState<TimeSlot[]>([]);
@@ -99,14 +93,21 @@ export default function AgendamentoPage() {
     fetchBarbers();
     fetchPlans();
     calculateMaxDate();
+    setMounted(true);
   }, []);
 
   // Auto-seleciona o primeiro barbeiro quando a lista carregar
-  useEffect(() => {
-    if (barbers.length > 0 && !formData.barberId) {
-      setFormData(prev => ({ ...prev, barberId: barbers[0].id }));
-    }
-  }, [barbers, formData.barberId]);
+  // Auto-seleciona o primeiro barbeiro quando a lista carregar
+  // useEffect(() => {
+  //   if (barbers.length > 0) {
+  //     setFormData(prev => {
+  //       if (!prev.barberId) {
+  //         return { ...prev, barberId: barbers[0].id };
+  //       }
+  //       return prev;
+  //     });
+  //   }
+  // }, [barbers]);
 
   const calculateMaxDate = () => {
     // Padrão: 30 dias no futuro (será atualizado pela API se houver configurações)
@@ -114,21 +115,6 @@ export default function AgendamentoPage() {
     const maxDateCalc = new Date(today);
     maxDateCalc.setDate(maxDateCalc.getDate() + 30);
     setMaxDate(maxDateCalc.toISOString().split('T')[0]);
-  };
-
-  // Converter data do formato ISO (aaaa-mm-dd) para brasileiro (dd/mm/aaaa)
-  const formatDateBR = (isoDate: string): string => {
-    if (!isoDate) return '';
-    const [year, month, day] = isoDate.split('-');
-    return `${day}/${month}/${year}`;
-  };
-
-  // Converter data do formato brasileiro (dd/mm/aaaa) para ISO (aaaa-mm-dd)
-  const parseDateBR = (brDate: string): string => {
-    if (!brDate || brDate.length < 10) return '';
-    const [day, month, year] = brDate.split('/');
-    if (!day || !month || !year || year.length !== 4) return '';
-    return `${year}-${month.padStart(2, '0')}-${day.padStart(2, '0')}`;
   };
 
   // Formatar data enquanto o usuário digita
@@ -190,21 +176,11 @@ export default function AgendamentoPage() {
     }
   };
 
-  // Buscar horários disponíveis quando a data for selecionada
-  useEffect(() => {
-    if (formData.scheduledDate) {
-      fetchAvailableSlots(formData.scheduledDate, formData.barberId);
-    } else {
-      setAvailableSlots([]);
-    }
-  }, [formData.scheduledDate, formData.barberId]);
-
   const fetchServices = async () => {
     try {
       const response = await fetch('/api/public/services');
       if (!response.ok) throw new Error('Erro ao carregar serviços');
       const data = await response.json();
-      console.log('Serviços carregados:', data);
       setServices(data);
     } catch (error) {
       console.error(error);
@@ -218,7 +194,6 @@ export default function AgendamentoPage() {
       const response = await fetch('/api/public/barbers');
       if (!response.ok) throw new Error('Erro ao carregar barbeiros');
       const data = await response.json();
-      console.log('Barbeiros carregados:', data);
       setBarbers(data);
     } catch (error) {
       console.error(error);
@@ -240,7 +215,7 @@ export default function AgendamentoPage() {
     }
   };
 
-  const fetchAvailableSlots = async (date: string, barberId?: string) => {
+  const fetchAvailableSlots = useCallback(async (date: string, barberId?: string) => {
     try {
       setLoadingSlots(true);
       const params = new URLSearchParams({ date });
@@ -255,16 +230,20 @@ export default function AgendamentoPage() {
       }
 
       const data = await response.json();
-      console.log('Horários disponíveis:', data);
       setAvailableSlots(data.slots || []);
 
       // Limpar horário selecionado se não estiver mais disponível
-      if (formData.scheduledTime) {
-        const selectedSlot = (data.slots || []).find((slot: TimeSlot) => slot.time === formData.scheduledTime);
-        if (!selectedSlot || !selectedSlot.available) {
-          setFormData(prev => ({ ...prev, scheduledTime: '' }));
+      // (Verifica no estado atual, não na dependencia do useCallback para evitar loops)
+      setFormData(prev => {
+        if (prev.scheduledTime) {
+          const selectedSlot = (data.slots || []).find((slot: TimeSlot) => slot.time === prev.scheduledTime);
+          if (!selectedSlot || !selectedSlot.available) {
+            return { ...prev, scheduledTime: '' };
+          }
         }
-      }
+        return prev;
+      });
+
     } catch (error: any) {
       console.error(error);
       toast.error(error.message);
@@ -272,7 +251,16 @@ export default function AgendamentoPage() {
     } finally {
       setLoadingSlots(false);
     }
-  };
+  }, []); // Dependências vazias, pois usamos setStates funcionais
+
+  // Buscar horários disponíveis quando a data for selecionada
+  useEffect(() => {
+    if (formData.scheduledDate) {
+      fetchAvailableSlots(formData.scheduledDate, formData.barberId);
+    } else {
+      setAvailableSlots([]);
+    }
+  }, [formData.scheduledDate, formData.barberId, fetchAvailableSlots]);
 
   const handleServiceToggle = (serviceId: string) => {
     const currentIds = [...formData.serviceIds];
@@ -308,7 +296,6 @@ export default function AgendamentoPage() {
       }
 
       // Combinar data e hora no formato ISO sem conversão de timezone
-      // Mantém o horário local (ex: 09:00 continua sendo 09:00, não converte para UTC)
       const scheduledDateString = `${formData.scheduledDate}T${formData.scheduledTime}:00`;
 
       const response = await fetch('/api/public/bookings', {
@@ -319,7 +306,7 @@ export default function AgendamentoPage() {
           clientPhone: formData.clientPhone,
           clientEmail: formData.clientEmail,
           isSubscriber: formData.isSubscriber,
-          serviceIds: formData.serviceIds, // Envia lista de IDs
+          serviceIds: formData.serviceIds,
           barberId: formData.barberId || null,
           scheduledDate: scheduledDateString,
           observations: formData.observations,
@@ -332,11 +319,9 @@ export default function AgendamentoPage() {
         // Se for erro 409 (conflito de horário), recarregar horários disponíveis
         if (response.status === 409) {
           toast.error('Ops! Este horário acabou de ser reservado por outra pessoa. Por favor, escolha outro horário.');
-          // Recarregar horários disponíveis
           if (formData.scheduledDate) {
             await fetchAvailableSlots(formData.scheduledDate, formData.barberId);
           }
-          // Limpar horário selecionado
           setFormData({ ...formData, scheduledTime: '' });
           setSubmitting(false);
           return;
@@ -360,9 +345,9 @@ export default function AgendamentoPage() {
         scheduledTime: '',
         observations: '',
       });
-      setDisplayDate(''); // Limpar campo de data brasileiro
-      setSelectedDate(undefined); // Limpar data selecionada no calendário
-      setAvailableSlots([]); // Limpar lista de horários disponíveis
+      setDisplayDate('');
+      setSelectedDate(undefined);
+      setAvailableSlots([]);
     } catch (error: any) {
       console.error(error);
       toast.error(error.message);
@@ -424,6 +409,9 @@ export default function AgendamentoPage() {
     .filter(s => formData.serviceIds.includes(s.id))
     .reduce((sum, s) => sum + s.duration, 0);
 
+  // Só renderiza o conteúdo principal após a montagem no cliente para evitar erros de hidratação
+  if (!mounted) return null;
+
   if (success) {
     return (
       <div className="min-h-screen bg-gradient-to-br from-gray-900 via-black to-gray-900 flex items-center justify-center p-4">
@@ -444,7 +432,6 @@ export default function AgendamentoPage() {
             </div>
             <Button
               onClick={() => {
-                // Reset completo do formulário
                 setSuccess(false);
                 setFormData({
                   clientName: '',
