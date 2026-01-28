@@ -1,13 +1,15 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { prisma } from '@/lib/db';
-import { 
-  getManausNow, 
-  toManausTime, 
-  getManausStartOfDay, 
+import {
+  getManausNow,
+  toManausTime,
+  getManausStartOfDay,
   getManausEndOfDay,
   isSameDayManaus,
-  createManausDate 
+  createManausDate
 } from '@/lib/timezone';
+
+export const dynamic = 'force-dynamic';
 
 const dayMapping: { [key: string]: string } = {
   '0': 'sunday',
@@ -167,12 +169,12 @@ export async function GET(request: NextRequest) {
 
         const [hours, minutes] = slot.split(':').map(Number);
         const slotTime = createManausDate(dateStr, hours, minutes);
-        
+
         console.log(`[available-slots] Verificando slot ${slot}:`);
         console.log(`  - Horário atual (Manaus): ${nowManaus.toISOString()}`);
         console.log(`  - Horário do slot: ${slotTime.toISOString()}`);
         console.log(`  - Tempo mínimo necessário: ${minTime.toISOString()}`);
-        
+
         if (slotTime < minTime) {
           isAvailable = false;
           reason = 'past';
