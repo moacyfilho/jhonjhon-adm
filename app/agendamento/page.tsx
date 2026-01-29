@@ -451,12 +451,21 @@ export default function AgendamentoPage() {
             </div>
 
             {paymentLink && mode === 'subscription' && (
-              <Button
-                onClick={() => window.open(paymentLink, '_blank')}
-                className="w-full bg-green-600 hover:bg-green-700 text-white font-bold h-12 text-lg mb-4"
-              >
-                Finalizar Pagamento
-              </Button>
+              <div className="w-full mb-6">
+                <p className="text-sm text-gold mb-2 animate-pulse">👇 Clique abaixo para pagar 👇</p>
+                <Button
+                  onClick={() => {
+                    toast.info('Abrindo pagamento...');
+                    window.location.href = paymentLink;
+                  }}
+                  className="w-full bg-green-600 hover:bg-green-700 text-white font-bold h-14 text-xl shadow-lg shadow-green-900/50 flex items-center justify-center gap-2 animate-bounce-slow"
+                >
+                  FINALIZAR PAGAMENTO <CheckCircle2 className="w-6 h-6" />
+                </Button>
+                <p className="text-xs text-muted-foreground mt-2">
+                  Se não abrir, acesse: <a href={paymentLink} target="_blank" className="text-blue-400 underline">{paymentLink}</a>
+                </p>
+              </div>
             )}
             <Button
               onClick={() => {
