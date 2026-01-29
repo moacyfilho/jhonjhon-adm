@@ -214,7 +214,7 @@ export async function GET(request: NextRequest) {
     } catch (error) {
         console.error('Error serving subscription report:', error);
         return NextResponse.json(
-            { error: 'Internal Server Error' },
+            { error: 'Internal Server Error', details: error instanceof Error ? error.message : String(error) },
             { status: 500 }
         );
     }

@@ -274,11 +274,14 @@ export async function POST(request: NextRequest) {
       if (isSubscriptionAppointment && activeSubscription) {
         if (serviceIds && serviceIds.length > 0) {
           await tx.subscriptionUsage.createMany({
-            data: serviceIds.map((serviceId: string) => ({
-              subscriptionId: activeSubscription.id,
-              serviceId: serviceId,
-              date: appointmentDate,
-            })),
+            data: serviceIds.map((serviceId: string) => {
+              const service = services.find(s => s.id === serviceId);
+              return {
+                subscriptionId: activeSubscription.id,
+                serviceDetails: service ? service.name : `Service ID: ${serviceId}`,
+                usedDate: appointmentDate,
+              };
+            }),
           });
         }
       }
