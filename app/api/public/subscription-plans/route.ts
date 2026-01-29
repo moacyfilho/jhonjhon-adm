@@ -1,5 +1,6 @@
 import { NextResponse } from 'next/server';
 import { prisma } from '@/lib/db';
+import { getPaymentLink } from '@/lib/plan-links';
 
 export const dynamic = 'force-dynamic';
 
@@ -22,7 +23,12 @@ export async function GET() {
             },
         });
 
-        return NextResponse.json(plans);
+        const plansWithLinks = plans.map(plan => ({
+            ...plan,
+            paymentLink: getPaymentLink(plan.id)
+        }));
+
+        return NextResponse.json(plansWithLinks);
     } catch (error) {
         console.error('Erro ao buscar planos:', error);
         return NextResponse.json(

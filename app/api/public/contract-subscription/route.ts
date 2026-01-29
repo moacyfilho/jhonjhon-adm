@@ -1,5 +1,6 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { prisma } from '@/lib/db';
+import { getPaymentLink } from '@/lib/plan-links';
 
 export const dynamic = 'force-dynamic';
 
@@ -91,6 +92,7 @@ export async function POST(request: NextRequest) {
                 startDate,
                 endDate,
             },
+            paymentLink: getPaymentLink(plan.id),
         }, { status: 201 });
     } catch (error) {
         console.error('Erro ao contratar plano:', error);
