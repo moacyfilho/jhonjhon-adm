@@ -43,7 +43,12 @@ import {
   Clock,
   XCircle,
   Calendar,
+  Package,
+  User,
+  ChevronsUpDown,
+  Check,
 } from 'lucide-react';
+import Image from 'next/image';
 import { toast } from 'sonner';
 import {
   Table,
@@ -58,6 +63,13 @@ import {
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { format, subMonths, addMonths, startOfMonth } from 'date-fns';
 import { ptBR } from 'date-fns/locale';
+
+const getBarberPhoto = (name: string) => {
+  const normalized = name.toLowerCase();
+  // Placeholder logic - replace with actual image paths if available
+  if (normalized.includes('moacy')) return null;
+  return null;
+};
 
 interface Client {
   id: string;
@@ -86,6 +98,17 @@ interface Subscription {
   }>;
 }
 
+interface SubscriptionPlan {
+  id: string;
+  name: string;
+  description?: string;
+  price: number;
+  durationDays: number;
+  servicesIncluded?: string;
+  usageLimit?: number;
+  isActive: boolean;
+}
+
 interface PaymentLink {
   id: string;
   linkUrl: string;
@@ -97,8 +120,10 @@ interface SubscriptionReport {
   metrics: {
     received: number;
     pending: number;
+    total: number;
     totalHours: number;
     hourlyRate: number;
+    frequency: number;
   };
   table: {
     serviceNames: string[];
@@ -111,6 +136,16 @@ interface SubscriptionReport {
       house: number;
     }>;
   };
+  subscribers: Array<{
+    id: string;
+    clientName: string;
+    clientPhone: string;
+    amount: number;
+    billingDay: number;
+    isPaid: boolean;
+    usageCount: number;
+    usageMinutes: number;
+  }>;
 }
 
 export default function AssinaturasPage() {
@@ -132,9 +167,14 @@ export default function AssinaturasPage() {
   const [reportDate, setReportDate] = useState<Date>(new Date());
   const [loadingReport, setLoadingReport] = useState(false);
 
-  const [clientSearchTerm, setClientSearchTerm] = useState('');
+  const [plans, setPlans] = useState<SubscriptionPlan[]>([]);
+  // Resource States
+  const [availableServices, setAvailableServices] = useState<any[]>([]);
+  const [availableProducts, setAvailableProducts] = useState<any[]>([]);
+
   const [formData, setFormData] = useState({
     clientId: '',
+    planId: '',
     planName: '',
     amount: '',
     billingDay: '',
@@ -144,10 +184,17 @@ export default function AssinaturasPage() {
     status: 'ACTIVE' as 'ACTIVE' | 'SUSPENDED' | 'CANCELLED',
   });
 
+  // Structured Selection State
+  const [selectedServices, setSelectedServices] = useState<string[]>([]);
+  const [selectedProducts, setSelectedProducts] = useState<Array<{ id: string, quantity: number }>>([]);
+  const [inclusionMode, setInclusionMode] = useState<'text' | 'structured'>('structured');
+
   useEffect(() => {
     fetchSubscriptions();
     fetchClients();
+    fetchPlans();
     fetchReport();
+    fetchResources();
   }, [searchTerm, statusFilter]);
 
   // Recarregar relatório quando a data mudar
@@ -190,6 +237,28 @@ export default function AssinaturasPage() {
     }
   };
 
+  const fetchPlans = async () => {
+    try {
+      const response = await fetch('/api/subscription-plans');
+      if (!response.ok) throw new Error('Erro ao carregar planos');
+      const data = await response.json();
+      setPlans(data.filter((p: SubscriptionPlan) => p.isActive));
+    } catch (error) {
+      console.error(error);
+      toast.error('Erro ao carregar planos');
+    }
+  };
+
+  const [clientSearchTerm, setClientSearchTerm] = useState('');
+
+  const [subscriberSearch, setSubscriberSearch] = useState('');
+
+  // Filter subscribers for the report table
+  const filteredSubscribers = reportData?.subscribers.filter(sub =>
+    sub.clientName.toLowerCase().includes(subscriberSearch.toLowerCase()) ||
+    sub.clientPhone.includes(subscriberSearch)
+  ) || [];
+
   const fetchClients = async () => {
     try {
       const response = await fetch('/api/clients');
@@ -198,7 +267,25 @@ export default function AssinaturasPage() {
       setClients(data);
     } catch (error) {
       console.error(error);
-      toast.error('Erro ao carregar clientes');
+    }
+  };
+
+  const fetchResources = async () => {
+    try {
+      const [servicesRes, productsRes] = await Promise.all([
+        fetch('/api/services'),
+        fetch('/api/products')
+      ]);
+      if (servicesRes.ok) {
+        const data = await servicesRes.json();
+        setAvailableServices(data.filter((s: any) => s.isActive));
+      }
+      if (productsRes.ok) {
+        const data = await productsRes.json();
+        setAvailableProducts(data.filter((p: any) => p.isActive));
+      }
+    } catch (error) {
+      console.error("Error fetching resources", error);
     }
   };
 
@@ -218,6 +305,12 @@ export default function AssinaturasPage() {
         amount: parseFloat(formData.amount),
         billingDay: parseInt(formData.billingDay),
         usageLimit: formData.usageLimit ? parseInt(formData.usageLimit) : null,
+        servicesIncluded: inclusionMode === 'structured'
+          ? JSON.stringify({
+            services: selectedServices,
+            products: selectedProducts
+          })
+          : formData.servicesIncluded,
       };
 
       const response = await fetch(url, {
@@ -360,8 +453,28 @@ export default function AssinaturasPage() {
 
   const openEditDialog = (subscription: Subscription) => {
     setSelectedSubscription(subscription);
+    // Try parsing servicesIncluded
+    let parsedServices: string[] = [];
+    let parsedProducts: Array<{ id: string, quantity: number }> = [];
+    let mode: 'text' | 'structured' = 'text';
+
+    if (subscription.servicesIncluded) {
+      try {
+        const parsed = JSON.parse(subscription.servicesIncluded);
+        if (parsed.services || parsed.products) {
+          parsedServices = parsed.services || [];
+          parsedProducts = parsed.products || [];
+          mode = 'structured';
+        }
+      } catch (e) {
+        // Not JSON, simple text
+        mode = 'text';
+      }
+    }
+
     setFormData({
       clientId: subscription.clientId,
+      planId: '',
       planName: subscription.planName,
       amount: subscription.amount.toString(),
       billingDay: subscription.billingDay.toString(),
@@ -370,12 +483,18 @@ export default function AssinaturasPage() {
       observations: subscription.observations || '',
       status: subscription.status,
     });
+
+    setSelectedServices(parsedServices);
+    setSelectedProducts(parsedProducts);
+    setInclusionMode(mode);
+
     setIsDialogOpen(true);
   };
 
   const resetForm = () => {
     setFormData({
       clientId: '',
+      planId: '',
       planName: '',
       amount: '',
       billingDay: '',
@@ -384,6 +503,9 @@ export default function AssinaturasPage() {
       observations: '',
       status: 'ACTIVE',
     });
+    setSelectedServices([]);
+    setSelectedProducts([]);
+    setInclusionMode('structured');
     setClientSearchTerm('');
   };
 
@@ -443,33 +565,39 @@ export default function AssinaturasPage() {
             Gerencie os clientes assinantes e gere links de cobrança
           </p>
         </div>
-        <Button onClick={openCreateDialog} className="bg-gold text-white hover:bg-gold/90">
-          <Plus className="mr-2 h-4 w-4" />
-          Nova Assinatura
-        </Button>
+        <div className="flex gap-2">
+          <Button className="bg-[#1a1a1a] hover:bg-[#333] text-white border border-[#333]">
+            <Package className="mr-2 h-4 w-4" />
+            Planos
+          </Button>
+          <Button onClick={openCreateDialog} className="bg-green-600 hover:bg-green-700 text-white">
+            <Plus className="mr-2 h-4 w-4" />
+            Assinatura
+          </Button>
+        </div>
       </div>
 
       {/* Conteúdo Principal com Tabs */}
-      <Tabs defaultValue="management" className="w-full">
-        <TabsList className="grid w-full grid-cols-2 mb-8">
-          <TabsTrigger value="overview">Visão Geral & Relatórios</TabsTrigger>
-          <TabsTrigger value="management">Gerenciar Assinaturas</TabsTrigger>
+      <Tabs defaultValue="overview" className="w-full">
+        <TabsList className="grid w-[400px] grid-cols-2 mb-8 bg-[#1a1a1a]">
+          <TabsTrigger value="overview" className="data-[state=active]:bg-gold data-[state=active]:text-black">Visão Geral</TabsTrigger>
+          <TabsTrigger value="management" className="data-[state=active]:bg-gold data-[state=active]:text-black">Gerenciar</TabsTrigger>
         </TabsList>
 
         {/* TAB: VISÃO GERAL (Dashboard) */}
         <TabsContent value="overview" className="space-y-6">
           {/* Seletor de Mês */}
-          <div className="flex items-center justify-between bg-card p-4 rounded-lg shadow-sm border">
-            <Button variant="ghost" size="icon" onClick={() => handleMonthChange('prev')}>
-              <span className="text-xl">←</span>
+          <div className="flex items-center gap-4 bg-[#1a1a1a] p-2 rounded-md border border-[#333] w-fit mb-4">
+            <Button variant="ghost" size="icon" onClick={() => handleMonthChange('prev')} className="h-8 w-8 text-white hover:bg-white/10">
+              <span className="text-lg">←</span>
             </Button>
-            <div className="text-center">
-              <h2 className="text-lg font-semibold capitalize">
+            <div className="text-center min-w-[150px]">
+              <h2 className="text-sm font-semibold capitalize text-white">
                 {format(reportDate, "MMMM 'de' yyyy", { locale: ptBR })}
               </h2>
             </div>
-            <Button variant="ghost" size="icon" onClick={() => handleMonthChange('next')}>
-              <span className="text-xl">→</span>
+            <Button variant="ghost" size="icon" onClick={() => handleMonthChange('next')} className="h-8 w-8 text-white hover:bg-white/10">
+              <span className="text-lg">→</span>
             </Button>
           </div>
 
@@ -477,88 +605,185 @@ export default function AssinaturasPage() {
             <div className="text-center py-12">Carregando relatório...</div>
           ) : reportData ? (
             <>
-              {/* Cards Metrics */}
-              <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-4">
-                <Card className="bg-green-500/10 border-green-500/20">
-                  <CardContent className="p-6">
-                    <p className="text-sm font-medium text-green-600 mb-2">Recebidas</p>
-                    <h3 className="text-2xl font-bold text-green-700">
-                      R$ {reportData.metrics.received.toFixed(2)}
-                    </h3>
+              {/* Cards Metrics - Grid 2 colunas como na foto */}
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+
+                {/* Linha 1 */}
+                <Card className="bg-[#78e068] border-none text-black">
+                  <CardContent className="p-4">
+                    <p className="font-bold text-sm opacity-80 mb-1">Recebidas</p>
+                    <h3 className="text-2xl font-bold">R$ {reportData.metrics.received.toFixed(2).replace('.', ',')}</h3>
                   </CardContent>
                 </Card>
 
-                <Card className="bg-red-500/10 border-red-500/20">
-                  <CardContent className="p-6">
-                    <p className="text-sm font-medium text-red-600 mb-2">A receber</p>
-                    <h3 className="text-2xl font-bold text-red-700">
-                      R$ {reportData.metrics.pending.toFixed(2)}
-                    </h3>
+                <Card className="bg-[#dca5a5] border-none text-black bg-opacity-90" style={{ backgroundColor: '#c76e78' }}>
+                  <CardContent className="p-4">
+                    <p className="font-bold text-sm text-black/70 mb-1">A receber</p>
+                    <h3 className="text-2xl font-bold text-black/90">R$ {reportData.metrics.pending.toFixed(2).replace('.', ',')}</h3>
                   </CardContent>
                 </Card>
 
-                <Card className="bg-yellow-500/10 border-yellow-500/20">
-                  <CardContent className="p-6">
-                    <p className="text-sm font-medium text-yellow-600 mb-2">Valor/Hora</p>
-                    <h3 className="text-2xl font-bold text-yellow-700">
-                      R$ {reportData.metrics.hourlyRate.toFixed(2)}
-                    </h3>
+                {/* Linha 2 */}
+                <Card className="bg-[#888888] border-none text-white">
+                  <CardContent className="p-4">
+                    <p className="font-bold text-sm opacity-80 mb-1">Total</p>
+                    <h3 className="text-2xl font-bold">R$ {reportData.metrics.total.toFixed(2).replace('.', ',')}</h3>
                   </CardContent>
                 </Card>
 
-                <Card className="bg-blue-500/10 border-blue-500/20">
-                  <CardContent className="p-6">
-                    <p className="text-sm font-medium text-blue-600 mb-2">Atendimento</p>
-                    <h3 className="text-2xl font-bold text-blue-700">
-                      {formatMinutesToHours(reportData.metrics.totalHours * 60)}
-                    </h3>
+                <Card className="bg-[#e6d845] border-none text-black">
+                  <CardContent className="p-4">
+                    <p className="font-bold text-sm opacity-80 mb-1">Valor/Hora</p>
+                    <h3 className="text-2xl font-bold">R$ {reportData.metrics.hourlyRate.toFixed(2).replace('.', ',')}</h3>
                   </CardContent>
                 </Card>
+
+                {/* Linha 3 */}
+                <Card className="bg-[#56a7c4] border-none text-white">
+                  <CardContent className="p-4">
+                    <p className="font-bold text-sm opacity-80 mb-1">Frequência</p>
+                    <h3 className="text-2xl font-bold">{reportData.metrics.frequency.toFixed(1).replace('.', ',')} vezes</h3>
+                  </CardContent>
+                </Card>
+
+                <Card className="bg-[#93bdcf] border-none text-black">
+                  <CardContent className="p-4">
+                    <p className="font-bold text-sm opacity-80 mb-1">Atendimento</p>
+                    <h3 className="text-2xl font-bold">{formatMinutesToHours(reportData.metrics.totalHours * 60)}</h3>
+                  </CardContent>
+                </Card>
+
               </div>
 
-              {/* Tabela de Produtividade */}
-              <Card>
+              {/* Lista de Assinantes - Tabela Detalhada */}
+              <Card className="bg-[#1a1a1a] border-[#333] text-[#ddd] mt-6">
+                <CardHeader className="flex flex-row items-center justify-between pb-2">
+                  <div className="flex gap-4">
+                    <Button size="sm" className="bg-green-600 hover:bg-green-700 text-white h-7 text-xs">Todos ({reportData.subscribers.length})</Button>
+                    <div className="flex gap-2 text-xs text-muted-foreground items-center">
+                      <span>Rec: ({reportData.subscribers.filter(s => s.isPaid).length})</span>
+                      <span>A rec: ({reportData.subscribers.filter(s => !s.isPaid).length})</span>
+                    </div>
+                  </div>
+                  <div className="w-[200px]">
+                    <Input
+                      placeholder="Pesquisar Assinante"
+                      className="h-8 bg-[#111] border-[#333] text-xs"
+                      value={subscriberSearch}
+                      onChange={(e) => setSubscriberSearch(e.target.value)}
+                    />
+                  </div>
+                </CardHeader>
+                <CardContent className="p-0">
+                  <Table>
+                    <TableHeader>
+                      <TableRow className="border-b-[#333] hover:bg-transparent">
+                        <TableHead className="text-xs font-bold text-muted-foreground w-[50px]">Pgto</TableHead>
+                        <TableHead className="text-xs font-bold text-muted-foreground">Cliente</TableHead>
+                        <TableHead className="text-xs font-bold text-muted-foreground">Número</TableHead>
+                        <TableHead className="text-xs font-bold text-muted-foreground">Valor</TableHead>
+                        <TableHead className="text-xs font-bold text-muted-foreground">Data venc.</TableHead>
+                        <TableHead className="text-xs font-bold text-muted-foreground text-right">Frequência/Mês</TableHead>
+                      </TableRow>
+                    </TableHeader>
+                    <TableBody>
+                      {filteredSubscribers.map((sub) => (
+                        <TableRow key={sub.id} className="border-b-[#333] hover:bg-white/5">
+                          <TableCell>
+                            <div className={`w-4 h-4 rounded-sm ${sub.isPaid ? 'bg-green-500' : 'bg-red-500/50'}`}></div>
+                          </TableCell>
+                          <TableCell className="font-medium text-sm text-gray-300">{sub.clientName}</TableCell>
+                          <TableCell className="text-xs text-muted-foreground">{sub.clientPhone}</TableCell>
+                          <TableCell className="text-xs text-gray-400">R$ {sub.amount.toFixed(2).replace('.', ',')}</TableCell>
+                          <TableCell className="text-xs text-gray-400 max-w-[50px]">{sub.billingDay}</TableCell>
+                          <TableCell className="text-xs text-right text-gray-400">
+                            {formatMinutesToHours(sub.usageMinutes)} / {sub.usageCount} vezes
+                          </TableCell>
+                        </TableRow>
+                      ))}
+                      {filteredSubscribers.length === 0 && (
+                        <TableRow>
+                          <TableCell colSpan={6} className="text-center py-8 text-muted-foreground text-sm">
+                            Nenhum assinante encontrado com atividade neste período.
+                          </TableCell>
+                        </TableRow>
+                      )}
+                    </TableBody>
+                  </Table>
+                </CardContent>
+              </Card>
+
+              <Card className="bg-[#1a1a1a] border-[#333] text-[#ddd]">
                 <CardHeader>
-                  <CardTitle>Resumo por Profissional</CardTitle>
+                  <CardTitle className="text-xl font-serif text-white">Resumo por Profissional</CardTitle>
                 </CardHeader>
                 <CardContent>
                   <div className="overflow-x-auto">
-                    <Table>
+                    <Table className="border-collapse">
                       <TableHeader>
-                        <TableRow className="bg-muted/50">
-                          <TableHead className="w-[200px] font-bold">Serviço / Plano</TableHead>
-                          {reportData.table.barbers.map((barber) => (
-                            <TableHead key={barber.name} className="text-center font-bold">
-                              {barber.name}
-                            </TableHead>
-                          ))}
-                          <TableHead className="text-center font-bold bg-gold/10 text-gold">Casa (Total)</TableHead>
+                        <TableRow className="bg-[#222] hover:bg-[#222] border-b-[#444]">
+                          <TableHead className="w-[200px] font-bold text-white relative h-24">
+                            <div className="absolute inset-0 flex flex-col items-center justify-center bg-gold/10 p-2 rounded-tl-lg">
+                              <span className="text-xs font-bold uppercase tracking-wider text-gold">Assinaturas</span>
+                              <div className="mt-1 flex flex-col items-center">
+                                <span className="text-[10px] text-muted-foreground uppercase">Valor da hora</span>
+                                <span className="text-sm font-bold text-white">R$ {reportData.metrics.hourlyRate.toFixed(2).replace('.', ',')}</span>
+                              </div>
+                            </div>
+                          </TableHead>
+                          {reportData.table.barbers.map((barber) => {
+                            const photo = getBarberPhoto(barber.name);
+                            return (
+                              <TableHead key={barber.name} className="text-center font-bold text-white border-x border-[#333] h-24">
+                                <div className="flex flex-col items-center gap-2">
+                                  <div className="relative w-12 h-12 rounded-full overflow-hidden border-2 border-gold/30">
+                                    {photo ? (
+                                      <Image src={photo} alt={barber.name} fill className="object-cover" />
+                                    ) : (
+                                      <div className="bg-muted w-full h-full flex items-center justify-center">
+                                        <User className="w-6 h-6 text-muted-foreground" />
+                                      </div>
+                                    )}
+                                  </div>
+                                  <span className="text-xs">{barber.name.split(' ')[0]}</span>
+                                </div>
+                              </TableHead>
+                            );
+                          })}
+                          <TableHead className="text-center font-bold bg-[#111] text-white border-l border-[#444]">
+                            <div className="flex flex-col items-center gap-2">
+                              <div className="relative w-12 h-12 rounded-full overflow-hidden border-2 border-gold bg-[#000] flex items-center justify-center">
+                                <Image src="/logo.png" alt="Logo" width={32} height={32} className="opacity-80" />
+                              </div>
+                              <span className="text-xs">Casa</span>
+                            </div>
+                          </TableHead>
                         </TableRow>
                       </TableHeader>
                       <TableBody>
-                        {reportData.table.serviceNames.map((serviceName) => (
-                          <TableRow key={serviceName}>
-                            <TableCell className="font-medium bg-muted/20">{serviceName}</TableCell>
+                        {reportData.table.serviceNames.map((serviceName, sIdx) => (
+                          <TableRow key={serviceName} className={`border-b-[#333] ${sIdx % 2 === 0 ? 'bg-white/5' : ''}`}>
+                            <TableCell className="font-bold text-[11px] uppercase text-white/70 bg-[#222]/50 border-r border-[#333]">
+                              {serviceName}
+                            </TableCell>
                             {reportData.table.barbers.map((barber, idx) => {
                               const svc = barber.services[serviceName];
                               return (
-                                <TableCell key={idx} className="text-center">
+                                <TableCell key={idx} className="text-center border-x border-[#333]">
                                   {svc ? (
-                                    <div className="flex flex-col items-center">
-                                      <span className="font-bold">{svc.count}</span>
-                                      <span className="text-xs text-muted-foreground">
+                                    <div className="flex flex-col items-center gap-1">
+                                      <span className="text-sm font-medium text-white">{svc.count}</span>
+                                      <span className="text-[10px] text-white/50">
                                         ({formatMinutesToHours(svc.minutes)})
                                       </span>
                                     </div>
                                   ) : (
-                                    <span className="text-muted-foreground">-</span>
+                                    <span className="text-white/20 text-xs">-</span>
                                   )}
                                 </TableCell>
                               );
                             })}
-                            {/* Coluna 'Casa' somando os counts/tempos de todos (opcional, ou apenas traço se Casa for separate) */}
-                            {/* Para simplificar, vou somar a linha para a coluna Casa */}
-                            <TableCell className="text-center bg-gold/5 font-semibold">
+                            <TableCell className="text-center bg-[#111]/80 font-semibold border-l border-[#444]">
                               {(() => {
                                 let totalCount = 0;
                                 let totalMinutes = 0;
@@ -570,9 +795,9 @@ export default function AssinaturasPage() {
                                   }
                                 });
                                 return (
-                                  <div className="flex flex-col items-center">
-                                    <span>{totalCount}</span>
-                                    <span className="text-xs text-muted-foreground">({formatMinutesToHours(totalMinutes)})</span>
+                                  <div className="flex flex-col items-center gap-1">
+                                    <span className="text-sm font-bold text-white">{totalCount}</span>
+                                    <span className="text-[10px] text-white/50">({formatMinutesToHours(totalMinutes)})</span>
                                   </div>
                                 );
                               })()}
@@ -581,49 +806,51 @@ export default function AssinaturasPage() {
                         ))}
 
                         {/* Totais Gerais */}
-                        <TableRow className="bg-muted font-medium border-t-2">
-                          <TableCell>Horas em atendimentos</TableCell>
+                        <TableRow className="bg-[#2a2a2a] font-medium border-t-2 border-t-[#444]">
+                          <TableCell className="text-xs font-bold text-white uppercase">Horas em atendimentos</TableCell>
                           {reportData.table.barbers.map((barber, idx) => (
-                            <TableCell key={idx} className="text-center">
-                              {formatMinutesToHours(barber.totalHours * 60)}
+                            <TableCell key={idx} className="text-center text-white border-x border-[#333] py-4">
+                              <span className="text-sm font-bold">{formatMinutesToHours(barber.totalHours * 60)}</span>
                             </TableCell>
                           ))}
-                          <TableCell className="text-center bg-gold/10 font-bold">
+                          <TableCell className="text-center bg-[#111] font-bold text-white border-l border-[#444]">
                             {formatMinutesToHours(reportData.metrics.totalHours * 60)}
                           </TableCell>
                         </TableRow>
-                        <TableRow>
-                          <TableCell>Total (Valor Gerado)</TableCell>
+
+                        <TableRow className="bg-[#333]">
+                          <TableCell className="text-xs font-bold text-white/80 uppercase">Total</TableCell>
                           {reportData.table.barbers.map((barber, idx) => (
-                            <TableCell key={idx} className="text-center">
-                              R$ {barber.totalValue.toFixed(2)}
+                            <TableCell key={idx} className="text-center text-white/90 border-x border-[#444]">
+                              <span className="text-sm">R${barber.totalValue.toFixed(2).replace('.', ',')}</span>
                             </TableCell>
                           ))}
-                          <TableCell className="text-center bg-gold/10 font-bold">
-                            R$ {reportData.metrics.received.toFixed(2)}
+                          <TableCell className="text-center bg-[#000] font-bold text-white border-l border-[#555]">
+                            R${reportData.metrics.received.toFixed(2).replace('.', ',')}
                           </TableCell>
                         </TableRow>
-                        <TableRow>
-                          <TableCell>Comissão (45%)</TableCell>
+
+                        <TableRow className="bg-[#333]/80">
+                          <TableCell className="text-xs font-bold text-white/80 uppercase">Comissão</TableCell>
                           {reportData.table.barbers.map((barber, idx) => (
-                            <TableCell key={idx} className="text-center text-green-600 font-bold">
-                              R$ {barber.commission.toFixed(2)}
+                            <TableCell key={idx} className="text-center text-green-400 font-bold border-x border-[#444]">
+                              R${barber.commission.toFixed(2).replace('.', ',')}
                             </TableCell>
                           ))}
-                          <TableCell className="text-center bg-gold/10 text-muted-foreground">
-                            -
+                          <TableCell className="text-center bg-[#000] font-bold text-green-500 border-l border-[#555]">
+                            R${reportData.table.barbers.reduce((acc, b) => acc + b.commission, 0).toFixed(2).replace('.', ',')}
                           </TableCell>
                         </TableRow>
-                        <TableRow>
-                          <TableCell className="text-gold font-bold">Casa (55%)</TableCell>
+
+                        <TableRow className="bg-[#059669]/20">
+                          <TableCell className="text-xs font-extrabold text-[#10b981] uppercase">Casa</TableCell>
                           {reportData.table.barbers.map((barber, idx) => (
-                            <TableCell key={idx} className="text-center text-gold font-bold">
-                              R$ {barber.house.toFixed(2)}
+                            <TableCell key={idx} className="text-center text-[#10b981] font-bold border-x border-[#10b981]/20">
+                              R${barber.house.toFixed(2).replace('.', ',')}
                             </TableCell>
                           ))}
-                          <TableCell className="text-center bg-gold/10 font-extrabold text-gold">
-                            {/* Total House Share */}
-                            R$ {reportData.table.barbers.reduce((acc, b) => acc + b.house, 0).toFixed(2)}
+                          <TableCell className="text-center bg-[#059669] font-extrabold text-white">
+                            R${reportData.table.barbers.reduce((acc, b) => acc + b.house, 0).toFixed(2).replace('.', ',')}
                           </TableCell>
                         </TableRow>
                       </TableBody>
@@ -798,6 +1025,43 @@ export default function AssinaturasPage() {
                 </Select>
               </div>
 
+              <div className="space-y-2 sm:col-span-2">
+                <Label htmlFor="planId">Plano de Assinatura (Opcional)</Label>
+                <Select
+                  value={formData.planId}
+                  onValueChange={(value) => {
+                    const plan = plans.find(p => p.id === value);
+                    if (plan) {
+                      setFormData({
+                        ...formData,
+                        planId: value,
+                        planName: plan.name,
+                        amount: plan.price.toString(),
+                        servicesIncluded: plan.servicesIncluded || '',
+                        usageLimit: plan.usageLimit?.toString() || '',
+                      });
+                    } else {
+                      setFormData({ ...formData, planId: value });
+                    }
+                  }}
+                >
+                  <SelectTrigger>
+                    <SelectValue placeholder="Selecione um plano pré-cadastrado" />
+                  </SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value="none">Personalizado (sem plano)</SelectItem>
+                    {plans.map((plan) => (
+                      <SelectItem key={plan.id} value={plan.id}>
+                        {plan.name} - R$ {plan.price.toFixed(2)}
+                      </SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
+                <p className="text-[10px] text-muted-foreground mt-1">
+                  Selecionar um plano preencherá automaticamente os campos abaixo.
+                </p>
+              </div>
+
               <div className="space-y-2">
                 <Label htmlFor="planName">Nome do Plano *</Label>
                 <Input
@@ -869,15 +1133,108 @@ export default function AssinaturasPage() {
               )}
             </div>
 
-            <div className="space-y-2">
-              <Label htmlFor="servicesIncluded">Serviços Incluídos</Label>
-              <Textarea
-                id="servicesIncluded"
-                value={formData.servicesIncluded}
-                onChange={(e) => setFormData({ ...formData, servicesIncluded: e.target.value })}
-                placeholder="Descreva os serviços incluídos na assinatura..."
-                rows={3}
-              />
+            <div className="space-y-2 border p-3 rounded-md bg-secondary/20">
+              <div className="flex justify-between items-center mb-2">
+                <Label>Itens Inclusos</Label>
+                <div className="flex gap-2 text-xs">
+                  <button
+                    type="button"
+                    onClick={() => setInclusionMode('structured')}
+                    className={`px-2 py-1 rounded ${inclusionMode === 'structured' ? 'bg-gold text-black font-bold' : 'bg-secondary text-muted-foreground'}`}
+                  >
+                    Seleção
+                  </button>
+                  <button
+                    type="button"
+                    onClick={() => setInclusionMode('text')}
+                    className={`px-2 py-1 rounded ${inclusionMode === 'text' ? 'bg-gold text-black font-bold' : 'bg-secondary text-muted-foreground'}`}
+                  >
+                    Texto Livre
+                  </button>
+                </div>
+              </div>
+
+              {inclusionMode === 'structured' ? (
+                <div className="space-y-4">
+                  {/* Services Selection */}
+                  <div>
+                    <Label className="text-xs text-muted-foreground mb-1 block">Serviços</Label>
+                    <div className="max-h-32 overflow-y-auto border rounded p-2 grid grid-cols-2 gap-2">
+                      {availableServices.map(service => (
+                        <label key={service.id} className="flex items-center gap-2 text-sm cursor-pointer hover:bg-white/5 p-1 rounded">
+                          <input
+                            type="checkbox"
+                            checked={selectedServices.includes(service.id)}
+                            onChange={(e) => {
+                              if (e.target.checked) setSelectedServices([...selectedServices, service.id]);
+                              else setSelectedServices(selectedServices.filter(id => id !== service.id));
+                            }}
+                            className="rounded border-gray-500 bg-transparent"
+                          />
+                          <span>{service.name}</span>
+                        </label>
+                      ))}
+                    </div>
+                  </div>
+
+                  {/* Products Selection */}
+                  <div>
+                    <Label className="text-xs text-muted-foreground mb-1 block">Produtos</Label>
+                    <div className="flex gap-2 mb-2">
+                      <Select onValueChange={(val) => {
+                        if (!selectedProducts.find(p => p.id === val)) {
+                          setSelectedProducts([...selectedProducts, { id: val, quantity: 1 }]);
+                        }
+                      }}>
+                        <SelectTrigger className="h-8 text-xs">
+                          <SelectValue placeholder="Adicionar Produto ao Plano" />
+                        </SelectTrigger>
+                        <SelectContent>
+                          {availableProducts
+                            .filter(p => !selectedProducts.find(sp => sp.id === p.id))
+                            .map(p => (
+                              <SelectItem key={p.id} value={p.id}>{p.name}</SelectItem>
+                            ))}
+                        </SelectContent>
+                      </Select>
+                    </div>
+                    <div className="space-y-1">
+                      {selectedProducts.map(item => {
+                        const product = availableProducts.find(p => p.id === item.id);
+                        return (
+                          <div key={item.id} className="flex justify-between items-center bg-secondary/40 p-1.5 rounded text-sm">
+                            <span>{product?.name}</span>
+                            <div className="flex items-center gap-2">
+                              <span className="text-xs text-muted-foreground">Qtd:</span>
+                              <Input
+                                type="number"
+                                min="1"
+                                className="h-6 w-12 text-center p-0"
+                                value={item.quantity}
+                                onChange={(e) => {
+                                  const val = parseInt(e.target.value) || 1;
+                                  setSelectedProducts(selectedProducts.map(p => p.id === item.id ? { ...p, quantity: val } : p));
+                                }}
+                              />
+                              <Button type="button" variant="ghost" size="icon" className="h-6 w-6 text-red-500" onClick={() => setSelectedProducts(selectedProducts.filter(p => p.id !== item.id))}>
+                                <Trash2 className="h-3 w-3" />
+                              </Button>
+                            </div>
+                          </div>
+                        );
+                      })}
+                    </div>
+                  </div>
+                </div>
+              ) : (
+                <Textarea
+                  id="servicesIncluded"
+                  value={formData.servicesIncluded}
+                  onChange={(e) => setFormData({ ...formData, servicesIncluded: e.target.value })}
+                  placeholder="Descreva os serviços incluídos na assinatura..."
+                  rows={3}
+                />
+              )}
             </div>
 
             <div className="space-y-2">

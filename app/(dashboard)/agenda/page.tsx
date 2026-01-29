@@ -19,7 +19,7 @@ import { Separator } from '@/components/ui/separator';
 import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle } from '@/components/ui/alert-dialog';
 import { toast } from 'sonner';
 import { AppointmentEditDialog } from '@/components/appointment-edit-dialog';
-import { toManausTime } from '@/lib/timezone';
+import { toManausTime, getManausNow, getManausTimeString, isSameDayManaus, formatManausDateTime } from '@/lib/timezone';
 
 interface Barber {
   id: string;
@@ -43,6 +43,8 @@ interface Service {
 
 interface Appointment {
   id: string;
+  clientId: string;
+  barberId: string;
   date: string;
   totalAmount: number;
   commissionAmount: number;
@@ -55,6 +57,16 @@ interface Appointment {
     service: Service;
   }>;
   isOnlineBooking?: boolean;
+  products?: Array<{
+    productId: string;
+    quantity: number;
+    unitPrice: number;
+    totalPrice: number;
+    product: {
+      name: string;
+      price: number;
+    };
+  }>;
 }
 
 interface ScheduleBlock {
@@ -82,11 +94,11 @@ const BARBER_COLORS = [
 // Mapeamento de fotos dos barbeiros
 const getBarberPhoto = (barberName: string): string | null => {
   const name = barberName.toLowerCase().trim();
-  
+
   if (name.includes('jhon')) return '/barbers/jhonjhon.jpeg';
   if (name.includes('maikon') || name.includes('maykon')) return '/barbers/maykon.jpeg';
   if (name.includes('eduardo')) return '/barbers/eduardo.jpeg';
-  
+
   return null;
 };
 
@@ -128,7 +140,7 @@ function CompletionDialog({
 }: {
   appointment: Appointment;
   products: any[];
-  selectedProducts: Array<{productId: string; quantity: number; unitPrice: number}>;
+  selectedProducts: Array<{ productId: string; quantity: number; unitPrice: number }>;
   onAddProduct: (productId: string) => void;
   onRemoveProduct: (productId: string) => void;
   onUpdateQuantity: (productId: string, delta: number) => void;
@@ -198,7 +210,7 @@ function CompletionDialog({
               <ShoppingCart className="w-4 h-4" />
               Produtos Vendidos (Opcional)
             </h3>
-            
+
             {/* Seletor de produto */}
             <div className="flex gap-2 mb-4">
               <Select onValueChange={onAddProduct}>
@@ -333,7 +345,7 @@ function CompletionDialog({
           <Button variant="outline" onClick={onClose}>
             Cancelar
           </Button>
-          <Button 
+          <Button
             onClick={onComplete}
             className="bg-green-600 hover:bg-green-700"
           >
@@ -349,42 +361,42 @@ export default function AgendaPage() {
   const [appointments, setAppointments] = useState<Appointment[]>([]);
   const [barbers, setBarbers] = useState<Barber[]>([]);
   const [loading, setLoading] = useState(true);
-  
+
   // Visualização
   const [viewMode, setViewMode] = useState<'day' | 'week'>('day');
   const [currentDate, setCurrentDate] = useState(new Date());
-  
+
   // Filtros
   const [searchTerm, setSearchTerm] = useState('');
   const [filterBarber, setFilterBarber] = useState('all');
   const [filterStatus, setFilterStatus] = useState('all');
-  
+
   // Drag & Drop
   const [activeId, setActiveId] = useState<string | null>(null);
   const [draggedAppointment, setDraggedAppointment] = useState<Appointment | null>(null);
-  
+
   // Dialogs
   const [detailsDialog, setDetailsDialog] = useState<Appointment | null>(null);
   const [deleteDialog, setDeleteDialog] = useState<string | null>(null);
   const [completionDialog, setCompletionDialog] = useState<Appointment | null>(null);
-  const [editDialog, setEditDialog] = useState<{appointment?: Appointment; isNew?: boolean; date?: string; barberId?: string} | null>(null);
-  
+  const [editDialog, setEditDialog] = useState<{ appointment?: Appointment; isNew?: boolean; date?: string; barberId?: string } | null>(null);
+
   // Bloqueios de horário
   const [scheduleBlocks, setScheduleBlocks] = useState<ScheduleBlock[]>([]);
-  const [blockDialog, setBlockDialog] = useState<{date?: string; barberId?: string} | null>(null);
+  const [blockDialog, setBlockDialog] = useState<{ date?: string; barberId?: string } | null>(null);
   const [blockForm, setBlockForm] = useState({
     date: '',
     startTime: '09:00',
     endTime: '10:00',
     reason: '',
   });
-  
+
   // Completion modal states
   const [products, setProducts] = useState<any[]>([]);
-  const [selectedProducts, setSelectedProducts] = useState<Array<{productId: string; quantity: number; unitPrice: number}>>([]);
+  const [selectedProducts, setSelectedProducts] = useState<Array<{ productId: string; quantity: number; unitPrice: number }>>([]);
   const [paymentMethod, setPaymentMethod] = useState('PENDING');
   const [completionNotes, setCompletionNotes] = useState('');
-  
+
   const sensors = useSensors(
     useSensor(PointerSensor, {
       activationConstraint: {
@@ -413,17 +425,17 @@ export default function AgendaPage() {
   const fetchData = async () => {
     try {
       setLoading(true);
-      
+
       // Buscar barbeiros
       const barbersRes = await fetch('/api/barbers');
       const barbersData = await barbersRes.json();
       setBarbers(barbersData);
 
       // Buscar agendamentos
-      const startDate = viewMode === 'day' 
+      const startDate = viewMode === 'day'
         ? format(startOfDay(currentDate), 'yyyy-MM-dd')
         : format(startOfWeek(currentDate, { locale: ptBR }), 'yyyy-MM-dd');
-      
+
       const endDate = viewMode === 'day'
         ? format(startOfDay(currentDate), 'yyyy-MM-dd')
         : format(addDays(startOfWeek(currentDate, { locale: ptBR }), 6), 'yyyy-MM-dd');
@@ -443,32 +455,48 @@ export default function AgendaPage() {
       // Converter OnlineBookings para o formato de Appointment para exibição
       const convertedOnlineBookings = onlineBookingsData
         .filter((booking: any) => booking.barber) // Apenas bookings com barbeiro atribuído
-        .map((booking: any) => ({
-          id: `online-${booking.id}`,
-          clientId: booking.clientId || 'temp',
-          barberId: booking.barberId,
-          date: booking.scheduledDate,
-          totalAmount: booking.service?.price || 0,
-          commissionAmount: 0, // Online bookings não têm comissão calculada ainda
-          paymentMethod: 'A definir',
-          notes: booking.observations,
-          status: booking.status === 'CONFIRMED' ? 'SCHEDULED' : booking.status,
-          client: {
-            id: booking.clientId || 'temp',
-            name: booking.clientName,
-            phone: booking.clientPhone,
-          },
-          barber: booking.barber,
-          services: [{
-            service: booking.service,
-          }],
-          isOnlineBooking: true, // Flag para identificar agendamentos online
-        }));
+        .map((booking: any) => {
+          // Lidar com múltiplos serviços ou o serviço único legado
+          const bookingServices = booking.services && booking.services.length > 0
+            ? booking.services.map((s: any) => ({ service: s.service }))
+            : (booking.service ? [{ service: booking.service }] : []);
+
+          const totalAmount = booking.services && booking.services.length > 0
+            ? booking.services.reduce((sum: number, s: any) => sum + (s.service?.price || 0), 0)
+            : (booking.service?.price || 0);
+
+          return {
+            id: `online-${booking.id}`,
+            clientId: booking.clientId || 'temp',
+            barberId: booking.barberId,
+            date: booking.scheduledDate,
+            totalAmount: booking.isSubscriber ? 0 : totalAmount,
+            commissionAmount: 0,
+            paymentMethod: 'A definir',
+            notes: booking.observations,
+            status: booking.status === 'CONFIRMED' ? 'SCHEDULED' : booking.status,
+            client: {
+              id: booking.clientId || 'temp',
+              name: booking.clientName,
+              phone: booking.clientPhone,
+              isSubscriber: booking.isSubscriber,
+            },
+            barber: booking.barber,
+            services: bookingServices,
+            isOnlineBooking: true,
+          };
+        });
+
+      console.log('[Agenda] Agendamentos carregados:', {
+        admin: appointmentsData.length,
+        online: convertedOnlineBookings.length,
+        total: appointmentsData.length + convertedOnlineBookings.length
+      });
 
       // Combinar ambos os tipos de agendamento
       const allAppointments = [...appointmentsData, ...convertedOnlineBookings];
       setAppointments(allAppointments);
-      
+
       // Buscar bloqueios de horário
       await fetchScheduleBlocks(startDate, endDate);
     } catch (error) {
@@ -526,7 +554,7 @@ export default function AgendaPage() {
           // Converter de UTC para Manaus time para comparação
           const manausDate = toManausTime(new Date(a.date));
           return format(manausDate, 'yyyy-MM-dd') === targetDate &&
-                 format(manausDate, 'HH:mm') === targetTime;
+            format(manausDate, 'HH:mm') === targetTime;
         }
       );
 
@@ -648,7 +676,7 @@ export default function AgendaPage() {
       toast.error('Agendamento não encontrado');
       return;
     }
-    
+
     // Abrir modal de conclusão
     setCompletionDialog(appointment);
     setDetailsDialog(null);
@@ -659,26 +687,61 @@ export default function AgendaPage() {
 
   const handleCompleteAppointment = async () => {
     if (!completionDialog) return;
-    
+
     try {
       const isOnline = completionDialog.id.startsWith('online-');
       const realId = isOnline ? completionDialog.id.replace('online-', '') : completionDialog.id;
-      
-      // 1. Marcar agendamento como concluído
-      const endpoint = isOnline ? `/api/online-bookings/${realId}` : `/api/appointments/${realId}`;
-      const updateRes = await fetch(endpoint, {
-        method: 'PATCH',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ 
-          status: 'COMPLETED',
-          paymentMethod,
-          notes: completionNotes 
-        }),
-      });
+      let finalAppointmentId = realId;
 
-      if (!updateRes.ok) throw new Error('Erro ao finalizar agendamento');
+      if (isOnline) {
+        // 1. Criar o atendimento administrativo real a partir do agendamento online
+        const res = await fetch('/api/appointments', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({
+            clientId: completionDialog.client.id,
+            barberId: completionDialog.barber.id,
+            serviceIds: completionDialog.services.map(s => s.service.id),
+            date: completionDialog.date,
+            paymentMethod,
+            notes: completionNotes,
+            onlineBookingId: realId,
+          }),
+        });
 
-      // 2. Registrar vendas de produtos (se houver)
+        if (!res.ok) throw new Error('Erro ao criar atendimento administrativo');
+        const newAppointment = await res.json();
+        finalAppointmentId = newAppointment.id;
+
+        // 2. Marcar o atendimento administrativo como concluído
+        await fetch(`/api/appointments/${newAppointment.id}`, {
+          method: 'PATCH',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ status: 'COMPLETED' }),
+        });
+
+        // 3. Marcar o agendamento online como CONFIRMED (para indicar que virou um atendimento)
+        await fetch(`/api/online-bookings/${realId}`, {
+          method: 'PATCH',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ status: 'CONFIRMED' }),
+        });
+      } else {
+        // Para agendamentos administrativos já existentes:
+        // 1. Atualizar status, pagamento e notas
+        const updateRes = await fetch(`/api/appointments/${realId}`, {
+          method: 'PATCH',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({
+            status: 'COMPLETED',
+            paymentMethod,
+            notes: completionNotes
+          }),
+        });
+        if (!updateRes.ok) throw new Error('Erro ao finalizar atendimento');
+      }
+
+      // 4. Registrar vendas de produtos (se houver)
       for (const product of selectedProducts) {
         await fetch('/api/product-sales', {
           method: 'POST',
@@ -693,31 +756,33 @@ export default function AgendaPage() {
         });
       }
 
-      // 3. Calcular e criar comissão
+      // 5. Registrar comissão (o backend da criação não registra automaticamente)
       const servicesTotal = completionDialog.totalAmount;
       const productsTotal = selectedProducts.reduce((sum, p) => sum + (p.unitPrice * p.quantity), 0);
       const grandTotal = servicesTotal + productsTotal;
       const commissionAmount = grandTotal * (completionDialog.barber.commissionRate / 100);
 
-      await fetch('/api/commissions', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({
-          appointmentId: isOnline ? null : realId,
-          barberId: completionDialog.barber.id,
-          clientId: completionDialog.client.id,
-          serviceId: completionDialog.services[0]?.service.id,
-          amount: commissionAmount,
-          status: 'PENDING',
-        }),
-      });
+      if (commissionAmount > 0) {
+        await fetch('/api/commissions', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({
+            appointmentId: finalAppointmentId,
+            barberId: completionDialog.barber.id,
+            clientId: completionDialog.client.id,
+            serviceId: completionDialog.services[0]?.service.id || null,
+            amount: commissionAmount,
+            status: 'PENDING',
+          }),
+        });
+      }
 
       toast.success(`Atendimento finalizado! Comissão de ${formatCurrency(commissionAmount)} registrada.`);
       setCompletionDialog(null);
       fetchData();
     } catch (error) {
       console.error('Erro ao finalizar:', error);
-      toast.error('Erro ao finalizar atendimento');
+      toast.error('Erro ao finalizar atendimento. Verifique o console para mais detalhes.');
     }
   };
 
@@ -725,7 +790,7 @@ export default function AgendaPage() {
   const handleAddProduct = (productId: string) => {
     const product = products.find(p => p.id === productId);
     if (!product) return;
-    
+
     setSelectedProducts([...selectedProducts, {
       productId: product.id,
       quantity: 1,
@@ -795,10 +860,6 @@ export default function AgendaPage() {
           ${isSubscriber ? 'ring-2 ring-amber-400 shadow-lg' : ''}
         `}
         onClick={() => {
-          if (isOnline) {
-            toast.error('Agendamentos online não podem ser finalizados aqui. Use o módulo "Agendamentos Online" para gerenciá-los.');
-            return;
-          }
           setDetailsDialog(appointment);
         }}
       >
@@ -808,27 +869,27 @@ export default function AgendaPage() {
             <Award className="w-3 h-3 text-white" />
           </div>
         )}
-        
+
         {isOnline && (
           <div className="flex items-center gap-1 mb-1">
             <Globe className="w-3 h-3 text-blue-600" />
             <span className="text-[9px] font-bold text-blue-600">ONLINE</span>
           </div>
         )}
-        
+
         <div className="font-semibold truncate flex items-center gap-1">
           {appointment.client.name}
           {isSubscriber && <span className="text-[9px] font-bold text-amber-600">⭐</span>}
         </div>
-        
+
         <div className="text-[10px] opacity-80 truncate">
           {appointment.services.map(s => s.service.name).join(', ')}
         </div>
-        
+
         <div className="text-[10px] font-medium mt-1">
           {formatCurrency(appointment.totalAmount)}
         </div>
-        
+
         {isCompleted && (
           <div className="text-[10px] text-green-600 font-semibold mt-1">
             ✓ Concluído
@@ -1174,14 +1235,17 @@ function DayGridView({
             {barbers.map((barber: Barber) => {
               const dateStr = format(date, 'yyyy-MM-dd');
               const dropId = `${dateStr}|${time}|${barber.id}`;
-              
-              // Encontrar agendamento neste horário
+
+              // Encontrar agendamento neste horário utilizando comparação robusta
               const appointment = appointments.find((a: Appointment) => {
-                // Converter de UTC para Manaus time para exibição
-                const manausDate = toManausTime(new Date(a.date));
-                const appointmentDate = format(manausDate, 'yyyy-MM-dd');
-                const appointmentTime = format(manausDate, 'HH:mm');
-                return appointmentDate === dateStr && appointmentTime === time && a.barber.id === barber.id;
+                const aDate = new Date(a.date);
+                try {
+                  const appointmentDate = new Intl.DateTimeFormat('en-CA', { timeZone: 'America/Manaus' }).format(aDate);
+                  const appointmentTime = getManausTimeString(aDate);
+                  return appointmentDate === dateStr && appointmentTime === time && a.barber?.id === barber.id;
+                } catch (e) {
+                  return false;
+                }
               });
 
               // Verificar se há bloqueio neste horário
@@ -1256,14 +1320,17 @@ function WeekGridView({
             {/* Células para cada dia */}
             {weekDays.map((day: Date) => {
               const dateStr = format(day, 'yyyy-MM-dd');
-              
+
               // Agrupar agendamentos deste horário/dia por barbeiro
               const dayTimeAppointments = appointments.filter((a: Appointment) => {
-                // Converter de UTC para Manaus time para exibição
-                const manausDate = toManausTime(new Date(a.date));
-                const appointmentDate = format(manausDate, 'yyyy-MM-dd');
-                const appointmentTime = format(manausDate, 'HH:mm');
-                return appointmentDate === dateStr && appointmentTime === time;
+                const aDate = new Date(a.date);
+                try {
+                  const appointmentDate = new Intl.DateTimeFormat('en-CA', { timeZone: 'America/Manaus' }).format(aDate);
+                  const appointmentTime = getManausTimeString(aDate);
+                  return appointmentDate === dateStr && appointmentTime === time;
+                } catch (e) {
+                  return false;
+                }
               });
 
               return (
@@ -1286,9 +1353,9 @@ function WeekGridView({
 // Componente: Célula de Horário (Droppable + Draggable)
 function TimeSlotCell({ id, appointment, block, renderAppointmentCard, onEmptySlotClick, onDeleteBlock }: any) {
   const { useDraggable, useDroppable } = require('@dnd-kit/core');
-  
+
   const { setNodeRef: setDroppableRef, isOver } = useDroppable({ id });
-  
+
   const draggableId = appointment?.id;
   const isOnlineBooking = appointment?.isOnlineBooking;
   const { attributes, listeners, setNodeRef: setDraggableRef, transform, isDragging } = useDraggable({
@@ -1360,115 +1427,6 @@ function TimeSlotCell({ id, appointment, block, renderAppointmentCard, onEmptySl
   );
 }
 
-// Componente: Wrapper do Dialog de Finalização com estados próprios
-function CompletionDialogWrapper({
-  appointment,
-  onClose,
-  onComplete,
-}: {
-  appointment: Appointment;
-  onClose: () => void;
-  onComplete: () => void;
-}) {
-  const [products, setProducts] = useState<any[]>([]);
-  const [selectedProducts, setSelectedProducts] = useState<Array<{productId: string; quantity: number; unitPrice: number}>>([]);
-  const [paymentMethod, setPaymentMethod] = useState(appointment.paymentMethod);
-  const [completionNotes, setCompletionNotes] = useState(appointment.notes || '');
-
-  useEffect(() => {
-    fetchProducts();
-  }, []);
-
-  const fetchProducts = async () => {
-    try {
-      const res = await fetch('/api/products');
-      const data = await res.json();
-      setProducts(data.filter((p: any) => p.isActive && p.stock > 0));
-    } catch (error) {
-      console.error('Error fetching products:', error);
-    }
-  };
-
-  const handleAddProduct = (productId: string) => {
-    const product = products.find(p => p.id === productId);
-    if (product) {
-      setSelectedProducts(prev => [...prev, {
-        productId,
-        quantity: 1,
-        unitPrice: product.price,
-      }]);
-    }
-  };
-
-  const handleRemoveProduct = (productId: string) => {
-    setSelectedProducts(prev => prev.filter(p => p.productId !== productId));
-  };
-
-  const handleUpdateQuantity = (productId: string, delta: number) => {
-    setSelectedProducts(prev => prev.map(p => 
-      p.productId === productId 
-        ? { ...p, quantity: Math.max(1, p.quantity + delta) }
-        : p
-    ));
-  };
-
-  const handleComplete = async () => {
-    try {
-      // Atualizar forma de pagamento se mudou
-      if (paymentMethod !== appointment.paymentMethod) {
-        await fetch(`/api/appointments/${appointment.id}`, {
-          method: 'PATCH',
-          headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify({ paymentMethod }),
-        });
-      }
-
-      // Registrar vendas de produtos se houver
-      for (const item of selectedProducts) {
-        await fetch('/api/product-sales', {
-          method: 'POST',
-          headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify({
-            productId: item.productId,
-            quantity: item.quantity,
-            paymentMethod,
-            observations: completionNotes,
-          }),
-        });
-      }
-
-      // Marcar como concluído
-      await fetch(`/api/appointments/${appointment.id}`, {
-        method: 'PATCH',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ status: 'COMPLETED' }),
-      });
-
-      toast.success('Atendimento finalizado com sucesso!');
-      onComplete();
-    } catch (error) {
-      console.error('Error completing appointment:', error);
-      toast.error('Erro ao finalizar atendimento');
-    }
-  };
-
-  return (
-    <CompletionDialog
-      appointment={appointment}
-      products={products}
-      selectedProducts={selectedProducts}
-      onAddProduct={handleAddProduct}
-      onRemoveProduct={handleRemoveProduct}
-      onUpdateQuantity={handleUpdateQuantity}
-      paymentMethod={paymentMethod}
-      onPaymentMethodChange={setPaymentMethod}
-      notes={completionNotes}
-      onNotesChange={setCompletionNotes}
-      onComplete={handleComplete}
-      onClose={onClose}
-    />
-  );
-}
 
 // Componente: Dialog de Detalhes do Agendamento (com edição completa)
 function AppointmentDetailsDialog({
@@ -1486,15 +1444,22 @@ function AppointmentDetailsDialog({
 }) {
   const [isEditingServices, setIsEditingServices] = useState(false);
   const [isEditingPayment, setIsEditingPayment] = useState(false);
-  const [isFinalizingDialogOpen, setIsFinalizingDialogOpen] = useState(false);
   const [services, setServices] = useState<Service[]>([]);
   const [products, setProducts] = useState<any[]>([]);
   const [selectedServiceIds, setSelectedServiceIds] = useState<string[]>(
     appointment.services.map(s => s.service.id)
   );
+  const [selectedProductItems, setSelectedProductItems] = useState<any[]>(
+    appointment.products?.map(p => ({
+      productId: p.productId,
+      quantity: p.quantity,
+      unitPrice: p.unitPrice,
+      product: p.product
+    })) || []
+  );
   const [selectedPaymentMethod, setSelectedPaymentMethod] = useState(appointment.paymentMethod);
   const [isUpdating, setIsUpdating] = useState(false);
-  
+
   const isCompleted = appointment.status === 'COMPLETED';
   const isOnline = appointment.isOnlineBooking;
 
@@ -1533,10 +1498,20 @@ function AppointmentDetailsDialog({
 
     setIsUpdating(true);
     try {
-      const res = await fetch(`/api/appointments/${appointment.id}`, {
+      const isOnline = appointment.id.startsWith('online-');
+      const realId = isOnline ? appointment.id.replace('online-', '') : appointment.id;
+      const endpoint = isOnline ? `/api/online-bookings/${realId}` : `/api/appointments/${appointment.id}`;
+
+      const res = await fetch(endpoint, {
         method: 'PATCH',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ serviceIds: selectedServiceIds }),
+        body: JSON.stringify({
+          serviceIds: selectedServiceIds,
+          productItems: selectedProductItems.map(p => ({
+            productId: p.productId,
+            quantity: p.quantity
+          }))
+        }),
       });
 
       if (res.ok) {
@@ -1558,6 +1533,17 @@ function AppointmentDetailsDialog({
   const handleSavePaymentMethod = async () => {
     setIsUpdating(true);
     try {
+      const isOnline = appointment.id.startsWith('online-');
+      if (isOnline) {
+        // Apenas atualiza o estado local para agendamentos online, 
+        // já que a tabela OnlineBooking não tem paymentMethod.
+        // O valor será salvo ao finalizar (converter em appointment).
+        toast.success('Forma de pagamento selecionada para finalização.');
+        setIsEditingPayment(false);
+        setIsUpdating(false);
+        return;
+      }
+
       const res = await fetch(`/api/appointments/${appointment.id}`, {
         method: 'PATCH',
         headers: { 'Content-Type': 'application/json' },
@@ -1588,11 +1574,46 @@ function AppointmentDetailsDialog({
     );
   };
 
+  const addProduct = (product: any) => {
+    if (selectedProductItems.find(p => p.productId === product.id)) {
+      toast.error('Produto já adicionado');
+      return;
+    }
+    setSelectedProductItems(prev => [
+      ...prev,
+      {
+        productId: product.id,
+        quantity: 1,
+        unitPrice: product.price,
+        product: product
+      }
+    ]);
+  };
+
+  const removeProduct = (productId: string) => {
+    setSelectedProductItems(prev => prev.filter(p => p.productId !== productId));
+  };
+
+  const updateProductQuantity = (productId: string, delta: number) => {
+    setSelectedProductItems(prev => prev.map(p => {
+      if (p.productId === productId) {
+        return { ...p, quantity: Math.max(1, p.quantity + delta) };
+      }
+      return p;
+    }));
+  };
+
   const calculateTotal = () => {
-    return selectedServiceIds.reduce((sum, id) => {
-      const service = services.find(s => s.id === id);
+    const servicesTotal = selectedServiceIds.reduce((sum, id) => {
+      const service = services.find(s => s.id === id) || appointment.services.find(s => s.service.id === id)?.service;
       return sum + (service?.price || 0);
     }, 0);
+
+    const productsTotal = selectedProductItems.reduce((sum, item) => {
+      return sum + (item.quantity * item.unitPrice);
+    }, 0);
+
+    return servicesTotal + productsTotal;
   };
 
   return (
@@ -1645,7 +1666,7 @@ function AppointmentDetailsDialog({
           <div className="bg-secondary/50 p-4 rounded-lg">
             <div className="flex items-center justify-between mb-3">
               <span className="text-sm font-semibold">Serviços</span>
-              {!isCompleted && !isOnline && !isEditingServices && (
+              {!isCompleted && !isEditingServices && (
                 <Button
                   variant="outline"
                   size="sm"
@@ -1656,7 +1677,7 @@ function AppointmentDetailsDialog({
                 </Button>
               )}
             </div>
-            
+
             {isEditingServices ? (
               <div className="space-y-3">
                 <div className="max-h-64 overflow-y-auto space-y-2 border border-border rounded-lg p-3">
@@ -1680,6 +1701,60 @@ function AppointmentDetailsDialog({
                     </label>
                   ))}
                 </div>
+
+                <div className="flex items-center justify-between mt-4 mb-2">
+                  <h4 className="text-sm font-semibold">Produtos</h4>
+                </div>
+
+                {/* Add Product Selector */}
+                <div className="flex gap-2 mb-2">
+                  <Select onValueChange={(val) => {
+                    const product = products.find(p => p.id === val);
+                    if (product) addProduct(product);
+                  }}>
+                    <SelectTrigger className="h-8 text-xs">
+                      <SelectValue placeholder="Adicionar Produto" />
+                    </SelectTrigger>
+                    <SelectContent>
+                      {products
+                        .filter(p => !selectedProductItems.find(sp => sp.productId === p.id))
+                        .map(product => (
+                          <SelectItem key={product.id} value={product.id}>
+                            {product.name} - {formatCurrency(product.price)}
+                          </SelectItem>
+                        ))}
+                    </SelectContent>
+                  </Select>
+                </div>
+
+                {/* Selected Products List */}
+                <div className="max-h-64 overflow-y-auto space-y-2 border border-border rounded-lg p-3">
+                  {selectedProductItems.map((item) => (
+                    <div key={item.productId} className="flex items-center justify-between p-2 bg-background rounded border border-secondary">
+                      <div className="flex-1">
+                        <p className="font-medium text-foreground text-sm">{item.product.name}</p>
+                        <p className="text-xs text-muted-foreground">
+                          {formatCurrency(item.unitPrice)}
+                        </p>
+                      </div>
+                      <div className="flex items-center gap-2">
+                        <Button variant="ghost" size="icon" className="h-6 w-6" onClick={() => updateProductQuantity(item.productId, -1)}>
+                          <Minus className="w-3 h-3" />
+                        </Button>
+                        <span className="text-sm w-4 text-center">{item.quantity}</span>
+                        <Button variant="ghost" size="icon" className="h-6 w-6" onClick={() => updateProductQuantity(item.productId, 1)}>
+                          <Plus className="w-3 h-3" />
+                        </Button>
+                        <Button variant="ghost" size="icon" className="h-6 w-6 text-red-500" onClick={() => removeProduct(item.productId)}>
+                          <Trash2 className="w-3 h-3" />
+                        </Button>
+                      </div>
+                    </div>
+                  ))}
+                  {selectedProductItems.length === 0 && (
+                    <p className="text-xs text-muted-foreground text-center py-2">Nenhum produto selecionado</p>
+                  )}
+                </div>
                 {selectedServiceIds.length > 0 && (
                   <div className="bg-primary/10 p-3 rounded border border-primary/20">
                     <div className="flex justify-between items-center">
@@ -1697,6 +1772,14 @@ function AppointmentDetailsDialog({
                     onClick={() => {
                       setIsEditingServices(false);
                       setSelectedServiceIds(appointment.services.map(s => s.service.id));
+                      setSelectedProductItems(
+                        appointment.products?.map(p => ({
+                          productId: p.productId,
+                          quantity: p.quantity,
+                          unitPrice: p.unitPrice,
+                          product: p.product
+                        })) || []
+                      );
                     }}
                     className="flex-1"
                   >
@@ -1719,6 +1802,18 @@ function AppointmentDetailsDialog({
                     <span className="text-foreground">{s.service.name}</span>
                     <span className="font-semibold text-primary">
                       {formatCurrency(s.service.price)}
+                    </span>
+                  </div>
+                ))}
+
+                {appointment.products?.map((p) => (
+                  <div key={p.productId} className="flex justify-between items-center text-sm">
+                    <div className="flex items-center gap-1">
+                      <ShoppingCart className="w-3 h-3 text-muted-foreground" />
+                      <span className="text-foreground">{p.product.name} <span className="text-xs text-muted-foreground">(x{p.quantity})</span></span>
+                    </div>
+                    <span className="font-semibold text-primary">
+                      {formatCurrency(p.totalPrice)}
                     </span>
                   </div>
                 ))}
@@ -1847,8 +1942,7 @@ function AppointmentDetailsDialog({
                   variant="default"
                   onClick={(e) => {
                     e.stopPropagation();
-                    onClose();
-                    setIsFinalizingDialogOpen(true);
+                    onMarkCompleted(appointment.id);
                   }}
                   className="bg-green-600 hover:bg-green-700 text-white"
                 >
@@ -1857,30 +1951,17 @@ function AppointmentDetailsDialog({
                 </Button>
               </>
             )}
-            {!isOnline && (
-              <Button
-                variant="destructive"
-                onClick={() => onDelete(appointment.id)}
-              >
-                <Trash2 className="w-4 h-4 mr-2" />
-                Excluir
-              </Button>
-            )}
+            <Button
+              variant="destructive"
+              onClick={() => onDelete(appointment.id)}
+            >
+              <Trash2 className="w-4 h-4 mr-2" />
+              Excluir
+            </Button>
           </div>
         </DialogFooter>
       </DialogContent>
 
-      {/* Dialog de Finalização */}
-      {isFinalizingDialogOpen && (
-        <CompletionDialogWrapper
-          appointment={appointment}
-          onClose={() => setIsFinalizingDialogOpen(false)}
-          onComplete={() => {
-            setIsFinalizingDialogOpen(false);
-            onUpdate();
-          }}
-        />
-      )}
     </Dialog>
   );
 

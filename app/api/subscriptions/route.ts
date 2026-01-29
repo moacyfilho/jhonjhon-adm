@@ -70,20 +70,40 @@ export async function POST(request: NextRequest) {
     const body = await request.json();
     const {
       clientId,
-      planName,
-      amount,
+      planId,
+      planName: manualPlanName,
+      amount: manualAmount,
       billingDay,
-      servicesIncluded,
-      usageLimit,
+      servicesIncluded: manualServices,
+      usageLimit: manualLimit,
       observations,
     } = body;
 
     // Validações
-    if (!clientId || !planName || !amount || !billingDay) {
+    if (!clientId || (!planId && !manualPlanName) || (!planId && manualAmount === undefined) || !billingDay) {
       return NextResponse.json(
-        { error: 'Campos obrigatórios: clientId, planName, amount, billingDay' },
+        { error: 'Campos obrigatórios: clientId, (planId ou planName+amount), billingDay' },
         { status: 400 }
       );
+    }
+
+    // Se planId for fornecido, buscar os dados do plano
+    let planName = manualPlanName;
+    let amount = manualAmount;
+    let servicesIncluded = manualServices;
+    let usageLimit = manualLimit;
+
+    if (planId) {
+      const plan = await prisma.subscriptionPlan.findUnique({
+        where: { id: planId }
+      });
+      if (!plan) {
+        return NextResponse.json({ error: 'Plano não encontrado' }, { status: 404 });
+      }
+      planName = plan.name;
+      amount = plan.price;
+      servicesIncluded = plan.servicesIncluded;
+      usageLimit = plan.usageLimit;
     }
 
     if (billingDay < 1 || billingDay > 31) {
@@ -152,15 +172,17 @@ export async function POST(request: NextRequest) {
       const subscription = await tx.subscription.create({
         data: {
           clientId,
-          planName,
-          amount,
-          billingDay,
-          servicesIncluded,
-          usageLimit: usageLimit || null,
+          planId: planId || null,
+          planName: planName as string,
+          amount: parseFloat(amount as string),
+          billingDay: parseInt(billingDay as string),
+          servicesIncluded: servicesIncluded || null,
+          usageLimit: usageLimit ? parseInt(usageLimit as string) : null,
           observations,
         },
         include: {
           client: true,
+          plan: true,
         },
       });
 

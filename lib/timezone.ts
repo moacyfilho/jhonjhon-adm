@@ -16,9 +16,19 @@ export function getManausNow(): Date {
 }
 
 /**
- * Converte uma data UTC para o horário de Manaus
+ * Converte uma data UTC para o horário de Manaus (exibição)
+ * No cliente, apenas retorna a data se já estiver no fuso correto, 
+ * ou formata usando Intl.
  */
 export function toManausTime(date: Date): Date {
+  // Para compatibilidade com o código legado que espera um objeto Date "deslocado"
+  // mas agora de forma mais segura para evitar double-offset no browser
+  if (typeof window !== 'undefined') {
+    // No browser, retornamos a data original pois o browser já ajusta para o fuso local
+    // Se o browser não estiver em Manaus, as funções de formatação abaixo resolverão.
+    return date;
+  }
+  // No servidor (Node.js), podemos manter a lógica de deslocamento se necessário para strings
   return new Date(date.getTime() + (MANAUS_OFFSET_HOURS * 60 * 60 * 1000));
 }
 
@@ -33,11 +43,11 @@ export function toManausTime(date: Date): Date {
  */
 export function createManausDate(dateStr: string, hours: number, minutes: number): Date {
   const [year, month, day] = dateStr.split('-').map(Number);
-  
+
   // Manaus é UTC-4, então para converter Manaus → UTC precisamos ADICIONAR 4 horas
   // Exemplo: 18:00 Manaus = 22:00 UTC (18 + 4)
   const utcHours = hours - MANAUS_OFFSET_HOURS; // hours - (-4) = hours + 4
-  
+
   // Cria a data diretamente em UTC com o horário ajustado
   return new Date(Date.UTC(year, month - 1, day, utcHours, minutes, 0));
 }
@@ -46,10 +56,12 @@ export function createManausDate(dateStr: string, hours: number, minutes: number
  * Extrai o horário (HH:MM) de uma data no fuso de Manaus
  */
 export function getManausTimeString(date: Date): string {
-  const manausDate = toManausTime(date);
-  const hours = manausDate.getUTCHours();
-  const minutes = manausDate.getUTCMinutes();
-  return `${String(hours).padStart(2, '0')}:${String(minutes).padStart(2, '0')}`;
+  return new Intl.DateTimeFormat('pt-BR', {
+    timeZone: 'America/Manaus',
+    hour: '2-digit',
+    minute: '2-digit',
+    hour12: false
+  }).format(date);
 }
 
 /**
@@ -70,26 +82,26 @@ export function getManausEndOfDay(dateStr: string): Date {
  * Verifica se duas datas são do mesmo dia no fuso de Manaus
  */
 export function isSameDayManaus(date1: Date, date2: Date): boolean {
-  const manaus1 = toManausTime(date1);
-  const manaus2 = toManausTime(date2);
-  
-  return (
-    manaus1.getUTCFullYear() === manaus2.getUTCFullYear() &&
-    manaus1.getUTCMonth() === manaus2.getUTCMonth() &&
-    manaus1.getUTCDate() === manaus2.getUTCDate()
-  );
+  const fmt = new Intl.DateTimeFormat('en-CA', {
+    timeZone: 'America/Manaus',
+    year: 'numeric',
+    month: '2-digit',
+    day: '2-digit'
+  });
+  return fmt.format(date1) === fmt.format(date2);
 }
 
 /**
  * Formata uma data para exibição no formato brasileiro (dd/MM/yyyy HH:mm)
  */
 export function formatManausDateTime(date: Date): string {
-  const manausDate = toManausTime(date);
-  const day = String(manausDate.getUTCDate()).padStart(2, '0');
-  const month = String(manausDate.getUTCMonth() + 1).padStart(2, '0');
-  const year = manausDate.getUTCFullYear();
-  const hours = String(manausDate.getUTCHours()).padStart(2, '0');
-  const minutes = String(manausDate.getUTCMinutes()).padStart(2, '0');
-  
-  return `${day}/${month}/${year} ${hours}:${minutes}`;
+  return new Intl.DateTimeFormat('pt-BR', {
+    timeZone: 'America/Manaus',
+    day: '2-digit',
+    month: '2-digit',
+    year: 'numeric',
+    hour: '2-digit',
+    minute: '2-digit',
+    hour12: false
+  }).format(date);
 }

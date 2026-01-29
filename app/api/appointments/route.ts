@@ -2,7 +2,7 @@ import { NextRequest, NextResponse } from "next/server";
 import { getServerSession } from "next-auth";
 import { authOptions } from "@/lib/auth/auth-options";
 import { prisma } from "@/lib/db";
-import { createManausDate } from "@/lib/timezone";
+import { createManausDate, getManausStartOfDay, getManausEndOfDay } from "@/lib/timezone";
 
 export const dynamic = 'force-dynamic';
 
@@ -43,32 +43,17 @@ export async function GET(request: NextRequest) {
     }
 
     if (startDate && endDate) {
-      // Converter datas para incluir todo o dia em Manaus (GMT-4)
-      // Manaus 00:00 = UTC 04:00 do mesmo dia
-      // Manaus 23:59 = UTC 03:59 do dia seguinte
-      const startDateObj = new Date(startDate);
-      const endDateObj = new Date(endDate);
+      where.date = {
+        gte: getManausStartOfDay(startDate),
+        lte: getManausEndOfDay(endDate),
+      };
 
-      // Início do dia em Manaus = 04:00 UTC do mesmo dia
-      const startUTC = new Date(startDateObj);
-      startUTC.setUTCHours(4, 0, 0, 0);
-
-      // Fim do dia em Manaus = 03:59:59 UTC do dia seguinte
-      const endUTC = new Date(endDateObj);
-      endUTC.setUTCDate(endUTC.getUTCDate() + 1);
-      endUTC.setUTCHours(3, 59, 59, 999);
-
-      console.log('[Appointments API] Filtro de data:', {
+      console.log('[Appointments API] Filtro de data (Manaus):', {
         startDate,
         endDate,
-        startUTC: startUTC.toISOString(),
-        endUTC: endUTC.toISOString(),
+        gte: where.date.gte.toISOString(),
+        lte: where.date.lte.toISOString(),
       });
-
-      where.date = {
-        gte: startUTC,
-        lte: endUTC,
-      };
     }
 
     const appointments = await prisma.appointment.findMany({
@@ -284,6 +269,19 @@ export async function POST(request: NextRequest) {
           },
         },
       });
+
+      // Se for assinante, registrar o uso na tabela de SubscriptionUsage
+      if (isSubscriptionAppointment && activeSubscription) {
+        if (serviceIds && serviceIds.length > 0) {
+          await tx.subscriptionUsage.createMany({
+            data: serviceIds.map((serviceId: string) => ({
+              subscriptionId: activeSubscription.id,
+              serviceId: serviceId,
+              date: appointmentDate,
+            })),
+          });
+        }
+      }
 
       // Update product stock
       if (productItems && productItems.length > 0) {

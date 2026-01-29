@@ -15,23 +15,34 @@ export async function GET(request: NextRequest) {
         const endDate = endOfMonth(referenceDate);
 
         // 1. Calculate Financials (Recebidas / A Receber)
-        // We look at AccountReceivable for SUBSCRIPTION category
-        const receivables = await prisma.accountReceivable.groupBy({
-            by: ['status'],
+        // Recebidas: Somar pelo paymentDate (quando caiu o dinheiro)
+        const receivedData = await prisma.accountReceivable.aggregate({
+            _sum: { amount: true },
             where: {
                 category: 'SUBSCRIPTION',
+                status: 'PAID',
+                paymentDate: {
+                    gte: startDate,
+                    lte: endDate,
+                },
+            },
+        });
+
+        // A receber: Somar pelo dueDate (o que vence/venceu no mês)
+        const pendingData = await prisma.accountReceivable.aggregate({
+            _sum: { amount: true },
+            where: {
+                category: 'SUBSCRIPTION',
+                status: { in: ['PENDING', 'OVERDUE'] },
                 dueDate: {
                     gte: startDate,
                     lte: endDate,
                 },
             },
-            _sum: {
-                amount: true,
-            },
         });
 
-        const receivedAmount = receivables.find(r => r.status === 'PAID')?._sum.amount || 0;
-        const pendingAmount = receivables.find(r => r.status === 'PENDING' || r.status === 'OVERDUE')?._sum.amount || 0;
+        const receivedAmount = receivedData._sum.amount || 0;
+        const pendingAmount = pendingData._sum.amount || 0;
 
         // Note: If no receivables exist, we might want to fallback to active subscriptions sum, 
         // but proper system usage implies generating receivables. 
@@ -58,22 +69,15 @@ export async function GET(request: NextRequest) {
         });
 
         // 3. Calculate Global Metrics
-        // Calculate total hours from appointments
-        // We can use workedHoursSubscription if populated, or calculate from duration
-        // Let's use workedHoursSubscription first, fallback to duration if 0
+        // Calculate total hours from appointments (using workedHoursSubscription)
         let totalServiceMinutes = 0;
 
         const processedAppointments = appointments.map(app => {
-            // Calculate duration for this appointment
-            // If workedHoursSubscription is stored as hours, convert to minutes. 
-            // If it's 0, use sum of services duration.
+            // Se workedHoursSubscription estiver zerado (legado), calcular pela duração dos serviços
             let durationMinutes = app.workedHoursSubscription * 60;
-
             if (durationMinutes === 0) {
-                // Fallback to service durations
                 durationMinutes = app.services.reduce((acc, s) => acc + s.service.duration, 0);
             }
-
             totalServiceMinutes += durationMinutes;
 
             return {
@@ -84,49 +88,97 @@ export async function GET(request: NextRequest) {
 
         const totalServiceHours = totalServiceMinutes / 60;
 
-        // Avoid division by zero
+        // VALOR DA HORA (DINÂMICO): Total Recebido / Total de Horas de Assinantes Trabalhadas
         const hourlyRate = totalServiceHours > 0
             ? receivedAmount / totalServiceHours
             : 0;
 
-        // 4. Build Table Data
-        // We need a list of all Barbers and all Service Names used involved
+        // Total (Recebidas + A receber)
+        const grandTotal = receivedAmount + pendingAmount;
+
+        // Frequência (Atendimentos Totais / Total de Assinantes que usaram ou total de ativos?)
+        // Na imagem parece ser a média de uso por assinante
+        const subscriptionsCount = await prisma.subscription.count({
+            where: { status: 'ACTIVE' }
+        });
+
+        const totalUsageCount = processedAppointments.length;
+        const averageFrequency = subscriptionsCount > 0
+            ? totalUsageCount / subscriptionsCount
+            : 0;
+
+        // 4. Build Detailed Subscriber List
+        // Buscar todas as contas a receber do período para saber quem pagou
+        const monthlyReceivables = await prisma.accountReceivable.findMany({
+            where: {
+                category: 'SUBSCRIPTION',
+                OR: [
+                    { paymentDate: { gte: startDate, lte: endDate } },
+                    { dueDate: { gte: startDate, lte: endDate } }
+                ]
+            }
+        });
+
+        // Buscar todos os assinantes ativos para listar
+        const allSubscriptions = await prisma.subscription.findMany({
+            where: { status: 'ACTIVE' },
+            include: { client: true }
+        });
+
+        const subscriberList = allSubscriptions.map(sub => {
+            // Ver se tem conta paga ou pendente este mês
+            const receivable = monthlyReceivables.find(r => r.clientId === sub.clientId);
+
+            // Ver uso deste assinante no mês
+            const usage = processedAppointments.filter(app => app.clientId === sub.clientId);
+            const usageCount = usage.length;
+            const usageMinutes = usage.reduce((acc, app) => acc + app.durationMinutes, 0);
+
+            return {
+                id: sub.id,
+                clientName: sub.client.name,
+                clientPhone: sub.client.phone,
+                amount: sub.amount,
+                billingDay: sub.billingDay,
+                isPaid: receivable?.status === 'PAID',
+                usageCount,
+                usageMinutes
+            };
+        });
+
+        // 5. Build Barber Table Data
         const barberStats: Record<string, any> = {};
         const serviceNames = new Set<string>();
 
-        // Initial pass to setup barbers
         processedAppointments.forEach(app => {
+            const barberId = app.barberId;
             const barberName = app.barber.name;
-            if (!barberStats[barberName]) {
-                barberStats[barberName] = {
-                    id: app.barberId,
+            const commissionRate = app.barber.commissionRate;
+
+            if (!barberStats[barberId]) {
+                barberStats[barberId] = {
+                    id: barberId,
                     name: barberName,
+                    commissionRate,
                     totalMinutes: 0,
                     services: {}
                 };
             }
 
-            // Group by Service Name
-            // An appointment might have multiple services. 
-            // For the table, we usually categorize the appointment by its "Main" service or split it.
-            // The image shows "Corte Assinante", "Corte & Barba". 
-            // Let's iterate services.
             app.services.forEach(appService => {
                 const serviceName = appService.service.name;
                 serviceNames.add(serviceName);
 
-                if (!barberStats[barberName].services[serviceName]) {
-                    barberStats[barberName].services[serviceName] = {
+                if (!barberStats[barberId].services[serviceName]) {
+                    barberStats[barberId].services[serviceName] = {
                         count: 0,
                         minutes: 0
                     };
                 }
 
-                barberStats[barberName].services[serviceName].count += 1;
-                barberStats[barberName].services[serviceName].minutes += appService.service.duration;
-
-                // Allow total to accumulate
-                barberStats[barberName].totalMinutes += appService.service.duration;
+                barberStats[barberId].services[serviceName].count += 1;
+                barberStats[barberId].services[serviceName].minutes += appService.service.duration;
+                barberStats[barberId].totalMinutes += appService.service.duration;
             });
         });
 
@@ -134,41 +186,34 @@ export async function GET(request: NextRequest) {
         const barbers = Object.values(barberStats).map(b => {
             const totalHours = b.totalMinutes / 60;
             const totalValue = totalHours * hourlyRate;
+            const commission = (totalValue * b.commissionRate) / 100;
 
             return {
                 name: b.name,
                 services: b.services,
                 totalHours,
                 totalValue,
-                commission: totalValue * 0.45,
-                house: totalValue * 0.55
+                commission,
+                house: totalValue - commission
             };
         });
 
-        // Add "Casa" summary (sum of all house shares? or is "Casa" a separate entity in the columns?)
-        // The image shows "Casa" as a column. 
-        // Usually "Casa" column implies the shop's share generated by that professional?
-        // OR it's a "Casa" professional. 
-        // Re-reading user: "cada profissional ganha 45% de comissão e a casa fica com 55%"
-        // Image 2 has a column for "Jhon", "Maikon", "Eduardo", "Kauã" AND "Casa". 
-        // "Casa" column likely aggregates metrics for a generic "House" user or is just a summary column?
-        // But it has values for service counts. 
-        // Let's just return the barbers list. If "Casa" is a barber in the DB, it will show up.
-
-        // Sort barbers by name?
         barbers.sort((a, b) => a.name.localeCompare(b.name));
 
         return NextResponse.json({
             metrics: {
                 received: receivedAmount,
                 pending: pendingAmount,
+                total: grandTotal,
                 totalHours: totalServiceHours,
-                hourlyRate: hourlyRate
+                hourlyRate: hourlyRate,
+                frequency: averageFrequency
             },
             table: {
                 serviceNames: Array.from(serviceNames).sort(),
                 barbers
-            }
+            },
+            subscribers: subscriberList
         });
 
     } catch (error) {

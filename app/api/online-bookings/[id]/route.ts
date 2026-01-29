@@ -55,10 +55,11 @@ export async function PATCH(
 
     const { id } = await params;
     const body = await request.json();
-    const { status, observations, barberId } = body;
+    const { status, observations, barberId, serviceIds, scheduledDate } = body;
 
     const booking = await prisma.onlineBooking.findUnique({
       where: { id },
+      include: { services: true }
     });
 
     if (!booking) {
@@ -72,6 +73,28 @@ export async function PATCH(
     if (status !== undefined) updateData.status = status;
     if (observations !== undefined) updateData.observations = observations;
     if (barberId !== undefined) updateData.barberId = barberId;
+    if (scheduledDate !== undefined) updateData.scheduledDate = new Date(scheduledDate);
+
+    // Se houver alteração de serviços, atualizar a tabela associativa
+    if (serviceIds && Array.isArray(serviceIds)) {
+      // Remover serviços antigos
+      await prisma.onlineBookingService.deleteMany({
+        where: { onlineBookingId: id }
+      });
+
+      // Buscar novos serviços para pegar os preços
+      const services = await prisma.service.findMany({
+        where: { id: { in: serviceIds } }
+      });
+
+      // Criar novos serviços
+      updateData.services = {
+        create: services.map(s => ({
+          serviceId: s.id,
+          price: s.price
+        }))
+      };
+    }
 
     const updatedBooking = await prisma.onlineBooking.update({
       where: { id },

@@ -57,6 +57,7 @@ export async function PATCH(
     const { id } = await params;
     const body = await request.json();
     const {
+      planId,
       planName,
       amount,
       billingDay,
@@ -81,6 +82,7 @@ export async function PATCH(
 
     const updateData: any = {};
 
+    if (planId !== undefined) updateData.planId = planId === 'none' ? null : planId;
     if (planName !== undefined) updateData.planName = planName;
     if (amount !== undefined) updateData.amount = amount;
     if (billingDay !== undefined) {

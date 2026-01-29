@@ -5,6 +5,8 @@ import { prisma } from '@/lib/db';
 
 export const dynamic = 'force-dynamic';
 
+import { getManausStartOfDay, getManausEndOfDay } from '@/lib/timezone';
+
 // GET - Listar agendamentos online (autenticado)
 export async function GET(request: NextRequest) {
   try {
@@ -27,26 +29,16 @@ export async function GET(request: NextRequest) {
 
     // Filtro por data única (compatibilidade)
     if (date) {
-      const startDate = new Date(date);
-      startDate.setHours(0, 0, 0, 0);
-      const endDate = new Date(date);
-      endDate.setHours(23, 59, 59, 999);
-
       where.scheduledDate = {
-        gte: startDate,
-        lte: endDate,
+        gte: getManausStartOfDay(date),
+        lte: getManausEndOfDay(date),
       };
     }
     // Filtro por período (para agenda visual)
     else if (startDateParam && endDateParam) {
-      const startDate = new Date(startDateParam);
-      startDate.setHours(0, 0, 0, 0);
-      const endDate = new Date(endDateParam);
-      endDate.setHours(23, 59, 59, 999);
-
       where.scheduledDate = {
-        gte: startDate,
-        lte: endDate,
+        gte: getManausStartOfDay(startDateParam),
+        lte: getManausEndOfDay(endDateParam),
       };
     }
 
@@ -54,6 +46,11 @@ export async function GET(request: NextRequest) {
       where,
       include: {
         service: true,
+        services: {
+          include: {
+            service: true
+          }
+        },
         barber: true,
         client: true,
       },

@@ -122,9 +122,19 @@ export async function POST(request: NextRequest) {
 
     console.log(`[bookings] Horário ${requestedTimeSlot} disponível para agendamento`);
 
-    // Verificar se já existe um cliente com este telefone
+    // Normalizar telefone para busca (apenas números)
+    const normalizedPhone = clientPhone.replace(/\D/g, '');
+
+    // Verificar se já existe um cliente com este telefone ou nome
+    // A busca é feita por telefone exato, telefone normalizado ou nome identico (insensível a maiúsculas)
     let client = await prisma.client.findFirst({
-      where: { phone: clientPhone },
+      where: {
+        OR: [
+          { phone: clientPhone },
+          { phone: { contains: normalizedPhone } },
+          { name: { equals: clientName, mode: 'insensitive' } },
+        ]
+      },
     });
 
     let clientId = null;
