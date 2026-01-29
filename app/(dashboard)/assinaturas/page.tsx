@@ -107,6 +107,7 @@ interface SubscriptionPlan {
   servicesIncluded?: string;
   usageLimit?: number;
   isActive: boolean;
+  isExclusive?: boolean;
 }
 
 interface PaymentLink {
