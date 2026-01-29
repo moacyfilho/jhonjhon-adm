@@ -7,7 +7,7 @@ import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { Textarea } from '@/components/ui/textarea';
 import { Switch } from '@/components/ui/switch';
-import { Plus, Edit, Trash2, Package } from 'lucide-react';
+import { Plus, Edit, Trash2, Package, Sparkles } from 'lucide-react';
 import { toast } from 'sonner';
 
 interface SubscriptionPlan {
@@ -19,6 +19,7 @@ interface SubscriptionPlan {
     servicesIncluded?: string;
     usageLimit?: number;
     isActive: boolean;
+    isExclusive?: boolean;
     _count?: {
         subscriptions: number;
     };
@@ -138,6 +139,21 @@ export default function PlanosPage() {
         });
     };
 
+    const handleSeedPlans = async () => {
+        if (!confirm('Deseja recriar/restaurar os Planos Exclusivos (Corte, Barba, Combo)? Isso garantirá que eles existam no banco.')) return;
+
+        const promise = fetch('/api/admin/seed-exclusive-plans', { method: 'POST' });
+
+        toast.promise(promise, {
+            loading: 'Restaurando planos...',
+            success: () => {
+                fetchPlans();
+                return 'Planos restaurados!';
+            },
+            error: 'Erro ao restaurar'
+        });
+    };
+
     const getDurationLabel = (days: number) => {
         if (days === 30) return 'Mensal';
         if (days === 90) return 'Trimestral';
@@ -155,16 +171,26 @@ export default function PlanosPage() {
                         Gerencie os tipos de planos disponíveis para seus clientes
                     </p>
                 </div>
-                <Button
-                    onClick={() => {
-                        setShowForm(!showForm);
-                        setEditingPlan(null);
-                        resetForm();
-                    }}
-                >
-                    <Plus className="w-4 h-4 mr-2" />
-                    Novo Plano
-                </Button>
+                <div className="flex gap-2">
+                    <Button
+                        onClick={handleSeedPlans}
+                        variant="outline"
+                        className="text-gold border-gold/20 hover:bg-gold/10"
+                    >
+                        <Sparkles className="w-4 h-4 mr-2" />
+                        Restaurar Padrões
+                    </Button>
+                    <Button
+                        onClick={() => {
+                            setShowForm(!showForm);
+                            setEditingPlan(null);
+                            resetForm();
+                        }}
+                    >
+                        <Plus className="w-4 h-4 mr-2" />
+                        Novo Plano
+                    </Button>
+                </div>
             </div>
 
             {showForm && (

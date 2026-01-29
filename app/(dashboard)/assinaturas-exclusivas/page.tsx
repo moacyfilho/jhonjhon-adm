@@ -47,6 +47,7 @@ import {
     User,
     ChevronsUpDown,
     Check,
+    Sparkles,
 } from 'lucide-react';
 import Image from 'next/image';
 import { toast } from 'sonner';
@@ -579,6 +580,21 @@ export default function AssinaturasExclusivasPage() {
         return `${hours}h${mins.toString().padStart(2, '0')}min`;
     };
 
+    const handleSeedPlans = async () => {
+        if (!confirm('Deseja recriar/restaurar os Planos Exclusivos (Corte, Barba, Combo) no banco de dados? Isso não afeta assinaturas existentes.')) return;
+
+        const promise = fetch('/api/admin/seed-exclusive-plans', { method: 'POST' });
+
+        toast.promise(promise, {
+            loading: 'Restaurando planos...',
+            success: (data) => {
+                fetchPlans(); // Refresh list used in dropdown
+                return 'Planos restaurados com sucesso!';
+            },
+            error: 'Erro ao restaurar planos'
+        });
+    };
+
     return (
         <div className="space-y-6">
             {/* Header */}
@@ -590,7 +606,10 @@ export default function AssinaturasExclusivasPage() {
                     </p>
                 </div>
                 <div className="flex gap-2">
-                    {/* REMOVE PLANS BUTTON - IT'S EXCLUSIVE */}
+                    <Button onClick={handleSeedPlans} variant="outline" className="text-gold border-gold/20 hover:bg-gold/10">
+                        <Sparkles className="mr-2 h-4 w-4" />
+                        Restaurar Padrões
+                    </Button>
                     <Button onClick={openCreateDialog} className="bg-gold hover:bg-gold/80 text-black">
                         <Plus className="mr-2 h-4 w-4" />
                         Assinatura Exclusiva

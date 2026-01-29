@@ -246,7 +246,7 @@ export default function AssinaturasPage() {
       const response = await fetch('/api/subscription-plans');
       if (!response.ok) throw new Error('Erro ao carregar planos');
       const data = await response.json();
-      setPlans(data.filter((p: SubscriptionPlan) => p.isActive && !p.isExclusive));
+      setPlans(data.filter((p: SubscriptionPlan) => p.isActive));
     } catch (error) {
       console.error(error);
       toast.error('Erro ao carregar planos');
