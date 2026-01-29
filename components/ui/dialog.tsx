@@ -35,14 +35,19 @@ export function Dialog({ open, onOpenChange, children }: DialogProps) {
   );
 }
 
+import { cn } from "@/lib/utils";
+
+// ... existing imports
+
 interface DialogContentProps {
   children: React.ReactNode;
   onClose?: () => void;
+  className?: string;
 }
 
-export function DialogContent({ children, onClose }: DialogContentProps) {
+export function DialogContent({ children, onClose, className }: DialogContentProps) {
   return (
-    <div className="bg-card border border-border rounded-lg shadow-xl">
+    <div className={cn("bg-card border border-border rounded-lg shadow-xl", className)}>
       {onClose && (
         <button
           onClick={onClose}
@@ -56,25 +61,25 @@ export function DialogContent({ children, onClose }: DialogContentProps) {
   );
 }
 
-export function DialogHeader({ children }: { children: React.ReactNode }) {
-  return <div className="p-6 border-b border-border">{children}</div>;
+export function DialogHeader({ children, className }: { children: React.ReactNode; className?: string }) {
+  return <div className={cn("p-6 border-b border-border", className)}>{children}</div>;
 }
 
-export function DialogTitle({ children }: { children: React.ReactNode }) {
-  return <h2 className="text-xl font-bold text-foreground">{children}</h2>;
+export function DialogTitle({ children, className }: { children: React.ReactNode; className?: string }) {
+  return <h2 className={cn("text-xl font-bold text-foreground", className)}>{children}</h2>;
 }
 
-export function DialogDescription({ children }: { children: React.ReactNode }) {
-  return <p className="text-sm text-muted-foreground mt-1">{children}</p>;
+export function DialogDescription({ children, className }: { children: React.ReactNode; className?: string }) {
+  return <p className={cn("text-sm text-muted-foreground mt-1", className)}>{children}</p>;
 }
 
-export function DialogBody({ children }: { children: React.ReactNode }) {
-  return <div className="p-6">{children}</div>;
+export function DialogBody({ children, className }: { children: React.ReactNode; className?: string }) {
+  return <div className={cn("p-6", className)}>{children}</div>;
 }
 
-export function DialogFooter({ children }: { children: React.ReactNode }) {
+export function DialogFooter({ children, className }: { children: React.ReactNode; className?: string }) {
   return (
-    <div className="p-6 border-t border-border flex items-center justify-end gap-3">
+    <div className={cn("p-6 border-t border-border flex items-center justify-end gap-3", className)}>
       {children}
     </div>
   );
