@@ -45,7 +45,7 @@ export async function GET(request: NextRequest) {
     // Atualizar status de contas vencidas
     const today = new Date();
     today.setHours(0, 0, 0, 0);
-    
+
     const overdueIds = accounts
       .filter(acc => acc.status === 'PENDING' && new Date(acc.dueDate) < today)
       .map(acc => acc.id);
@@ -80,7 +80,7 @@ export async function POST(request: NextRequest) {
     }
 
     const body = await request.json();
-    const { description, category, payer, amount, dueDate, observations } = body;
+    const { description, category, payer, amount, dueDate, observations, clientId, subscriptionId } = body;
 
     if (!description || !category || !amount || !dueDate) {
       return NextResponse.json(
@@ -97,6 +97,8 @@ export async function POST(request: NextRequest) {
         amount: parseFloat(amount),
         dueDate: new Date(dueDate),
         observations: observations || null,
+        clientId: clientId || null,
+        subscriptionId: subscriptionId || null,
       },
     });
 

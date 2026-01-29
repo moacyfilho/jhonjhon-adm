@@ -383,6 +383,7 @@ export default function AssinaturasPage() {
           category: 'SUBSCRIPTION',
           payer: subscription.client.name,
           clientId: subscription.clientId,
+          subscriptionId: subscription.id,
           phone: subscription.client.phone,
           amount: subscription.amount,
           dueDate: dueDate.toISOString(),
