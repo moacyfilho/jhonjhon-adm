@@ -2,6 +2,7 @@ import { NextRequest, NextResponse } from 'next/server';
 import { getServerSession } from 'next-auth';
 import { authOptions } from '@/lib/auth/auth-options';
 import { prisma } from '@/lib/db';
+import { getPaymentLink } from '@/lib/plan-links';
 
 // POST - Gerar link de pagamento
 export async function POST(request: NextRequest) {
@@ -24,7 +25,10 @@ export async function POST(request: NextRequest) {
     // Verificar se a conta existe
     const account = await prisma.accountReceivable.findUnique({
       where: { id: accountReceivableId },
-      include: { client: true },
+      include: {
+        client: true,
+        subscription: true,
+      },
     });
 
     if (!account) {
@@ -37,8 +41,20 @@ export async function POST(request: NextRequest) {
     // Gerar URL de pagamento (aqui você pode integrar com sua plataforma de pagamento)
     // Por enquanto, vamos gerar um link simulado
     const linkId = Math.random().toString(36).substring(2, 15);
-    const baseUrl = process.env.NEXTAUTH_URL || 'https://jhonjhon-adm.abacusai.app';
-    const linkUrl = `${baseUrl}/pagamento/${linkId}`;
+    const baseUrl = process.env.NEXTAUTH_URL || 'https://jhonjhon-adm.netlify.app';
+    let linkUrl = `${baseUrl}/pagamento/${linkId}`;
+
+    // Se for uma conta de assinatura, usar o link do plano
+    if (account.subscription) {
+      const planLink = getPaymentLink({
+        id: account.subscription.planId || '',
+        name: account.subscription.planName
+      });
+
+      if (planLink) {
+        linkUrl = planLink;
+      }
+    }
 
     // Calcular data de expiração
     const expiresAt = expiryDays
