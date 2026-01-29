@@ -106,7 +106,7 @@ export async function PATCH(
       }
 
       // Buscar novos produtos ou usar os atuais
-      let productDetails = [];
+      let productDetails: any[] = [];
       if (areProductsChanging) {
         const productIds = productItems.map((p: any) => p.productId);
         productDetails = await prisma.product.findMany({
