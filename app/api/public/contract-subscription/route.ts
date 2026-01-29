@@ -92,7 +92,7 @@ export async function POST(request: NextRequest) {
                 startDate,
                 endDate,
             },
-            paymentLink: getPaymentLink(plan.id),
+            paymentLink: getPaymentLink(plan),
         }, { status: 201 });
     } catch (error) {
         console.error('Erro ao contratar plano:', error);

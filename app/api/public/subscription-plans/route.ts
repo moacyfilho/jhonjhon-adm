@@ -25,7 +25,7 @@ export async function GET() {
 
         const plansWithLinks = plans.map(plan => ({
             ...plan,
-            paymentLink: getPaymentLink(plan.id)
+            paymentLink: getPaymentLink(plan)
         }));
 
         return NextResponse.json(plansWithLinks);
