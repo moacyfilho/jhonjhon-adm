@@ -7,7 +7,7 @@ import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { Textarea } from '@/components/ui/textarea';
 import { Switch } from '@/components/ui/switch';
-import { Plus, Edit, Trash2, Package, Sparkles } from 'lucide-react';
+import { Plus, Edit, Trash2, Package, Sparkles, Wrench } from 'lucide-react';
 import { toast } from 'sonner';
 
 interface SubscriptionPlan {
@@ -139,6 +139,18 @@ export default function PlanosPage() {
         });
     };
 
+    const handleMigrate = async () => {
+        if (!confirm('Deseja reparar a estrutura do banco de dados (Criar colunas faltantes)? Use isso se estiver vendo erros 500.')) return;
+
+        const promise = fetch('/api/admin/migrate', { method: 'POST' });
+
+        toast.promise(promise, {
+            loading: 'Reparando banco...',
+            success: 'Banco reparado!',
+            error: 'Erro ao reparar'
+        });
+    };
+
     const handleSeedPlans = async () => {
         if (!confirm('Deseja recriar/restaurar os Planos Exclusivos (Corte, Barba, Combo)? Isso garantirá que eles existam no banco.')) return;
 
@@ -179,6 +191,14 @@ export default function PlanosPage() {
                     >
                         <Sparkles className="w-4 h-4 mr-2" />
                         Restaurar Padrões
+                    </Button>
+                    <Button
+                        onClick={handleMigrate}
+                        variant="outline"
+                        className="text-red-500 border-red-500/20 hover:bg-red-500/10"
+                    >
+                        <Wrench className="w-4 h-4 mr-2" />
+                        Reparar BD
                     </Button>
                     <Button
                         onClick={() => {
