@@ -47,7 +47,7 @@ async function main() {
         appointments.forEach((apt, index) => {
             console.log(`${index + 1}. ${apt.client?.name || 'Cliente sem nome'}`);
             console.log(`   📅 Data/Hora: ${apt.date}`);
-            console.log(`   💈 Barbeiro: ${apt.barber.name}`);
+            console.log(`   💈 Barbeiro: ${apt.barber?.name || 'Não identificado'}`);
             console.log(`   📊 Status: ${apt.status}`);
             console.log(`   🆔 ID: ${apt.id}`);
             console.log('');
