@@ -87,6 +87,7 @@ export default function AgendamentoPage() {
   const [displayDate, setDisplayDate] = useState(''); // Data no formato dd/mm/aaaa para exibição
   const [calendarOpen, setCalendarOpen] = useState(false); // Controla abertura do calendário
   const [selectedDate, setSelectedDate] = useState<Date | undefined>(undefined); // Data selecionada no calendário
+  const [paymentLink, setPaymentLink] = useState<string | null>(null);
 
   useEffect(() => {
     fetchServices();
@@ -392,6 +393,12 @@ export default function AgendamentoPage() {
       setSuccess(true);
       toast.success('Assinatura realizada com sucesso!');
 
+      if (data.paymentLink) {
+        setPaymentLink(data.paymentLink);
+        // Tenta abrir em nova aba
+        window.open(data.paymentLink, '_blank');
+      }
+
       // Reset
       setFormData(prev => ({ ...prev, clientName: '', clientPhone: '', clientEmail: '' }));
       setSelectedPlanId('');
@@ -429,9 +436,20 @@ export default function AgendamentoPage() {
               <p className="text-muted-foreground">
                 {mode === 'booking'
                   ? 'Seu agendamento foi realizado com sucesso. Em breve entraremos em contato para confirmar.'
-                  : 'Sua assinatura foi realizada com sucesso! Aproveite seus benefícios.'}
+                  : paymentLink
+                    ? 'Sua assinatura foi iniciada! Clique no botão abaixo para finalizar o pagamento.'
+                    : 'Sua assinatura foi realizada com sucesso! Aproveite seus benefícios.'}
               </p>
             </div>
+
+            {paymentLink && mode === 'subscription' && (
+              <Button
+                onClick={() => window.open(paymentLink, '_blank')}
+                className="w-full bg-green-600 hover:bg-green-700 text-white font-bold h-12 text-lg mb-4"
+              >
+                Finalizar Pagamento
+              </Button>
+            )}
             <Button
               onClick={() => {
                 setSuccess(false);
@@ -449,7 +467,9 @@ export default function AgendamentoPage() {
                 setDisplayDate('');
                 setSelectedDate(undefined);
                 setAvailableSlots([]);
+                setAvailableSlots([]);
                 setSelectedPlanId('');
+                setPaymentLink(null);
               }}
               className="bg-gold text-white hover:bg-gold/90"
             >
