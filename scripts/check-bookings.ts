@@ -20,8 +20,7 @@ async function main() {
         console.log(`✅ Encontrados ${bookings.length} agendamentos:\n`);
         bookings.forEach((booking, index) => {
             console.log(`${index + 1}. ${booking.clientName}`);
-            console.log(`   📅 Data: ${booking.scheduledDate}`);
-            console.log(`   ⏰ Hora: ${booking.scheduledTime}`);
+            console.log(`   📅 Data/Hora: ${booking.scheduledDate}`);
             console.log(`   💈 Barbeiro: ${booking.barber.name}`);
             console.log(`   📊 Status: ${booking.status}`);
             console.log(`   🆔 ID: ${booking.id}`);
