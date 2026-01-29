@@ -398,10 +398,13 @@ export default function AgendamentoPage() {
       if (data.paymentLink) {
         setPaymentLink(data.paymentLink);
         // Redirecionar na mesma aba para evitar bloqueio de popup
-        toast.info('Redirecionando para pagamento...');
+        toast.info('Link encontrado! Redirecionando para pagamento em 3 segundos...');
         setTimeout(() => {
           window.location.href = data.paymentLink;
-        }, 1500);
+        }, 3000);
+      } else {
+        console.warn('Payment link not found for plan', selectedPlanId, data);
+        toast.warning('Assinatura criada, mas o link de pagamento não foi encontrado automaticamente e por isso não redirecionou.');
       }
 
       // Reset
