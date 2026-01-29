@@ -12,35 +12,48 @@ export const authOptions: NextAuthOptions = {
         password: { label: "Password", type: "password" },
       },
       async authorize(credentials) {
-        if (!credentials?.email || !credentials?.password) {
-          throw new Error("Email e senha são obrigatórios");
+        try {
+          console.log("[AUTH] Starting authorization...");
+
+          if (!credentials?.email || !credentials?.password) {
+            console.log("[AUTH] Missing credentials");
+            throw new Error("Email e senha são obrigatórios");
+          }
+
+          console.log("[AUTH] Looking up user:", credentials.email);
+          const user = await prisma.user.findUnique({
+            where: {
+              email: credentials.email,
+            },
+          });
+
+          if (!user || !user?.password) {
+            console.log("[AUTH] User not found or no password");
+            throw new Error("Credenciais inválidas");
+          }
+
+          console.log("[AUTH] User found, comparing passwords...");
+          const isPasswordValid = await bcrypt.compare(
+            credentials.password,
+            user.password
+          );
+
+          if (!isPasswordValid) {
+            console.log("[AUTH] Invalid password");
+            throw new Error("Credenciais inválidas");
+          }
+
+          console.log("[AUTH] Authentication successful for:", user.email);
+          return {
+            id: user.id,
+            email: user.email,
+            name: user.name,
+            role: user.role,
+          };
+        } catch (error) {
+          console.error("[AUTH] Authorization error:", error);
+          throw error;
         }
-
-        const user = await prisma.user.findUnique({
-          where: {
-            email: credentials.email,
-          },
-        });
-
-        if (!user || !user?.password) {
-          throw new Error("Credenciais inválidas");
-        }
-
-        const isPasswordValid = await bcrypt.compare(
-          credentials.password,
-          user.password
-        );
-
-        if (!isPasswordValid) {
-          throw new Error("Credenciais inválidas");
-        }
-
-        return {
-          id: user.id,
-          email: user.email,
-          name: user.name,
-          role: user.role,
-        };
       },
     }),
   ],
