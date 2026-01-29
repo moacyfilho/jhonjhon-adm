@@ -263,16 +263,18 @@ export default function AgendamentoPage() {
   }, [formData.scheduledDate, formData.barberId, fetchAvailableSlots]);
 
   const handleServiceToggle = (serviceId: string) => {
-    const currentIds = [...formData.serviceIds];
-    const index = currentIds.indexOf(serviceId);
+    setFormData(prev => {
+      const currentIds = [...prev.serviceIds];
+      const index = currentIds.indexOf(serviceId);
 
-    if (index >= 0) {
-      currentIds.splice(index, 1);
-    } else {
-      currentIds.push(serviceId);
-    }
+      if (index >= 0) {
+        currentIds.splice(index, 1);
+      } else {
+        currentIds.push(serviceId);
+      }
 
-    setFormData({ ...formData, serviceIds: currentIds });
+      return { ...prev, serviceIds: currentIds };
+    });
   };
 
   const handleSubmit = async (e: React.FormEvent) => {
