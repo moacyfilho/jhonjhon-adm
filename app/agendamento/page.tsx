@@ -154,12 +154,12 @@ export default function AgendamentoPage() {
         // Valida se a data é válida
         const testDate = new Date(isoDate);
         if (!isNaN(testDate.getTime())) {
-          setFormData({ ...formData, scheduledDate: isoDate, scheduledTime: '' });
+          setFormData(prev => ({ ...prev, scheduledDate: isoDate, scheduledTime: '' }));
           setSelectedDate(testDate);
         }
       }
     } else if (formatted.length === 0) {
-      setFormData({ ...formData, scheduledDate: '', scheduledTime: '' });
+      setFormData(prev => ({ ...prev, scheduledDate: '', scheduledTime: '' }));
       setSelectedDate(undefined);
     }
   };
@@ -171,7 +171,7 @@ export default function AgendamentoPage() {
       const isoDate = format(date, 'yyyy-MM-dd');
       const brDate = format(date, 'dd/MM/yyyy', { locale: ptBR });
       setDisplayDate(brDate);
-      setFormData({ ...formData, scheduledDate: isoDate, scheduledTime: '' });
+      setFormData(prev => ({ ...prev, scheduledDate: isoDate, scheduledTime: '' }));
       setCalendarOpen(false); // Fecha o calendário após seleção
     }
   };
@@ -324,7 +324,7 @@ export default function AgendamentoPage() {
           if (formData.scheduledDate) {
             await fetchAvailableSlots(formData.scheduledDate, formData.barberId);
           }
-          setFormData({ ...formData, scheduledTime: '' });
+          setFormData(prev => ({ ...prev, scheduledTime: '' }));
           setSubmitting(false);
           return;
         }
@@ -393,7 +393,7 @@ export default function AgendamentoPage() {
       toast.success('Assinatura realizada com sucesso!');
 
       // Reset
-      setFormData({ ...formData, clientName: '', clientPhone: '', clientEmail: '' });
+      setFormData(prev => ({ ...prev, clientName: '', clientPhone: '', clientEmail: '' }));
       setSelectedPlanId('');
     } catch (error: any) {
       console.error(error);
@@ -569,7 +569,7 @@ export default function AgendamentoPage() {
                         <Input
                           id="clientName"
                           value={formData.clientName}
-                          onChange={(e) => setFormData({ ...formData, clientName: e.target.value })}
+                          onChange={(e) => setFormData(prev => ({ ...prev, clientName: e.target.value }))}
                           placeholder="Digite seu nome"
                           required
                           className="bg-gray-900/70 border-gold/30 focus:border-gold text-white placeholder:text-gray-500 h-12"
@@ -584,7 +584,7 @@ export default function AgendamentoPage() {
                         <Input
                           id="clientPhone"
                           value={formData.clientPhone}
-                          onChange={(e) => setFormData({ ...formData, clientPhone: e.target.value })}
+                          onChange={(e) => setFormData(prev => ({ ...prev, clientPhone: e.target.value }))}
                           placeholder="(00) 00000-0000"
                           required
                           className="bg-gray-900/70 border-gold/30 focus:border-gold text-white placeholder:text-gray-500 h-12"
@@ -600,7 +600,7 @@ export default function AgendamentoPage() {
                           id="clientEmail"
                           type="email"
                           value={formData.clientEmail}
-                          onChange={(e) => setFormData({ ...formData, clientEmail: e.target.value })}
+                          onChange={(e) => setFormData(prev => ({ ...prev, clientEmail: e.target.value }))}
                           placeholder="seu@email.com"
                           className="bg-gray-900/70 border-gold/30 focus:border-gold text-white placeholder:text-gray-500 h-12"
                         />
@@ -612,7 +612,7 @@ export default function AgendamentoPage() {
                             id="isSubscriber"
                             checked={formData.isSubscriber}
                             onCheckedChange={(checked) =>
-                              setFormData({ ...formData, isSubscriber: checked === true })
+                              setFormData(prev => ({ ...prev, isSubscriber: checked === true }))
                             }
                             className="mt-1 border-gold/40 data-[state=checked]:bg-gold data-[state=checked]:border-gold h-5 w-5"
                           />
@@ -708,7 +708,7 @@ export default function AgendamentoPage() {
                                   ? 'border-gold shadow-lg shadow-gold/20'
                                   : 'border-gray-700 hover:border-gold/50'}
                               `}
-                              onClick={() => setFormData({ ...formData, barberId: barber.id })}
+                              onClick={() => setFormData(prev => ({ ...prev, barberId: barber.id }))}
                             >
                               <div className="aspect-square relative overflow-hidden">
                                 {photo ? (
@@ -830,7 +830,7 @@ export default function AgendamentoPage() {
                                         ? 'bg-red-900/30 border-red-500/50 text-red-400 hover:bg-red-900/30 cursor-not-allowed opacity-70'
                                         : 'bg-gray-900/50 border-gold/20 hover:bg-gold/20'
                                   }
-                                  onClick={() => slot.available && setFormData({ ...formData, scheduledTime: slot.time })}
+                                  onClick={() => slot.available && setFormData(prev => ({ ...prev, scheduledTime: slot.time }))}
                                 >
                                   <Clock className="h-3 w-3 mr-1" />
                                   {slot.time}
@@ -854,7 +854,7 @@ export default function AgendamentoPage() {
                     <Textarea
                       id="observations"
                       value={formData.observations}
-                      onChange={(e) => setFormData({ ...formData, observations: e.target.value })}
+                      onChange={(e) => setFormData(prev => ({ ...prev, observations: e.target.value }))}
                       placeholder="Alguma preferência ou observação especial?"
                       rows={3}
                       className="bg-gray-900/50 border-gold/20"
@@ -965,7 +965,7 @@ export default function AgendamentoPage() {
                         <Input
                           id="subClientName"
                           value={formData.clientName}
-                          onChange={(e) => setFormData({ ...formData, clientName: e.target.value })}
+                          onChange={(e) => setFormData(prev => ({ ...prev, clientName: e.target.value }))}
                           placeholder="Digite seu nome"
                           required
                           className="bg-gray-900/50 border-gold/20 focus:border-gold text-white placeholder:text-gray-600"
@@ -985,7 +985,7 @@ export default function AgendamentoPage() {
                             if (v.length > 11) v = v.slice(0, 11);
                             if (v.length > 2) v = `(${v.slice(0, 2)}) ${v.slice(2)}`;
                             if (v.length > 9) v = `${v.slice(0, 9)}-${v.slice(9)}`;
-                            setFormData({ ...formData, clientPhone: v });
+                            setFormData(prev => ({ ...prev, clientPhone: v }));
                           }}
                           placeholder="(00) 00000-0000"
                           required
@@ -1001,7 +1001,7 @@ export default function AgendamentoPage() {
                           id="subClientEmail"
                           type="email"
                           value={formData.clientEmail}
-                          onChange={(e) => setFormData({ ...formData, clientEmail: e.target.value })}
+                          onChange={(e) => setFormData(prev => ({ ...prev, clientEmail: e.target.value }))}
                           placeholder="seu@email.com"
                           className="bg-gray-900/50 border-gold/20 focus:border-gold text-white placeholder:text-gray-600"
                         />
