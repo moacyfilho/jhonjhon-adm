@@ -18,5 +18,11 @@ export function getPaymentLink(plan: { id: string, name: string }): string | nul
     // 2. Tentar pelo Nome exato
     if (LINKS_BY_NAME[plan.name]) return LINKS_BY_NAME[plan.name];
 
+    // 3. Tentar Match Robusto (Keywords)
+    const normalized = plan.name.toLowerCase().trim();
+    if (normalized.includes('corte') && normalized.includes('barba')) return LINKS_BY_NAME['Jhonjhon club Corte & Barba'];
+    if (normalized.includes('corte')) return LINKS_BY_NAME['Jhonjhon club Corte'];
+    if (normalized.includes('barba')) return LINKS_BY_NAME['Jhonjhon club Barba'];
+
     return null;
 }

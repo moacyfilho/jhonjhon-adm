@@ -397,8 +397,11 @@ export default function AgendamentoPage() {
 
       if (data.paymentLink) {
         setPaymentLink(data.paymentLink);
-        // Tenta abrir em nova aba
-        window.open(data.paymentLink, '_blank');
+        // Redirecionar na mesma aba para evitar bloqueio de popup
+        toast.info('Redirecionando para pagamento...');
+        setTimeout(() => {
+          window.location.href = data.paymentLink;
+        }, 1500);
       }
 
       // Reset
