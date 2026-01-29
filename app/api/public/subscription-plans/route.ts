@@ -10,6 +10,7 @@ export async function GET() {
         const plans = await prisma.subscriptionPlan.findMany({
             where: {
                 isActive: true,
+                isExclusive: false,
             },
             orderBy: { price: 'asc' },
             select: {
