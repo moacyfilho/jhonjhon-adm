@@ -765,6 +765,10 @@ export default function AssinaturasExclusivasPage() {
                                 className="pl-8 bg-[#1a1a1a] border-[#333] text-white"
                             />
                         </div>
+                        <Button onClick={openCreateDialog} className="bg-gold hover:bg-gold/80 text-black whitespace-nowrap">
+                            <Plus className="mr-2 h-4 w-4" />
+                            Nova Assinatura
+                        </Button>
                     </div>
 
                     <Card className="bg-[#1a1a1a] border-[#333]">
