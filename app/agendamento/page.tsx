@@ -7,7 +7,7 @@ import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { Textarea } from '@/components/ui/textarea';
 import { CheckboxSimple as Checkbox } from '@/components/ui/checkbox-simple';
-import { Calendar as CalendarIcon, Clock, User, Phone, Mail, Scissors, CheckCircle2, Loader2, AlertCircle } from 'lucide-react';
+import { Calendar as CalendarIcon, Clock, User, Phone, Mail, Scissors, CheckCircle2, Loader2, AlertCircle, Crown, Sparkles } from 'lucide-react';
 import { Calendar } from '@/components/ui/calendar';
 import { Popover, PopoverContent, PopoverTrigger } from '@/components/ui/popover';
 import { toast } from 'sonner';
@@ -952,8 +952,10 @@ export default function AgendamentoPage() {
                               className={`
                                 relative p-4 rounded-lg border cursor-pointer transition-all
                                 ${selectedPlanId === plan.id
-                                  ? 'bg-gold/20 border-gold/60 ring-1 ring-gold/40'
-                                  : 'bg-gray-900/70 border-gold/20 hover:bg-gold/10'}
+                                  ? 'bg-gold/20 border-gold/60 ring-1 ring-gold/40 shadow-[0_0_15px_rgba(255,215,0,0.2)]'
+                                  : plan.isExclusive
+                                    ? 'bg-gradient-to-r from-gray-900/80 to-black border-gold/50 shadow-[0_0_10px_rgba(212,175,55,0.1)] hover:border-gold hover:shadow-[0_0_15px_rgba(212,175,55,0.2)]'
+                                    : 'bg-gray-900/70 border-gold/20 hover:bg-gold/10'}
                               `}
                               onClick={() => setSelectedPlanId(plan.id)}
                             >
@@ -964,8 +966,8 @@ export default function AgendamentoPage() {
                                       {plan.name}
                                     </h4>
                                     {plan.isExclusive && (
-                                      <span className="bg-gold text-black text-[10px] font-bold px-2 py-0.5 rounded-full uppercase tracking-wider">
-                                        Exclusivo
+                                      <span className="bg-gold text-black text-[10px] font-bold px-2 py-0.5 rounded-full uppercase tracking-wider flex items-center gap-1 shadow-sm">
+                                        <Crown className="h-3 w-3 fill-black" /> Exclusivo
                                       </span>
                                     )}
                                   </div>
