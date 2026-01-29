@@ -63,6 +63,7 @@ export async function POST(request: NextRequest) {
                 endDate,
                 servicesIncluded: plan.servicesIncluded,
                 usageLimit: plan.usageLimit,
+                isExclusive: plan.isExclusive || false,
                 observations: 'Assinatura contratada via agendamento online',
             },
         });

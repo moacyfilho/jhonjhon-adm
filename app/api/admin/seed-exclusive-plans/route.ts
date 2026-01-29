@@ -75,9 +75,23 @@ export async function POST() {
             results.push(result);
         }
 
+        // Fix inconsistencies in existing subscriptions
+        const planIds = plans.map(p => p.id);
+        const fixedCount = await prisma.subscription.updateMany({
+            where: {
+                planId: { in: planIds },
+                isExclusive: false
+            },
+            data: {
+                isExclusive: true
+            }
+        });
+
+        console.log(`Fixed ${fixedCount.count} subscriptions to be exclusive.`);
+
         return NextResponse.json({
             success: true,
-            message: `Planos exclusivos recriados/atualizados com sucesso. (${results.length} planos)`,
+            message: `Planos exclusivos recriados com sucesso. ${fixedCount.count} assinaturas existentes foram corrigidas.`,
             plans: results
         });
 
