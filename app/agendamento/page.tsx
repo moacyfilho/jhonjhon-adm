@@ -390,6 +390,8 @@ export default function AgendamentoPage() {
         throw new Error(error.error || 'Erro ao contratar assinatura');
       }
 
+      const data = await response.json();
+
       setSuccess(true);
       toast.success('Assinatura realizada com sucesso!');
 
