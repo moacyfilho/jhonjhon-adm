@@ -1,6 +1,6 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { prisma } from '@/lib/db';
-import { startOfMonth, endOfMonth, parseISO } from 'date-fns';
+import { startOfMonth, endOfMonth, parseISO, subDays, addDays, isWithinInterval } from 'date-fns';
 
 export const dynamic = 'force-dynamic';
 
@@ -14,48 +14,45 @@ export async function GET(request: NextRequest) {
         const startDate = startOfMonth(referenceDate);
         const endDate = endOfMonth(referenceDate);
 
-        // 1. Calculate Financials (Recebidas / A Receber)
-        // Recebidas: Somar pelo paymentDate (quando caiu o dinheiro)
-        const receivedData = await prisma.accountReceivable.aggregate({
-            _sum: { amount: true },
+        // Buffer dates to handle Timezone edge cases
+        const startBuffer = subDays(startDate, 2);
+        const endBuffer = addDays(endDate, 2);
+
+        // 1. Fetch All Relevant Receivables (Broad Range)
+        const rawReceivables = await prisma.accountReceivable.findMany({
             where: {
                 category: 'SUBSCRIPTION',
-                status: 'PAID',
-                paymentDate: {
-                    gte: startDate,
-                    lte: endDate,
-                },
-            },
+                OR: [
+                    { paymentDate: { gte: startBuffer, lte: endBuffer } },
+                    { dueDate: { gte: startBuffer, lte: endBuffer } }
+                ]
+            }
         });
 
-        // A receber: Somar pelo dueDate (o que vence/venceu no mês)
-        const pendingData = await prisma.accountReceivable.aggregate({
-            _sum: { amount: true },
-            where: {
-                category: 'SUBSCRIPTION',
-                status: { in: ['PENDING', 'OVERDUE'] },
-                dueDate: {
-                    gte: startDate,
-                    lte: endDate,
-                },
-            },
-        });
+        // 2. Calculate Financials In-Memory (Strict Filtering)
+        const receivedAmount = rawReceivables
+            .filter(r =>
+                r.status === 'PAID' &&
+                r.paymentDate &&
+                isWithinInterval(r.paymentDate, { start: startDate, end: endDate })
+            )
+            .reduce((sum, r) => sum + r.amount, 0);
 
-        const receivedAmount = receivedData._sum.amount || 0;
-        const pendingAmount = pendingData._sum.amount || 0;
+        const pendingAmount = rawReceivables
+            .filter(r =>
+                (r.status === 'PENDING' || r.status === 'OVERDUE') &&
+                isWithinInterval(r.dueDate, { start: startDate, end: endDate })
+            )
+            .reduce((sum, r) => sum + r.amount, 0);
 
-        // Note: If no receivables exist, we might want to fallback to active subscriptions sum, 
-        // but proper system usage implies generating receivables. 
-        // For now, let's also fetch active subscriptions count as a sanity check or "Total Potential".
-
-        // 2. Fetch Subscription Appointments
-        const appointments = await prisma.appointment.findMany({
+        // 3. Fetch Subscription Appointments (Broad Range)
+        const rawAppointments = await prisma.appointment.findMany({
             where: {
                 isSubscriptionAppointment: true,
                 status: 'COMPLETED',
                 date: {
-                    gte: startDate,
-                    lte: endDate,
+                    gte: startBuffer,
+                    lte: endBuffer,
                 },
             },
             include: {
@@ -68,7 +65,12 @@ export async function GET(request: NextRequest) {
             },
         });
 
-        // 3. Calculate Global Metrics
+        // Filter Appointments In-Memory
+        const appointments = rawAppointments.filter(app =>
+            isWithinInterval(app.date, { start: startDate, end: endDate })
+        );
+
+        // 4. Calculate Global Metrics
         // Calculate total hours from appointments (using workedHoursSubscription)
         let totalServiceMinutes = 0;
 
@@ -97,7 +99,6 @@ export async function GET(request: NextRequest) {
         const grandTotal = receivedAmount + pendingAmount;
 
         // Frequência (Atendimentos Totais / Total de Assinantes que usaram ou total de ativos?)
-        // Na imagem parece ser a média de uso por assinante
         const subscriptionsCount = await prisma.subscription.count({
             where: { status: 'ACTIVE' }
         });
@@ -107,18 +108,7 @@ export async function GET(request: NextRequest) {
             ? totalUsageCount / subscriptionsCount
             : 0;
 
-        // 4. Build Detailed Subscriber List
-        // Buscar todas as contas a receber do período para saber quem pagou
-        const monthlyReceivables = await prisma.accountReceivable.findMany({
-            where: {
-                category: 'SUBSCRIPTION',
-                OR: [
-                    { paymentDate: { gte: startDate, lte: endDate } },
-                    { dueDate: { gte: startDate, lte: endDate } }
-                ]
-            }
-        });
-
+        // 5. Build Detailed Subscriber List
         // Buscar todos os assinantes ativos para listar
         const allSubscriptions = await prisma.subscription.findMany({
             where: { status: 'ACTIVE' },
@@ -126,8 +116,13 @@ export async function GET(request: NextRequest) {
         });
 
         const subscriberList = allSubscriptions.map(sub => {
-            // Ver se tem conta paga ou pendente este mês
-            const receivable = monthlyReceivables.find(r => r.clientId === sub.clientId);
+            // Ver se tem conta paga este mês (Strict check using loaded list)
+            const paidReceivable = rawReceivables.find(r =>
+                r.clientId === sub.clientId &&
+                r.status === 'PAID' &&
+                r.paymentDate &&
+                isWithinInterval(r.paymentDate, { start: startDate, end: endDate })
+            );
 
             // Ver uso deste assinante no mês
             const usage = processedAppointments.filter(app => app.clientId === sub.clientId);
@@ -140,13 +135,13 @@ export async function GET(request: NextRequest) {
                 clientPhone: sub.client.phone,
                 amount: sub.amount,
                 billingDay: sub.billingDay,
-                isPaid: receivable?.status === 'PAID',
+                isPaid: !!paidReceivable,
                 usageCount,
                 usageMinutes
             };
         });
 
-        // 5. Build Barber Table Data
+        // 6. Build Barber Table Data
         const barberStats: Record<string, any> = {};
         const serviceNames = new Set<string>();
 

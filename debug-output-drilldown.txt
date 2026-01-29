@@ -1,0 +1,33 @@
+­ƒöì Diagn├│stico Detalhado para: Moacy
+(node:20436) [MODULE_TYPELESS_PACKAGE_JSON] Warning: Module type of file:///C:/Users/zilda/OneDrive/%C3%81rea%20de%20Trabalho/adm%20jhonjhon/jhon_jhon_admin/nextjs_space/scripts/debug-subscription.ts is not specified and it doesn't parse as CommonJS.
+Reparsing as ES module because module syntax was detected. This incurs a performance overhead.
+To eliminate this warning, add "type": "module" to C:\Users\zilda\OneDrive\├ürea de Trabalho\adm jhonjhon\jhon_jhon_admin\nextjs_space\package.json.
+(Use `node --trace-warnings ...` to show where the warning was created)
+prisma:info Starting a postgresql pool with 9 connections.
+prisma:query SELECT "public"."Client"."id", "public"."Client"."name", "public"."Client"."phone", "public"."Client"."email", "public"."Client"."createdAt", "public"."Client"."updatedAt" FROM "public"."Client" WHERE "public"."Client"."name"::text LIKE $1 LIMIT $2 OFFSET $3
+Ô£à Cliente: Moacy Soares Nonato Filho (cmkyhlvjk0000jr04uehkfjes)
+
+­ƒôà Intervalo de Diagn├│stico:
+   Start Date: 2026-01-01T04:00:00.000Z (Local/System representation)
+   End Date:   2026-02-01T03:59:59.999Z (Local/System representation)
+
+­ƒöÄ Investigando AccountReceivable passo-a-passo:
+prisma:query SELECT "public"."AccountReceivable"."id", "public"."AccountReceivable"."description", "public"."AccountReceivable"."category"::text, "public"."AccountReceivable"."payer", "public"."AccountReceivable"."clientId", "public"."AccountReceivable"."phone", "public"."AccountReceivable"."amount", "public"."AccountReceivable"."dueDate", "public"."AccountReceivable"."paymentDate", "public"."AccountReceivable"."status"::text, "public"."AccountReceivable"."paymentMethod"::text, "public"."AccountReceivable"."observations", "public"."AccountReceivable"."subscriptionId", "public"."AccountReceivable"."createdAt", "public"."AccountReceivable"."updatedAt" FROM "public"."AccountReceivable" WHERE "public"."AccountReceivable"."clientId" = $1 OFFSET $2
+   (A) Total Receb├¡veis do Cliente: 1
+       - ID: cmkyuxg5t000sd4q4g2i2c16y | Cat: 'SUBSCRIPTION' | Status: 'PAID' | PayDate: 2026-01-28T00:00:00.000Z | DueDate: 2026-02-10T04:00:00.000Z
+prisma:query SELECT COUNT(*) AS "_count._all" FROM (SELECT "public"."AccountReceivable"."id" FROM "public"."AccountReceivable" WHERE ("public"."AccountReceivable"."clientId" = $1 AND "public"."AccountReceivable"."category" = CAST($2::text AS "public"."AccountCategory")) OFFSET $3) AS "sub"
+   (B) Com Category='SUBSCRIPTION': 1
+prisma:query SELECT COUNT(*) AS "_count._all" FROM (SELECT "public"."AccountReceivable"."id" FROM "public"."AccountReceivable" WHERE ("public"."AccountReceivable"."clientId" = $1 AND "public"."AccountReceivable"."category" = CAST($2::text AS "public"."AccountCategory") AND "public"."AccountReceivable"."status" = CAST($3::text AS "public"."AccountStatus")) OFFSET $4) AS "sub"
+   (C) Com Status='PAID': 1
+prisma:query SELECT "public"."AccountReceivable"."id", "public"."AccountReceivable"."description", "public"."AccountReceivable"."category"::text, "public"."AccountReceivable"."payer", "public"."AccountReceivable"."clientId", "public"."AccountReceivable"."phone", "public"."AccountReceivable"."amount", "public"."AccountReceivable"."dueDate", "public"."AccountReceivable"."paymentDate", "public"."AccountReceivable"."status"::text, "public"."AccountReceivable"."paymentMethod"::text, "public"."AccountReceivable"."observations", "public"."AccountReceivable"."subscriptionId", "public"."AccountReceivable"."createdAt", "public"."AccountReceivable"."updatedAt" FROM "public"."AccountReceivable" WHERE ("public"."AccountReceivable"."clientId" = $1 AND "public"."AccountReceivable"."category" = CAST($2::text AS "public"."AccountCategory") AND "public"."AccountReceivable"."status" = CAST($3::text AS "public"."AccountStatus") AND "public"."AccountReceivable"."paymentDate" >= $4 AND "public"."AccountReceivable"."paymentDate" <= $5) OFFSET $6
+   (D) Com PaymentDate no intervalo: 1
+       Ô£à SUCESSO! Registro encontrado com a query completa.
+
+­ƒöÄ Investigando Appointment passo-a-passo:
+prisma:query SELECT "public"."Appointment"."id", "public"."Appointment"."clientId", "public"."Appointment"."barberId", "public"."Appointment"."date", "public"."Appointment"."status"::text, "public"."Appointment"."paymentMethod"::text, "public"."Appointment"."totalAmount", "public"."Appointment"."workedHours", "public"."Appointment"."workedHoursSubscription", "public"."Appointment"."isSubscriptionAppointment", "public"."Appointment"."observations", "public"."Appointment"."onlineBookingId", "public"."Appointment"."createdAt", "public"."Appointment"."updatedAt" FROM "public"."Appointment" WHERE "public"."Appointment"."clientId" = $1 ORDER BY "public"."Appointment"."date" DESC LIMIT $2 OFFSET $3
+   (A) ├Ültimos Agendamentos:
+       - ID: cmkyw24d8001fd4q46bvf0ww2 | Date: 2026-01-30T18:00:00.000Z | Status: 'COMPLETED' | IsSub: true
+       - ID: cmkyup3i2000cd4q4o0igc5af | Date: 2026-01-30T02:30:00.000Z | Status: 'COMPLETED' | IsSub: false
+       - ID: cmkyv389i000zd4q41aa6t6u7 | Date: 2026-01-29T22:00:00.000Z | Status: 'SCHEDULED' | IsSub: true
+prisma:query SELECT "public"."Appointment"."id", "public"."Appointment"."clientId", "public"."Appointment"."barberId", "public"."Appointment"."date", "public"."Appointment"."status"::text, "public"."Appointment"."paymentMethod"::text, "public"."Appointment"."totalAmount", "public"."Appointment"."workedHours", "public"."Appointment"."workedHoursSubscription", "public"."Appointment"."isSubscriptionAppointment", "public"."Appointment"."observations", "public"."Appointment"."onlineBookingId", "public"."Appointment"."createdAt", "public"."Appointment"."updatedAt" FROM "public"."Appointment" WHERE ("public"."Appointment"."clientId" = $1 AND "public"."Appointment"."isSubscriptionAppointment" = $2 AND "public"."Appointment"."status" = CAST($3::text AS "public"."AppointmentStatus") AND "public"."Appointment"."date" >= $4 AND "public"."Appointment"."date" <= $5) OFFSET $6
+   (B) Agendamentos v├ílidos para o Relat├│rio: 1

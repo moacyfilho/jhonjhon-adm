@@ -1,0 +1,26 @@
+­ƒöì Buscando dados para: Moacy
+(node:11768) [MODULE_TYPELESS_PACKAGE_JSON] Warning: Module type of file:///C:/Users/zilda/OneDrive/%C3%81rea%20de%20Trabalho/adm%20jhonjhon/jhon_jhon_admin/nextjs_space/scripts/debug-subscription.ts is not specified and it doesn't parse as CommonJS.
+Reparsing as ES module because module syntax was detected. This incurs a performance overhead.
+To eliminate this warning, add "type": "module" to C:\Users\zilda\OneDrive\├ürea de Trabalho\adm jhonjhon\jhon_jhon_admin\nextjs_space\package.json.
+(Use `node --trace-warnings ...` to show where the warning was created)
+Ô£à Cliente encontrado: Moacy Soares Nonato Filho (ID: cmkyhlvjk0000jr04uehkfjes)
+   ­ƒô× Telefone: 92981708066
+
+­ƒôª Assinaturas:
+   - ID: cmkyuxevt000qd4q4l8cmyl4e | Status: ACTIVE | Plano: Jhonjhon club Corte | Valor: 69.9
+
+­ƒôà Per├¡odo atual: 2026-01-01T04:00:00.000Z at├® 2026-02-01T03:59:59.999Z
+
+­ƒÆ░ Contas a Receber (Todos os tempos):
+   - Data Vencimento: 2026-02-10 | Pagamento: 2026-01-28 | Status: PAID | Categoria: SUBSCRIPTION | Valor: 69.9
+
+Ô£é´©Å Agendamentos (Todos os tempos):
+   - Data: 2026-01-30T18:00:00.000Z | Status: COMPLETED | ├ë Assinatura: true | Valor Total: 0
+     * Servi├ºo: Corte | Pre├ºo: 35
+   - Data: 2026-01-30T02:30:00.000Z | Status: COMPLETED | ├ë Assinatura: false | Valor Total: 110
+     * Servi├ºo: Barba | Pre├ºo: 35
+     * Servi├ºo: Corte Premium | Pre├ºo: 75
+   - Data: 2026-01-29T22:00:00.000Z | Status: SCHEDULED | ├ë Assinatura: true | Valor Total: 0
+     * Servi├ºo: Corte | Pre├ºo: 35
+   - Data: 2026-01-29T15:00:00.000Z | Status: SCHEDULED | ├ë Assinatura: true | Valor Total: 0
+     * Servi├ºo: Corte | Pre├ºo: 35
