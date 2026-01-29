@@ -610,7 +610,11 @@ export default function AssinaturasExclusivasPage() {
                         <Sparkles className="mr-2 h-4 w-4" />
                         Restaurar Padrões
                     </Button>
-                    <Button onClick={openCreateDialog} className="bg-gold hover:bg-gold/80 text-black">
+                    <Button
+                        onClick={openCreateDialog}
+                        className="bg-gold hover:bg-gold/80 text-black font-bold"
+                        style={{ backgroundColor: '#FFD700', color: '#000000', minWidth: '180px' }}
+                    >
                         <Plus className="mr-2 h-4 w-4" />
                         Assinatura Exclusiva
                     </Button>
@@ -765,7 +769,11 @@ export default function AssinaturasExclusivasPage() {
                                 className="pl-8 bg-[#1a1a1a] border-[#333] text-white"
                             />
                         </div>
-                        <Button onClick={openCreateDialog} className="bg-gold hover:bg-gold/80 text-black whitespace-nowrap">
+                        <Button
+                            onClick={openCreateDialog}
+                            className="bg-gold hover:bg-gold/80 text-black whitespace-nowrap font-bold"
+                            style={{ backgroundColor: '#FFD700', color: '#000000', minWidth: '160px' }}
+                        >
                             <Plus className="mr-2 h-4 w-4" />
                             Nova Assinatura
                         </Button>
