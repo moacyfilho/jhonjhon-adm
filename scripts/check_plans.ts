@@ -2,27 +2,20 @@ import { PrismaClient } from '@prisma/client';
 
 const prisma = new PrismaClient();
 
-async function checkExclusivePlans() {
-    try {
-        const plans = await prisma.subscriptionPlan.findMany({
-            where: {
-                name: { contains: 'Exclusiva' }
-            }
-        });
+async function main() {
+    console.log('🔍 Checking ALL Subscription Plans...');
 
-        console.log('Planos Exclusivos:');
-        plans.forEach(plan => {
-            console.log(`- ${plan.name}`);
-            console.log(`  isExclusive: ${plan.isExclusive}`);
-            console.log(`  id: ${plan.id}`);
-            console.log('---');
-        });
+    const plans = await prisma.subscriptionPlan.findMany({
+        orderBy: { name: 'asc' }
+    });
 
-    } catch (error) {
-        console.error('Erro:', error);
-    } finally {
-        await prisma.$disconnect();
-    }
+    console.log(`Found ${plans.length} plans.`);
+
+    plans.forEach(plan => {
+        console.log(`- [${plan.isActive ? 'ACTIVE' : 'INACTIVE'}] ${plan.name} (Exclusive: ${plan.isExclusive}) - ID: ${plan.id}`);
+    });
 }
 
-checkExclusivePlans();
+main()
+    .catch(e => console.error(e))
+    .finally(async () => await prisma.$disconnect());

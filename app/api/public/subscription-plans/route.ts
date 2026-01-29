@@ -20,6 +20,7 @@ export async function GET() {
                 durationDays: true,
                 servicesIncluded: true,
                 usageLimit: true,
+                isExclusive: true,
             },
         });
 

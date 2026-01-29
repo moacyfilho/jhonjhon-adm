@@ -207,7 +207,7 @@ export default function AgendamentoPage() {
 
   const fetchPlans = async () => {
     try {
-      const response = await fetch('/api/public/subscription-plans');
+      const response = await fetch('/api/public/subscription-plans', { cache: 'no-store' });
       if (!response.ok) throw new Error('Erro ao carregar planos');
       const data = await response.json();
       setPlans(data);
