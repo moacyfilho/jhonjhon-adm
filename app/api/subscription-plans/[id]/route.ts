@@ -57,7 +57,7 @@ export async function PUT(
 
         const { id } = await params;
         const body = await request.json();
-        const { name, description, price, durationDays, servicesIncluded, usageLimit, isActive } = body;
+        const { name, description, price, durationDays, servicesIncluded, usageLimit, isActive, isExclusive, ownerId } = body;
 
         if (!name || !price || !durationDays) {
             return NextResponse.json(
@@ -76,7 +76,9 @@ export async function PUT(
                 servicesIncluded: servicesIncluded || null,
                 usageLimit: usageLimit ? parseInt(usageLimit) : null,
                 isActive: isActive !== undefined ? isActive : true,
-            },
+                isExclusive: isExclusive !== undefined ? isExclusive : false,
+                ownerId: ownerId || null,
+            } as any,
         });
 
         return NextResponse.json(plan);

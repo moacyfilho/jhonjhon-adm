@@ -17,8 +17,12 @@ export async function GET(request: NextRequest) {
     const status = searchParams.get('status');
     const clientId = searchParams.get('clientId');
     const search = searchParams.get('search');
+    const type = searchParams.get('type') || 'standard';
+    const isExclusiveMode = type === 'exclusive';
 
-    const where: any = {};
+    const where: any = {
+      isExclusive: isExclusiveMode
+    };
 
     if (status) {
       where.status = status;
@@ -93,6 +97,9 @@ export async function POST(request: NextRequest) {
     let servicesIncluded = manualServices;
     let usageLimit = manualLimit;
 
+    // Determine exclusivity: start with body value, but plan can force it to true
+    let isExclusiveValue = !!(body as any).isExclusive;
+
     if (planId) {
       const plan = await prisma.subscriptionPlan.findUnique({
         where: { id: planId }
@@ -104,6 +111,11 @@ export async function POST(request: NextRequest) {
       amount = plan.price;
       servicesIncluded = plan.servicesIncluded;
       usageLimit = plan.usageLimit;
+
+      // Inherit exclusivity from plan
+      if ((plan as any).isExclusive) {
+        isExclusiveValue = true;
+      }
     }
 
     if (billingDay < 1 || billingDay > 31) {
@@ -166,6 +178,8 @@ export async function POST(request: NextRequest) {
 
     const nextDueDate = calculateNextDueDate(billingDay);
 
+    console.log('[CREATE SUBSCRIPTION] Final isExclusive value:', isExclusiveValue);
+
     // Criar assinatura e conta a receber em uma transação
     const result = await prisma.$transaction(async (tx) => {
       // Criar assinatura
@@ -179,7 +193,8 @@ export async function POST(request: NextRequest) {
           servicesIncluded: servicesIncluded || null,
           usageLimit: usageLimit ? parseInt(usageLimit as string) : null,
           observations,
-        },
+          isExclusive: isExclusiveValue,
+        } as any,
         include: {
           client: true,
           plan: true,

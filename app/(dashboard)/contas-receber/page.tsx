@@ -368,11 +368,18 @@ export default function ContasReceberPage() {
       const link = await linkResponse.json();
 
       // Preparar mensagem
-      const phone = account.phone?.replace(/\\D/g, '') || '';
+      // Remove all non-digits (Robust way)
+      let phone = account.phone?.replace(/[^0-9]/g, '') || '';
+
+      // Ensure it starts with country code 55
+      if (phone && !phone.startsWith('55')) {
+        phone = '55' + phone;
+      }
+
       const clientName = account.payer || 'Cliente';
       const competencia = format(new Date(account.dueDate), 'MMMM/yyyy', { locale: ptBR });
       const message = `Olá, ${clientName}! Segue o link para pagamento da sua assinatura (${competencia}): ${link.linkUrl}`;
-      const whatsappUrl = `https://wa.me/55${phone}?text=${encodeURIComponent(message)}`;
+      const whatsappUrl = `https://wa.me/${phone}?text=${encodeURIComponent(message)}`;
 
       // Marcar link como enviado
       await fetch(`/api/payment-links/${link.id}`, {

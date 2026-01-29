@@ -161,6 +161,7 @@ model Barber {
   commissions      Commission[]
   onlineBookings   OnlineBooking[]
   scheduleBlocks   ScheduleBlock[]
+  ownedPlans       SubscriptionPlan[] // Planos exclusivos deste barbeiro
 }
 
 model Service {
@@ -312,10 +313,13 @@ model SubscriptionPlan {
   durationDays     Int            // Duração em dias (30 = mensal, 90 = trimestral, 365 = anual)
   servicesIncluded String?        // JSON ou texto com serviços incluídos
   usageLimit       Int?           // Limite de usos por período (null = ilimitado)
-  isActive         Boolean        @default(true)
-  createdAt        DateTime       @default(now())
-  updatedAt        DateTime       @updatedAt
-  subscriptions    Subscription[] // Assinaturas que usam este plano
+  isActive         Boolean            @default(true)     // Se o plano está ativo
+  isExclusive      Boolean            @default(false)    // Assinatura exclusiva (ex: Jhon Jhon)
+  ownerId          String?                               // Dono da assinatura exclusiva (Barber ID)
+  createdAt        DateTime           @default(now())
+  updatedAt        DateTime           @updatedAt
+  subscriptions    Subscription[]     // Assinaturas que usam este plano
+  owner            Barber?            @relation(fields: [ownerId], references: [id])
 }
 
 model Subscription {
@@ -331,6 +335,7 @@ model Subscription {
   observations      String?
   servicesIncluded  String?            // JSON ou texto com serviços incluídos
   usageLimit        Int?               // Limite de usos por mês (null = ilimitado)
+  isExclusive       Boolean            @default(false)    // Herda do plano
   createdAt         DateTime           @default(now())
   updatedAt         DateTime           @updatedAt
   client            Client             @relation(fields: [clientId], references: [id])

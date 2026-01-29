@@ -206,7 +206,8 @@ export default function AssinaturasPage() {
     try {
       setLoadingReport(true);
       const dateStr = format(reportDate, 'yyyy-MM-dd');
-      const response = await fetch(`/api/reports/subscriptions?date=${dateStr}`);
+      // FILTER BY STANDARD (exclude exclusive)
+      const response = await fetch(`/api/reports/subscriptions?date=${dateStr}&type=standard`);
       if (!response.ok) throw new Error('Erro ao carregar relatório');
       const data = await response.json();
       setReportData(data);
@@ -224,6 +225,8 @@ export default function AssinaturasPage() {
       const params = new URLSearchParams();
       if (searchTerm) params.append('search', searchTerm);
       if (statusFilter) params.append('status', statusFilter);
+      // FILTER BY STANDARD (exclude exclusive)
+      params.append('type', 'standard');
 
       const response = await fetch(`/api/subscriptions?${params}`);
       if (!response.ok) throw new Error('Erro ao carregar assinaturas');
@@ -242,7 +245,7 @@ export default function AssinaturasPage() {
       const response = await fetch('/api/subscription-plans');
       if (!response.ok) throw new Error('Erro ao carregar planos');
       const data = await response.json();
-      setPlans(data.filter((p: SubscriptionPlan) => p.isActive));
+      setPlans(data.filter((p: SubscriptionPlan) => p.isActive && !p.isExclusive));
     } catch (error) {
       console.error(error);
       toast.error('Erro ao carregar planos');
@@ -431,9 +434,16 @@ export default function AssinaturasPage() {
   const handleSendWhatsApp = () => {
     if (!generatedLink || !selectedSubscription) return;
 
-    const phone = selectedSubscription.client.phone.replace(/\D/g, '');
+    // Remove all non-digits
+    let phone = selectedSubscription.client.phone.replace(/\D/g, '');
+
+    // Ensure it starts with country code 55
+    if (!phone.startsWith('55')) {
+      phone = '55' + phone;
+    }
+
     const message = `Olá, ${selectedSubscription.client.name}! Segue o link para pagamento da sua assinatura (${new Date().toLocaleDateString('pt-BR', { month: 'long', year: 'numeric' })}): ${generatedLink.linkUrl}`;
-    const whatsappUrl = `https://wa.me/55${phone}?text=${encodeURIComponent(message)}`;
+    const whatsappUrl = `https://wa.me/${phone}?text=${encodeURIComponent(message)}`;
 
     // Marcar link como enviado
     fetch(`/api/payment-links/${generatedLink.id}`, {

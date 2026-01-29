@@ -43,6 +43,7 @@ interface SubscriptionPlan {
   durationDays: number;
   servicesIncluded?: string;
   usageLimit?: number;
+  isExclusive?: boolean;
 }
 
 // Mapeamento de fotos dos barbeiros
@@ -958,7 +959,16 @@ export default function AgendamentoPage() {
                             >
                               <div className="flex justify-between items-start">
                                 <div>
-                                  <h4 className="font-bold text-lg text-white">{plan.name}</h4>
+                                  <div className="flex items-center gap-2">
+                                    <h4 className={`font-bold text-lg ${plan.isExclusive ? 'text-gold' : 'text-white'}`}>
+                                      {plan.name}
+                                    </h4>
+                                    {plan.isExclusive && (
+                                      <span className="bg-gold text-black text-[10px] font-bold px-2 py-0.5 rounded-full uppercase tracking-wider">
+                                        Exclusivo
+                                      </span>
+                                    )}
+                                  </div>
                                   <p className="text-sm text-gray-400 mt-1">{plan.description}</p>
                                   {plan.servicesIncluded && (
                                     <p className="text-xs text-gold/80 mt-2 font-medium">
@@ -967,7 +977,7 @@ export default function AgendamentoPage() {
                                   )}
                                 </div>
                                 <div className="text-right">
-                                  <p className="text-xl font-bold text-gold">
+                                  <p className={`text-xl font-bold ${plan.isExclusive ? 'text-gold' : 'text-white'}`}>
                                     R$ {plan.price.toFixed(2)}
                                   </p>
                                   <p className="text-xs text-gray-500">

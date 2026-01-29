@@ -22,6 +22,7 @@ import {
   Package,
   CalendarDays,
   Clock,
+  Sparkles,
 } from "lucide-react";
 
 const menuItems = [
@@ -33,6 +34,7 @@ const menuItems = [
   { title: "Atendimentos", icon: Calendar, href: "/atendimentos" },
   { title: "Agenda", icon: CalendarDays, href: "/agenda" },
   { title: "Assinaturas", icon: CreditCard, href: "/assinaturas" },
+  { title: "Assinaturas Exclusivas", icon: Sparkles, href: "/assinaturas-exclusivas" },
   { title: "Config. Horários", icon: Settings, href: "/configuracoes-agendamento" },
   { title: "Comissões", icon: DollarSign, href: "/comissoes" },
   { title: "Horas & Comissões", icon: Clock, href: "/horas-comissoes" },
@@ -58,9 +60,9 @@ export function MobileHeader() {
       <header className="lg:hidden sticky top-0 z-50 bg-card border-b border-border px-4 py-3">
         <div className="flex items-center justify-between">
           <div className="flex items-center gap-2">
-            <img 
-              src="/logo-mobile.png" 
-              alt="Logo Jhon Jhon Barbearia - Sistema Administrativo Mobile" 
+            <img
+              src="/logo-mobile.png"
+              alt="Logo Jhon Jhon Barbearia - Sistema Administrativo Mobile"
               className="h-8 w-auto"
             />
           </div>

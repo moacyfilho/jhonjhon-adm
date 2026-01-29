@@ -20,6 +20,7 @@ import {
   Package,
   CalendarDays,
   Clock,
+  Sparkles,
 } from "lucide-react";
 import { signOut, useSession } from "next-auth/react";
 import { cn } from "@/lib/utils";
@@ -64,6 +65,11 @@ const menuItems = [
     title: "Assinaturas",
     icon: CreditCard,
     href: "/assinaturas",
+  },
+  {
+    title: "Assinaturas Exclusivas",
+    icon: Sparkles,
+    href: "/assinaturas-exclusivas",
   },
   {
     title: "Planos",

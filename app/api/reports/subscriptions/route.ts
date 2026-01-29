@@ -8,6 +8,8 @@ export async function GET(request: NextRequest) {
     try {
         const searchParams = request.nextUrl.searchParams;
         const dateParam = searchParams.get('date'); // YYYY-MM-DD
+        const type = searchParams.get('type') || 'standard'; // 'standard' | 'exclusive'
+        const isExclusiveMode = type === 'exclusive';
 
         // Determine date range (default to current month)
         const referenceDate = dateParam ? parseISO(dateParam) : new Date();
@@ -26,11 +28,20 @@ export async function GET(request: NextRequest) {
                     { paymentDate: { gte: startBuffer, lte: endBuffer } },
                     { dueDate: { gte: startBuffer, lte: endBuffer } }
                 ]
-            }
+            },
+            include: { subscription: true }
+        });
+
+        // Filter Receivables by Exclusivity
+        const filteredReceivables = rawReceivables.filter(r => {
+            // If no subscription linked, assume standard (or ignore? assume standard for safety)
+            const sub = r.subscription as any;
+            const isExclusive = sub?.isExclusive === true;
+            return isExclusiveMode ? isExclusive : !isExclusive;
         });
 
         // 2. Calculate Financials In-Memory (Strict Filtering)
-        const receivedAmount = rawReceivables
+        const receivedAmount = filteredReceivables
             .filter(r =>
                 r.status === 'PAID' &&
                 r.paymentDate &&
@@ -38,7 +49,7 @@ export async function GET(request: NextRequest) {
             )
             .reduce((sum, r) => sum + r.amount, 0);
 
-        const pendingAmount = rawReceivables
+        const pendingAmount = filteredReceivables
             .filter(r =>
                 (r.status === 'PENDING' || r.status === 'OVERDUE') &&
                 isWithinInterval(r.dueDate, { start: startDate, end: endDate })
@@ -54,6 +65,14 @@ export async function GET(request: NextRequest) {
                     gte: startBuffer,
                     lte: endBuffer,
                 },
+                client: {
+                    subscriptions: {
+                        some: {
+                            isExclusive: isExclusiveMode,
+                            status: 'ACTIVE'
+                        } as any
+                    }
+                }
             },
             include: {
                 barber: true,
@@ -78,7 +97,8 @@ export async function GET(request: NextRequest) {
             // Se workedHoursSubscription estiver zerado (legado), calcular pela duração dos serviços
             let durationMinutes = app.workedHoursSubscription * 60;
             if (durationMinutes === 0) {
-                durationMinutes = app.services.reduce((acc, s) => acc + s.service.duration, 0);
+                const services = (app as any).services || [];
+                durationMinutes = services.reduce((acc: any, s: any) => acc + s.service.duration, 0);
             }
             totalServiceMinutes += durationMinutes;
 
@@ -100,7 +120,10 @@ export async function GET(request: NextRequest) {
 
         // Frequência (Atendimentos Totais / Total de Assinantes que usaram ou total de ativos?)
         const subscriptionsCount = await prisma.subscription.count({
-            where: { status: 'ACTIVE' }
+            where: {
+                status: 'ACTIVE',
+                isExclusive: isExclusiveMode
+            } as any
         });
 
         const totalUsageCount = processedAppointments.length;
@@ -109,9 +132,12 @@ export async function GET(request: NextRequest) {
             : 0;
 
         // 5. Build Detailed Subscriber List
-        // Buscar todos os assinantes ativos para listar
+        // Buscar todos os assinantes ativos para listar (FILTRADO POR TIPO)
         const allSubscriptions = await prisma.subscription.findMany({
-            where: { status: 'ACTIVE' },
+            where: {
+                status: 'ACTIVE',
+                isExclusive: isExclusiveMode
+            } as any,
             include: { client: true }
         });
 
@@ -129,10 +155,13 @@ export async function GET(request: NextRequest) {
             const usageCount = usage.length;
             const usageMinutes = usage.reduce((acc, app) => acc + app.durationMinutes, 0);
 
+            // Cast sub to any to safely access client
+            const subAny = sub as any;
+
             return {
                 id: sub.id,
-                clientName: sub.client.name,
-                clientPhone: sub.client.phone,
+                clientName: subAny.client?.name || 'Cliente',
+                clientPhone: subAny.client?.phone || '',
                 amount: sub.amount,
                 billingDay: sub.billingDay,
                 isPaid: !!paidReceivable,
@@ -146,9 +175,10 @@ export async function GET(request: NextRequest) {
         const serviceNames = new Set<string>();
 
         processedAppointments.forEach(app => {
+            const barber = (app as any).barber;
             const barberId = app.barberId;
-            const barberName = app.barber.name;
-            const commissionRate = app.barber.commissionRate;
+            const barberName = barber.name;
+            const commissionRate = barber.commissionRate;
 
             if (!barberStats[barberId]) {
                 barberStats[barberId] = {
@@ -160,7 +190,8 @@ export async function GET(request: NextRequest) {
                 };
             }
 
-            app.services.forEach(appService => {
+            const services = (app as any).services || [];
+            services.forEach((appService: any) => {
                 const serviceName = appService.service.name;
                 serviceNames.add(serviceName);
 
