@@ -21,7 +21,7 @@ async function main() {
         bookings.forEach((booking, index) => {
             console.log(`${index + 1}. ${booking.clientName}`);
             console.log(`   📅 Data/Hora: ${booking.scheduledDate}`);
-            console.log(`   💈 Barbeiro: ${booking.barber.name}`);
+            console.log(`   💈 Barbeiro: ${booking.barber?.name || 'Não selecionado'}`);
             console.log(`   📊 Status: ${booking.status}`);
             console.log(`   🆔 ID: ${booking.id}`);
             console.log(`   📝 Criado em: ${booking.createdAt}`);
@@ -46,7 +46,7 @@ async function main() {
         console.log(`✅ Encontrados ${appointments.length} agendamentos:\n`);
         appointments.forEach((apt, index) => {
             console.log(`${index + 1}. ${apt.client?.name || 'Cliente sem nome'}`);
-            console.log(`   📅 Data/Hora: ${apt.scheduledFor}`);
+            console.log(`   📅 Data/Hora: ${apt.date}`);
             console.log(`   💈 Barbeiro: ${apt.barber.name}`);
             console.log(`   📊 Status: ${apt.status}`);
             console.log(`   🆔 ID: ${apt.id}`);
