@@ -160,19 +160,26 @@ export async function GET(request: NextRequest) {
         });
 
         // 6. Calculate Totals from Subscriber List (Ensures consistency)
-        console.log(`[DEBUG] Finalizing report for ${isExclusiveMode ? 'exclusive' : 'standard'} subscribers. List size: ${subscriberList.length}`);
+        const paidSubscribers = subscriberList.filter(s => s.isPaid);
+        const pendingSubscribers = subscriberList.filter(s => !s.isPaid);
 
-        const receivedAmount = subscriberList
-            .filter(s => s.isPaid)
-            .reduce((sum, s) => sum + (Number(s.amount) || 0), 0);
+        console.log(`[DEBUG] Finalizing report. Paid: ${paidSubscribers.length}, Pending: ${pendingSubscribers.length}`);
 
-        const pendingAmount = subscriberList
-            .filter(s => !s.isPaid)
-            .reduce((sum, s) => sum + (Number(s.amount) || 0), 0);
+        const receivedAmount = paidSubscribers.reduce((sum, s) => {
+            const val = Number(s.amount) || 0;
+            console.log(` - Summing Paid: ${s.clientName}, Amount: ${val}`);
+            return sum + val;
+        }, 0);
+
+        const pendingAmount = pendingSubscribers.reduce((sum, s) => {
+            const val = Number(s.amount) || 0;
+            console.log(` - Summing Pending: ${s.clientName}, Amount: ${val}`);
+            return sum + val;
+        }, 0);
 
         const grandTotal = receivedAmount + pendingAmount;
 
-        console.log(`[DEBUG] Totals - Received: ${receivedAmount}, Pending: ${pendingAmount}, Grand: ${grandTotal}`);
+        console.log(`[DEBUG] Final Totals - Received: ${receivedAmount}, Pending: ${pendingAmount}, Grand: ${grandTotal}`);
 
         // 7. Calculate Derived Metrics
         const hourlyRate = totalServiceHours > 0
@@ -261,7 +268,17 @@ export async function GET(request: NextRequest) {
                 serviceNames: Array.from(serviceNames).sort(),
                 barbers
             },
-            subscribers: subscriberList
+            subscribers: subscriberList,
+            debug: {
+                serverTime: new Date().toISOString(),
+                range: { start: startDate, end: endDate },
+                counts: {
+                    rawReceivables: rawReceivables.length,
+                    filteredReceivables: filteredReceivables.length,
+                    paidFromList: paidSubscribers.length,
+                    totalSubscribers: subscriberList.length
+                }
+            }
         });
 
     } catch (error) {
