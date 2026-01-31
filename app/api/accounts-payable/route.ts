@@ -22,7 +22,7 @@ export async function GET(request: NextRequest) {
 
     const where: any = {};
 
-    if (status) {
+    if (status && status !== 'all') {
       where.status = status;
     }
 
@@ -45,7 +45,7 @@ export async function GET(request: NextRequest) {
     // Atualizar status de contas vencidas
     const today = new Date();
     today.setHours(0, 0, 0, 0);
-    
+
     const overdueIds = accounts
       .filter(acc => acc.status === 'PENDING' && new Date(acc.dueDate) < today)
       .map(acc => acc.id);

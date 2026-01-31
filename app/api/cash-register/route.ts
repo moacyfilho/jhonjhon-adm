@@ -14,7 +14,7 @@ export async function GET(request: NextRequest) {
     const status = searchParams.get("status");
 
     const where: any = {};
-    if (status) {
+    if (status && status !== "all") {
       where.status = status;
     }
 

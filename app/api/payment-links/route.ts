@@ -102,7 +102,7 @@ export async function GET(request: NextRequest) {
 
     const where: any = {};
     if (accountReceivableId) where.accountReceivableId = accountReceivableId;
-    if (status) where.status = status;
+    if (status && status !== 'all') where.status = status;
 
     const paymentLinks = await prisma.paymentLink.findMany({
       where,

@@ -24,7 +24,7 @@ export async function GET(request: NextRequest) {
       isExclusive: isExclusiveMode
     };
 
-    if (status) {
+    if (status && status !== 'all') {
       where.status = status;
     }
 
@@ -212,6 +212,7 @@ export async function POST(request: NextRequest) {
           amount: amount,
           dueDate: nextDueDate,
           status: 'PENDING',
+          subscriptionId: subscription.id,
           observations: `Criado automaticamente para assinatura: ${planName}`,
         },
       });

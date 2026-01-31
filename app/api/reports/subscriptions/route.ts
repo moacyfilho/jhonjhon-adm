@@ -32,11 +32,33 @@ export async function GET(request: NextRequest) {
             include: { subscription: true }
         });
 
+        // Create lookup sets for fast identification
+        const exclusiveSubsData = await prisma.subscription.findMany({
+            where: { isExclusive: true } as any,
+            select: { id: true, clientId: true, planName: true }
+        });
+
+        const exclusiveSubIds = new Set(exclusiveSubsData.map(s => s.id));
+        const exclusiveClientIds = new Set(exclusiveSubsData.map(s => s.clientId));
+
         // Filter Receivables by Exclusivity
         const filteredReceivables = rawReceivables.filter(r => {
-            // If no subscription linked, assume standard (or ignore? assume standard for safety)
+            const description = r.description || '';
             const sub = r.subscription as any;
-            const isExclusive = sub?.isExclusive === true;
+            const planName = sub?.planName || '';
+
+            // Criteria for Exclusivity:
+            // 1. Linked to a subscription known to be exclusive
+            // 2. Linked to a client known to have an exclusive subscription
+            // 3. Subscription plan name contains "Exclusiva" or "Jhon"
+            // 4. Record description contains "Exclusiva" or "Jhon"
+            const isExclusive =
+                (r.subscriptionId && exclusiveSubIds.has(r.subscriptionId)) ||
+                (r.clientId && exclusiveClientIds.has(r.clientId)) ||
+                /Exclusiva|Jhon/i.test(planName) ||
+                /Exclusiva|Jhon/i.test(description) ||
+                sub?.isExclusive === true;
+
             return isExclusiveMode ? isExclusive : !isExclusive;
         });
 

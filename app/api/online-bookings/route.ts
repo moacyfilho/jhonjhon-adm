@@ -23,7 +23,7 @@ export async function GET(request: NextRequest) {
 
     const where: any = {};
 
-    if (status) {
+    if (status && status !== 'all') {
       where.status = status;
     }
 
