@@ -62,21 +62,7 @@ export async function GET(request: NextRequest) {
             return isExclusiveMode ? isExclusive : !isExclusive;
         });
 
-        // 2. Calculate Financials In-Memory (Strict Filtering)
-        const receivedAmount = filteredReceivables
-            .filter(r =>
-                r.status === 'PAID' &&
-                r.paymentDate &&
-                isWithinInterval(r.paymentDate, { start: startDate, end: endDate })
-            )
-            .reduce((sum, r) => sum + r.amount, 0);
-
-        const pendingAmount = filteredReceivables
-            .filter(r =>
-                (r.status === 'PENDING' || r.status === 'OVERDUE') &&
-                isWithinInterval(r.dueDate, { start: startDate, end: endDate })
-            )
-            .reduce((sum, r) => sum + r.amount, 0);
+        // (Financial calculations moved below to ensure consistency with the list)
 
         // 3. Fetch Subscription Appointments (Broad Range)
         const rawAppointments = await prisma.appointment.findMany({
@@ -132,26 +118,7 @@ export async function GET(request: NextRequest) {
 
         const totalServiceHours = totalServiceMinutes / 60;
 
-        // VALOR DA HORA (DINÂMICO): Total Recebido / Total de Horas de Assinantes Trabalhadas
-        const hourlyRate = totalServiceHours > 0
-            ? receivedAmount / totalServiceHours
-            : 0;
-
-        // Total (Recebidas + A receber)
-        const grandTotal = receivedAmount + pendingAmount;
-
-        // Frequência (Atendimentos Totais / Total de Assinantes que usaram ou total de ativos?)
-        const subscriptionsCount = await prisma.subscription.count({
-            where: {
-                status: 'ACTIVE',
-                isExclusive: isExclusiveMode
-            } as any
-        });
-
-        const totalUsageCount = processedAppointments.length;
-        const averageFrequency = subscriptionsCount > 0
-            ? totalUsageCount / subscriptionsCount
-            : 0;
+        // (Calculations moved below subscriber list for consistency)
 
         // 5. Build Detailed Subscriber List
         // Buscar todos os assinantes ativos para listar (FILTRADO POR TIPO)
@@ -191,6 +158,35 @@ export async function GET(request: NextRequest) {
                 usageMinutes
             };
         });
+
+        // 6. Calculate Totals from Subscriber List (Ensures consistency)
+        const receivedAmount = subscriberList
+            .filter(s => s.isPaid)
+            .reduce((sum, s) => sum + s.amount, 0);
+
+        const pendingAmount = subscriberList
+            .filter(s => !s.isPaid)
+            .reduce((sum, s) => sum + s.amount, 0);
+
+        const grandTotal = receivedAmount + pendingAmount;
+
+        // 7. Calculate Derived Metrics
+        const hourlyRate = totalServiceHours > 0
+            ? receivedAmount / totalServiceHours
+            : 0;
+
+        // Frequência (Atendimentos Totais / Total de Assinantes que usaram ou total de ativos?)
+        const subscriptionsCount = await prisma.subscription.count({
+            where: {
+                status: 'ACTIVE',
+                isExclusive: isExclusiveMode
+            } as any
+        });
+
+        const totalUsageCount = processedAppointments.length;
+        const averageFrequency = subscriptionsCount > 0
+            ? totalUsageCount / subscriptionsCount
+            : 0;
 
         // 6. Build Barber Table Data
         const barberStats: Record<string, any> = {};
