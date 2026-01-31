@@ -160,15 +160,19 @@ export async function GET(request: NextRequest) {
         });
 
         // 6. Calculate Totals from Subscriber List (Ensures consistency)
+        console.log(`[DEBUG] Finalizing report for ${isExclusiveMode ? 'exclusive' : 'standard'} subscribers. List size: ${subscriberList.length}`);
+
         const receivedAmount = subscriberList
             .filter(s => s.isPaid)
-            .reduce((sum, s) => sum + s.amount, 0);
+            .reduce((sum, s) => sum + (Number(s.amount) || 0), 0);
 
         const pendingAmount = subscriberList
             .filter(s => !s.isPaid)
-            .reduce((sum, s) => sum + s.amount, 0);
+            .reduce((sum, s) => sum + (Number(s.amount) || 0), 0);
 
         const grandTotal = receivedAmount + pendingAmount;
+
+        console.log(`[DEBUG] Totals - Received: ${receivedAmount}, Pending: ${pendingAmount}, Grand: ${grandTotal}`);
 
         // 7. Calculate Derived Metrics
         const hourlyRate = totalServiceHours > 0
