@@ -11,7 +11,9 @@ import {
   Mail,
   Loader2,
   Calendar,
+  History,
 } from "lucide-react";
+import { ClientHistoryModal } from "@/components/clients/client-history-modal";
 import {
   Dialog,
   DialogContent,
@@ -40,6 +42,7 @@ export default function ClientsPage() {
   const [isDialogOpen, setIsDialogOpen] = useState(false);
   const [isDeleteDialogOpen, setIsDeleteDialogOpen] = useState(false);
   const [selectedClient, setSelectedClient] = useState<Client | null>(null);
+  const [isHistoryOpen, setIsHistoryOpen] = useState(false);
   const [submitting, setSubmitting] = useState(false);
 
   // Form state
@@ -95,6 +98,12 @@ export default function ClientsPage() {
   const handleDeleteClick = (client: Client) => {
     setSelectedClient(client);
     setIsDeleteDialogOpen(true);
+  };
+
+  // Open history dialog
+  const handleHistoryClick = (client: Client) => {
+    setSelectedClient(client);
+    setIsHistoryOpen(true);
   };
 
   // Submit form (create or update)
@@ -214,6 +223,13 @@ export default function ClientsPage() {
                     className="p-2 hover:bg-secondary rounded-lg transition-colors"
                   >
                     <Trash2 className="w-4 h-4 text-destructive" />
+                  </button>
+                  <button
+                    onClick={() => handleHistoryClick(client)}
+                    className="p-2 hover:bg-secondary rounded-lg transition-colors"
+                    title="Ver Histórico"
+                  >
+                    <History className="w-4 h-4 text-primary" />
                   </button>
                 </div>
               </div>
@@ -365,6 +381,13 @@ export default function ClientsPage() {
           </DialogFooter>
         </DialogContent>
       </Dialog>
+
+      {/* History Modal */}
+      <ClientHistoryModal
+        clientId={selectedClient?.id || null}
+        isOpen={isHistoryOpen}
+        onClose={() => setIsHistoryOpen(false)}
+      />
     </div>
   );
 }

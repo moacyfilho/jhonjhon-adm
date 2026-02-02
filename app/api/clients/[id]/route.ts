@@ -31,6 +31,11 @@ export async function GET(
                 service: true,
               },
             },
+            products: {
+              include: {
+                product: true,
+              },
+            },
           },
           orderBy: {
             date: "desc",
