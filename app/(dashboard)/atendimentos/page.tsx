@@ -22,12 +22,14 @@ interface Client {
   id: string;
   name: string;
   phone: string;
+  isSubscriber?: boolean;
 }
 
 interface Barber {
   id: string;
   name: string;
   commissionRate: number;
+  hourlyRate?: number;
 }
 
 interface Service {
@@ -50,6 +52,9 @@ interface Appointment {
   services: Array<{
     service: Service;
   }>;
+  commission?: {
+    amount: number;
+  };
 }
 
 // Horários disponíveis para agendamento
@@ -144,8 +149,8 @@ export default function AtendimentosPage() {
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
 
-    if (!formData.clientId || !formData.barberId || formData.serviceIds.length === 0 || 
-        !formData.date || !formData.time || !formData.paymentMethod) {
+    if (!formData.clientId || !formData.barberId || formData.serviceIds.length === 0 ||
+      !formData.date || !formData.time || !formData.paymentMethod) {
       toast.error("Preencha todos os campos obrigatórios");
       return;
     }
@@ -331,65 +336,65 @@ export default function AtendimentosPage() {
           <TabsContent value="all" className="mt-0">
             <div className="grid gap-4">
               {appointments.map((appointment) => (
-            <div
-              key={appointment.id}
-              className="bg-card rounded-lg border border-border p-6 hover:border-primary/50 transition-colors cursor-pointer"
-              onClick={() => {
-                setSelectedAppointment(appointment);
-                setIsViewDialogOpen(true);
-              }}
-            >
-              <div className="flex justify-between items-start mb-4">
-                <div>
-                  <h3 className="text-lg font-semibold text-foreground mb-1">
-                    {appointment.client.name}
-                  </h3>
-                  <p className="text-sm text-muted-foreground">
-                    Barbeiro: {appointment.barber.name}
-                  </p>
+                <div
+                  key={appointment.id}
+                  className="bg-card rounded-lg border border-border p-6 hover:border-primary/50 transition-colors cursor-pointer"
+                  onClick={() => {
+                    setSelectedAppointment(appointment);
+                    setIsViewDialogOpen(true);
+                  }}
+                >
+                  <div className="flex justify-between items-start mb-4">
+                    <div>
+                      <h3 className="text-lg font-semibold text-foreground mb-1">
+                        {appointment.client.name}
+                      </h3>
+                      <p className="text-sm text-muted-foreground">
+                        Barbeiro: {appointment.barber.name}
+                      </p>
+                    </div>
+                    <div className="flex gap-2">
+                      <Button
+                        variant="destructive"
+                        size="sm"
+                        onClick={(e) => {
+                          e.stopPropagation();
+                          handleDelete(appointment.id);
+                        }}
+                      >
+                        <Trash2 className="w-4 h-4" />
+                      </Button>
+                    </div>
+                  </div>
+                  <div className="grid grid-cols-2 md:grid-cols-4 gap-4 text-sm">
+                    <div>
+                      <p className="text-muted-foreground">Data</p>
+                      <p className="font-medium text-foreground">
+                        {format(toManausTime(new Date(appointment.date)), "dd/MM/yyyy HH:mm", { locale: ptBR })}
+                      </p>
+                    </div>
+                    <div>
+                      <p className="text-muted-foreground">Serviços</p>
+                      <p className="font-medium text-foreground">
+                        {appointment.services.length} serviço(s)
+                      </p>
+                    </div>
+                    <div>
+                      <p className="text-muted-foreground">Pagamento</p>
+                      <p className="font-medium text-foreground">
+                        {paymentMethodLabels[appointment.paymentMethod]}
+                      </p>
+                    </div>
+                    <div>
+                      <p className="text-muted-foreground">Valor Total</p>
+                      <p className="font-semibold text-primary">
+                        {formatCurrency(appointment.totalAmount)}
+                      </p>
+                    </div>
+                  </div>
                 </div>
-                <div className="flex gap-2">
-                  <Button
-                    variant="destructive"
-                    size="sm"
-                    onClick={(e) => {
-                      e.stopPropagation();
-                      handleDelete(appointment.id);
-                    }}
-                  >
-                    <Trash2 className="w-4 h-4" />
-                  </Button>
-                </div>
-              </div>
-              <div className="grid grid-cols-2 md:grid-cols-4 gap-4 text-sm">
-                <div>
-                  <p className="text-muted-foreground">Data</p>
-                  <p className="font-medium text-foreground">
-                    {format(toManausTime(new Date(appointment.date)), "dd/MM/yyyy HH:mm", { locale: ptBR })}
-                  </p>
-                </div>
-                <div>
-                  <p className="text-muted-foreground">Serviços</p>
-                  <p className="font-medium text-foreground">
-                    {appointment.services.length} serviço(s)
-                  </p>
-                </div>
-                <div>
-                  <p className="text-muted-foreground">Pagamento</p>
-                  <p className="font-medium text-foreground">
-                    {paymentMethodLabels[appointment.paymentMethod]}
-                  </p>
-                </div>
-                <div>
-                  <p className="text-muted-foreground">Valor Total</p>
-                  <p className="font-semibold text-primary">
-                    {formatCurrency(appointment.totalAmount)}
-                  </p>
-                </div>
-              </div>
+              ))}
             </div>
-          ))}
-        </div>
           </TabsContent>
 
           {/* Tabs individuais para cada barbeiro */}
@@ -685,7 +690,7 @@ export default function AtendimentosPage() {
                 <p className="text-foreground font-medium">
                   {format(toManausTime(new Date(selectedAppointment.date)), "dd/MM/yyyy 'às' HH:mm", { locale: ptBR })}
                 </p>
-                <Badge 
+                <Badge
                   variant={selectedAppointment.status === 'COMPLETED' ? 'default' : 'secondary'}
                   className="mt-2"
                 >
@@ -698,8 +703,8 @@ export default function AtendimentosPage() {
                 <Label className="text-sm font-semibold mb-3 block">Serviços Realizados</Label>
                 <div className="space-y-2">
                   {selectedAppointment.services.map((s) => (
-                    <div 
-                      key={s.service.id} 
+                    <div
+                      key={s.service.id}
                       className="flex justify-between items-center p-2 bg-background rounded border border-border"
                     >
                       <span className="text-foreground">{s.service.name}</span>
@@ -722,17 +727,37 @@ export default function AtendimentosPage() {
 
               {/* Totais */}
               <div className="bg-primary/10 border border-primary/20 p-4 rounded-lg space-y-3">
-                <div className="flex justify-between items-center">
-                  <span className="text-foreground font-medium">Valor Total:</span>
-                  <span className="font-bold text-primary text-xl">
+                <div className="flex justify-between items-center text-primary">
+                  <span className="font-medium text-lg">Valor Total:</span>
+                  <span className="font-bold text-2xl">
                     {formatCurrency(selectedAppointment.totalAmount)}
                   </span>
                 </div>
-                <div className="border-t border-border pt-2">
+                <div className="border-t border-border pt-3">
                   <div className="flex justify-between items-center text-sm">
-                    <span className="text-muted-foreground">Comissão do Barbeiro:</span>
-                    <span className="font-semibold text-foreground">
-                      {formatCurrency(selectedAppointment.commissionAmount)}
+                    <div className="flex flex-col">
+                      <span className="text-muted-foreground">Comissão do Barbeiro</span>
+                      <span className="text-[10px] text-muted-foreground">
+                        {selectedAppointment.client.isSubscriber
+                          ? `Base: ${selectedAppointment.barber.hourlyRate || 0}/hora`
+                          : `Base: ${selectedAppointment.barber.commissionRate || 0}% sobre serviços`}
+                      </span>
+                    </div>
+                    <span className="font-bold text-lg">
+                      {formatCurrency(
+                        selectedAppointment.commission?.amount ??
+                        selectedAppointment.commissionAmount ??
+                        (() => {
+                          const isSub = selectedAppointment.client.isSubscriber;
+                          if (isSub) {
+                            const totalMinutes = selectedAppointment.services.reduce((sum, s) => sum + (s.service.duration || 0), 0);
+                            return (totalMinutes / 60) * (selectedAppointment.barber.hourlyRate || 0);
+                          } else {
+                            const servicesTotal = selectedAppointment.services.reduce((sum, s) => sum + (s.service.price || 0), 0);
+                            return (servicesTotal * (selectedAppointment.barber.commissionRate || 0)) / 100;
+                          }
+                        })()
+                      )}
                     </span>
                   </div>
                 </div>

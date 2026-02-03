@@ -62,7 +62,17 @@ export async function PATCH(
 
     const { id } = await params;
     const body = await request.json();
-    const { date, barberId, status, serviceIds, productItems, paymentMethod, notes } = body;
+    const {
+      date,
+      barberId,
+      status,
+      serviceIds,
+      serviceItems, // Novo: Array de { serviceId, price }
+      productItems,
+      paymentMethod,
+      notes,
+      totalAmount: manualTotalAmount // Novo: Valor final editado manualmente
+    } = body;
 
     // 1. Buscar agendamento atual com todas as relações necessárias
     const currentAppointment = await prisma.appointment.findUnique({
@@ -88,51 +98,132 @@ export async function PATCH(
     if (notes !== undefined) updateData.observations = notes;
 
     // 3. Lógica de Comissão e Totais
-    // Precisamos recalcular se houver mudança em serviços, produtos, barbeiro ou status
     const isStatusChangingToCompleted = status === 'COMPLETED' && currentAppointment.status !== 'COMPLETED';
     const isBarberChanging = barberId && barberId !== currentAppointment.barberId;
-    const areServicesChanging = !!serviceIds;
+    const areServicesChanging = !!serviceIds || !!serviceItems;
     const areProductsChanging = !!productItems;
 
     // Recalcular apenas se necessário ou se estiver completando agora
-    if (isStatusChangingToCompleted || isBarberChanging || areServicesChanging || areProductsChanging) {
+    if (isStatusChangingToCompleted || isBarberChanging || areServicesChanging || areProductsChanging || manualTotalAmount !== undefined) {
 
-      // Buscar novos serviços ou usar os atuais
-      let services = currentAppointment.services.map(s => s.service);
-      if (areServicesChanging) {
-        services = await prisma.service.findMany({
-          where: { id: { in: serviceIds } },
+      // Prepare services data
+      let servicesToCreate: any[] = [];
+      let servicesTotal = 0;
+      let totalMinutes = 0;
+
+      const allServiceIds = serviceItems
+        ? serviceItems.map((s: any) => s.serviceId)
+        : (serviceIds || currentAppointment.services.map(s => s.serviceId));
+
+      const dbServices = await prisma.service.findMany({
+        where: { id: { in: allServiceIds } }
+      });
+
+      if (serviceItems && serviceItems.length > 0) {
+        servicesToCreate = serviceItems.map((item: any) => {
+          const dbS = dbServices.find(s => s.id === item.serviceId);
+          servicesTotal += item.price;
+          totalMinutes += dbS?.duration || 0;
+          return { serviceId: item.serviceId, price: item.price };
         });
+      } else if (serviceIds) {
+        servicesToCreate = serviceIds.map((sId: string) => {
+          const s = dbServices.find(sv => sv.id === sId);
+          const price = s?.price || 0;
+          servicesTotal += price;
+          totalMinutes += s?.duration || 0;
+          return { serviceId: sId, price };
+        });
+      } else {
+        servicesToCreate = currentAppointment.services.map(s => ({
+          serviceId: s.serviceId,
+          price: s.price
+        }));
+        servicesTotal = currentAppointment.services.reduce((sum, s) => sum + s.price, 0);
+        totalMinutes = currentAppointment.services.reduce((sum, s) => sum + (s.service?.duration || 0), 0);
       }
 
-      // Buscar novos produtos ou usar os atuais
-      let productDetails: any[] = [];
+      // Prepare products data
+      let productsToCreate: any[] = [];
+      let productsTotal = 0;
+
       if (areProductsChanging) {
         const productIds = productItems.map((p: any) => p.productId);
-        productDetails = await prisma.product.findMany({
+        const productDetails = await prisma.product.findMany({
           where: { id: { in: productIds } },
         });
-      }
-
-      // Calcular preços
-      const servicesTotal = services.reduce((sum, s) => sum + s.price, 0);
-      let productsTotal = 0;
-      if (areProductsChanging) {
-        productsTotal = productItems.reduce((sum: number, item: any) => {
-          const product = productDetails.find(p => p.id === item.productId);
-          return sum + (product ? product.price * item.quantity : 0);
-        }, 0);
+        productsToCreate = productItems.map((item: any) => {
+          const prod = productDetails.find(p => p.id === item.productId);
+          const unitPrice = item.unitPrice !== undefined ? item.unitPrice : (prod?.price || 0);
+          const totalPrice = unitPrice * item.quantity;
+          productsTotal += totalPrice;
+          return {
+            productId: item.productId,
+            quantity: item.quantity,
+            unitPrice,
+            totalPrice
+          };
+        });
       } else {
+        productsToCreate = currentAppointment.products.map(p => ({
+          productId: p.productId,
+          quantity: p.quantity,
+          unitPrice: p.unitPrice,
+          totalPrice: p.totalPrice
+        }));
         productsTotal = currentAppointment.products.reduce((sum, p) => sum + p.totalPrice, 0);
       }
 
       // Verificar assinatura
       const isSubscriber = currentAppointment.isSubscriptionAppointment;
 
-      // Atualizar valores no record
-      updateData.totalAmount = isSubscriber ? productsTotal : (servicesTotal + productsTotal);
+      // Final total amount
+      if (manualTotalAmount !== undefined && manualTotalAmount !== null) {
+        updateData.totalAmount = manualTotalAmount;
+      } else {
+        if (isSubscriber) {
+          // Buscar a assinatura ativa para ver o que está incluso
+          const activeSubscription = await prisma.subscription.findFirst({
+            where: {
+              clientId: currentAppointment.clientId,
+              status: 'ACTIVE',
+            },
+          });
 
-      const totalMinutes = services.reduce((sum, s) => sum + s.duration, 0);
+          const servicesIncludedStr = activeSubscription?.servicesIncluded || "";
+          const includedServices = servicesIncludedStr
+            ? servicesIncludedStr.split(',').map(s => s.trim().toLowerCase())
+            : [];
+
+          if (includedServices.length === 0) {
+            // Padrão: Corte é isento
+            let nonSubscriptionServicesTotal = 0;
+            for (const item of servicesToCreate) {
+              const dbService = dbServices.find(s => s.id === item.serviceId);
+              const isCorte = dbService?.name.toLowerCase().includes('corte');
+              if (!isCorte) {
+                nonSubscriptionServicesTotal += item.price;
+              }
+            }
+            updateData.totalAmount = nonSubscriptionServicesTotal + productsTotal;
+          } else {
+            let nonSubscriptionServicesTotal = 0;
+            for (const item of servicesToCreate) {
+              const dbService = dbServices.find(s => s.id === item.serviceId);
+              const isIncluded = includedServices.some(inc =>
+                dbService?.name.toLowerCase().includes(inc) || inc === dbService?.id
+              );
+              if (!isIncluded) {
+                nonSubscriptionServicesTotal += item.price;
+              }
+            }
+            updateData.totalAmount = nonSubscriptionServicesTotal + productsTotal;
+          }
+        } else {
+          updateData.totalAmount = servicesTotal + productsTotal;
+        }
+      }
+
       const workedHours = totalMinutes / 60;
 
       if (isSubscriber) {
@@ -153,6 +244,7 @@ export async function PATCH(
         if (isSubscriber) {
           commissionAmount = workedHours * barber.hourlyRate;
         } else {
+          // Comissão sobre o total de serviços (preços customizados)
           commissionAmount = (servicesTotal * barber.commissionRate) / 100;
         }
       }
@@ -162,12 +254,11 @@ export async function PATCH(
         // Atualizar serviços se mudaram
         if (areServicesChanging) {
           await tx.appointmentService.deleteMany({ where: { appointmentId: id } });
-          if (serviceIds.length > 0) {
+          if (servicesToCreate.length > 0) {
             await tx.appointmentService.createMany({
-              data: serviceIds.map((sId: string) => ({
+              data: servicesToCreate.map(s => ({
                 appointmentId: id,
-                serviceId: sId,
-                price: services.find(sv => sv.id === sId)?.price || 0
+                ...s
               }))
             });
           }
@@ -175,25 +266,25 @@ export async function PATCH(
 
         // Atualizar produtos se mudaram
         if (areProductsChanging) {
+          // Reverter estoque atual antes de deletar
+          for (const oldItem of currentAppointment.products) {
+            await tx.product.update({
+              where: { id: oldItem.productId },
+              data: { stock: { increment: oldItem.quantity } }
+            });
+          }
+
           await tx.appointmentProduct.deleteMany({ where: { appointmentId: id } });
-          if (productItems.length > 0) {
+          if (productsToCreate.length > 0) {
             await tx.appointmentProduct.createMany({
-              data: productItems.map((item: any) => {
-                const prod = productDetails.find(p => p.id === item.productId);
-                const unitPrice = prod?.price || 0;
-                return {
-                  appointmentId: id,
-                  productId: item.productId,
-                  quantity: item.quantity,
-                  unitPrice,
-                  totalPrice: unitPrice * item.quantity
-                };
-              })
+              data: productsToCreate.map(p => ({
+                appointmentId: id,
+                ...p
+              }))
             });
 
-            // Ajustar estoque (isso é simplificado, idealmente compararia diff)
-            // Por simplicidade aqui, vamos apenas processar a nova lista
-            for (const item of productItems) {
+            // Ajustar estoque novo
+            for (const item of productsToCreate) {
               await tx.product.update({
                 where: { id: item.productId },
                 data: { stock: { decrement: item.quantity } }

@@ -308,8 +308,8 @@ export default function AgendamentosOnlinePage() {
           <div className="grid gap-4 md:grid-cols-3">
             <div className="space-y-2">
               <Label>Status</Label>
-              <Select 
-                value={filterStatus || 'all'} 
+              <Select
+                value={filterStatus || 'all'}
                 onValueChange={(value) => setFilterStatus(value === 'all' ? undefined : value)}
               >
                 <SelectTrigger>
@@ -459,12 +459,12 @@ export default function AgendamentosOnlinePage() {
                     <User className="h-4 w-4" />
                     Cliente
                   </Label>
-                  <p className="text-sm font-medium">
+                  <div className="text-sm font-medium">
                     {selectedBooking.clientName}
                     {selectedBooking.isSubscriber && (
                       <Badge className="ml-2 bg-gold text-white">Assinante</Badge>
                     )}
-                  </p>
+                  </div>
                 </div>
 
                 <div className="space-y-2">

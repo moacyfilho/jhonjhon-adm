@@ -57,6 +57,7 @@ interface AppointmentData {
   clientId?: string;
   barberId?: string;
   date: string;
+  totalAmount?: number;
   client?: Client;
   barber?: Barber;
   services?: Array<{ service: Service }>;
@@ -121,6 +122,8 @@ export function AppointmentEditDialog({
   // UI States
   const [activeTab, setActiveTab] = useState<'services' | 'products'>('services');
   const [clientSearch, setClientSearch] = useState('');
+  const [manualTotal, setManualTotal] = useState<number | null>(appointment?.totalAmount || null);
+  const [isEditingTotal, setIsEditingTotal] = useState(false);
 
   useEffect(() => {
     fetchData();
@@ -242,13 +245,35 @@ export function AppointmentEditDialog({
     );
   };
 
+  // Editar preço do produto
+  const updateProductPrice = (productId: string, newPrice: number) => {
+    setSelectedProducts(prev =>
+      prev.map(p => (p.productId === productId ? { ...p, unitPrice: newPrice } : p))
+    );
+  };
+
   // Calcular totais
   const servicesTotal = selectedServices.reduce((sum, item) => sum + item.price, 0);
   const productsTotal = selectedProducts.reduce(
     (sum, item) => sum + item.unitPrice * item.quantity,
     0
   );
-  const grandTotal = servicesTotal + productsTotal;
+
+  // Para assinantes, sugerir o cálculo com Corte isento
+  const client = getClient();
+  const isSubscriber = client?.isSubscriber || false;
+
+  let suggestedGrandTotal = servicesTotal + productsTotal;
+  if (isSubscriber) {
+    const nonSubscriptionServicesTotal = selectedServices.reduce((sum, item) => {
+      const service = getService(item.serviceId);
+      const isIncluded = service?.name?.toLowerCase().includes('corte');
+      return isIncluded ? sum : sum + item.price;
+    }, 0);
+    suggestedGrandTotal = nonSubscriptionServicesTotal + productsTotal;
+  }
+
+  const grandTotal = suggestedGrandTotal;
 
   const barber = getBarber();
   const commissionAmount = barber ? (servicesTotal * barber.commissionRate) / 100 : 0;
@@ -269,9 +294,6 @@ export function AppointmentEditDialog({
       return;
     }
 
-    const client = getClient();
-    const isSubscriber = client?.isSubscriber || false;
-
     // Para assinantes, não exigir forma de pagamento (usar PIX como padrão)
     if (!isSubscriber && !paymentMethod) {
       toast.error('Selecione a forma de pagamento');
@@ -284,12 +306,17 @@ export function AppointmentEditDialog({
         clientId,
         barberId,
         date: appointment?.date || new Date().toISOString(),
-        serviceIds: selectedServices.map(s => s.serviceId),
+        serviceItems: selectedServices.map(s => ({
+          serviceId: s.serviceId,
+          price: s.price
+        })),
         productItems: selectedProducts.map(p => ({
           productId: p.productId,
           quantity: p.quantity,
+          unitPrice: p.unitPrice,
         })),
-        paymentMethod: isSubscriber ? 'PIX' : paymentMethod, // Assinantes usam PIX por padrão
+        totalAmount: manualTotal !== null ? manualTotal : undefined,
+        paymentMethod: isSubscriber && (manualTotal === null || manualTotal === 0) ? 'PIX' : paymentMethod,
         notes: observations || null,
         onlineBookingId: appointment?.onlineBookingId || null,
       };
@@ -354,7 +381,6 @@ export function AppointmentEditDialog({
     }
   };
 
-  const client = getClient();
   const isOnline = appointment?.isOnlineBooking;
 
   if (loading) {
@@ -594,37 +620,56 @@ export function AppointmentEditDialog({
                           <div className="flex-1">
                             <p className="font-medium text-sm">{product.name}</p>
                             <p className="text-xs text-muted-foreground">
-                              {formatCurrency(product.price)}/{product.unit}
+                              Preço base: {formatCurrency(product.price)}/{product.unit}
                             </p>
                           </div>
                           <div className="flex items-center gap-2">
-                            <div className="flex items-center gap-1 bg-white rounded border px-2 py-1">
-                              <Button
-                                size="icon"
-                                variant="ghost"
-                                className="h-6 w-6"
-                                onClick={() => updateProductQuantity(item.productId, -1)}
-                                disabled={item.quantity <= 1}
-                              >
-                                <Minus className="w-3 h-3" />
-                              </Button>
-                              <span className="w-8 text-center text-sm font-medium">{item.quantity}</span>
-                              <Button
-                                size="icon"
-                                variant="ghost"
-                                className="h-6 w-6"
-                                onClick={() => updateProductQuantity(item.productId, 1)}
-                              >
-                                <Plus className="w-3 h-3" />
-                              </Button>
+                            <div className="flex flex-col items-end gap-1">
+                              <Label className="text-[10px] text-muted-foreground">Preço Unit.</Label>
+                              <Input
+                                type="number"
+                                value={item.unitPrice}
+                                onChange={(e) =>
+                                  updateProductPrice(item.productId, parseFloat(e.target.value) || 0)
+                                }
+                                className="w-20 h-7 text-xs"
+                                step="0.01"
+                                min="0"
+                              />
                             </div>
-                            <span className="text-sm font-medium w-20 text-right">
-                              {formatCurrency(item.unitPrice * item.quantity)}
-                            </span>
+                            <div className="flex flex-col items-center gap-1">
+                              <Label className="text-[10px] text-muted-foreground">Qtde</Label>
+                              <div className="flex items-center gap-1 bg-white rounded border px-1 py-0.5">
+                                <Button
+                                  size="icon"
+                                  variant="ghost"
+                                  className="h-5 w-5"
+                                  onClick={() => updateProductQuantity(item.productId, -1)}
+                                  disabled={item.quantity <= 1}
+                                >
+                                  <Minus className="w-2 h-2" />
+                                </Button>
+                                <span className="w-6 text-center text-xs font-medium">{item.quantity}</span>
+                                <Button
+                                  size="icon"
+                                  variant="ghost"
+                                  className="h-5 w-5"
+                                  onClick={() => updateProductQuantity(item.productId, 1)}
+                                >
+                                  <Plus className="w-2 h-2" />
+                                </Button>
+                              </div>
+                            </div>
+                            <div className="flex flex-col items-end gap-1">
+                              <Label className="text-[10px] text-muted-foreground">Subtotal</Label>
+                              <span className="text-xs font-bold w-20 text-right text-teal-700">
+                                {formatCurrency(item.unitPrice * item.quantity)}
+                              </span>
+                            </div>
                             <Button
                               size="icon"
                               variant="ghost"
-                              className="h-8 w-8 text-red-600 hover:text-red-700 hover:bg-red-100"
+                              className="h-8 w-8 text-red-600 hover:text-red-700 hover:bg-red-100 mt-4"
                               onClick={() => removeProduct(item.productId)}
                             >
                               <Trash2 className="w-4 h-4" />
@@ -646,42 +691,94 @@ export function AppointmentEditDialog({
             <Separator />
 
             {/* Resumo de Pagamento */}
-            <div className="bg-teal-50 border border-teal-200 rounded-lg p-4 space-y-3">
-              <h3 className="font-semibold text-teal-900">Resumo de pagamento</h3>
+            <div className="bg-teal-50 border border-teal-200 rounded-lg p-4 space-y-4">
+              <div className="flex justify-between items-center">
+                <h3 className="font-semibold text-teal-900">Resumo de pagamento</h3>
+                {client?.isSubscriber && (
+                  <Badge variant="outline" className="bg-yellow-100 text-yellow-700 border-yellow-200 uppercase font-bold text-[10px]">
+                    Assinante
+                  </Badge>
+                )}
+              </div>
 
               <div className="space-y-2">
                 <div className="flex justify-between text-sm">
-                  <span>Serviços:</span>
+                  <span>Subtotal Serviços:</span>
                   <span className="font-medium">{formatCurrency(servicesTotal)}</span>
                 </div>
                 {productsTotal > 0 && (
                   <div className="flex justify-between text-sm">
-                    <span>Produtos:</span>
+                    <span>Subtotal Produtos:</span>
                     <span className="font-medium">{formatCurrency(productsTotal)}</span>
                   </div>
                 )}
+
                 <Separator />
-                <div className="flex justify-between">
-                  <span className="font-semibold">Total pendente</span>
-                  <span className="font-bold text-lg text-teal-700">{formatCurrency(grandTotal)}</span>
+
+                <div className="flex justify-between items-center py-1">
+                  <div className="flex flex-col">
+                    <span className="font-semibold">Valor a Pagar</span>
+                    <span className="text-[10px] text-muted-foreground">Original: {formatCurrency(grandTotal)}</span>
+                  </div>
+                  <div className="flex items-center gap-2">
+                    {manualTotal === null ? (
+                      <div className="flex items-center gap-2">
+                        <span className="font-bold text-lg text-teal-700">{formatCurrency(grandTotal)}</span>
+                        <Button
+                          variant="ghost"
+                          size="icon"
+                          className="h-8 w-8 text-teal-600"
+                          onClick={() => {
+                            setManualTotal(grandTotal);
+                            setIsEditingTotal(true);
+                          }}
+                        >
+                          <Edit2 className="w-4 h-4" />
+                        </Button>
+                      </div>
+                    ) : (
+                      <div className="flex items-center gap-2">
+                        <div className="relative group">
+                          <Input
+                            type="number"
+                            value={manualTotal}
+                            onChange={(e) => setManualTotal(parseFloat(e.target.value) || 0)}
+                            className="w-32 h-9 text-right font-bold pr-8 border-teal-300 focus-visible:ring-teal-500"
+                            step="0.01"
+                            autoFocus
+                          />
+                          <span className="absolute left-2 top-2 text-xs text-muted-foreground">R$</span>
+                        </div>
+                        <Button
+                          variant="ghost"
+                          size="icon"
+                          className="h-8 w-8 text-red-500 hover:text-red-700 hover:bg-red-50"
+                          onClick={() => setManualTotal(null)}
+                          title="Restaurar valor original"
+                        >
+                          <Trash2 className="w-4 h-4" />
+                        </Button>
+                      </div>
+                    )}
+                  </div>
                 </div>
               </div>
 
-              {client?.isSubscriber ? (
+              {client?.isSubscriber && manualTotal === null && grandTotal === 0 && (
                 <div className="bg-yellow-50 border border-yellow-300 rounded p-3">
-                  <div className="flex items-center gap-2 mb-2">
-                    <Award className="w-4 h-4 text-yellow-600" />
-                    <span className="font-semibold text-yellow-900">Cliente Assinante</span>
-                  </div>
-                  <p className="text-sm text-yellow-700">
-                    Este atendimento já está incluído na assinatura. Não há cobrança adicional.
+                  <p className="text-sm text-yellow-700 flex items-center gap-2">
+                    <Award className="w-4 h-4" />
+                    Atendimento incluído na assinatura.
                   </p>
                 </div>
-              ) : (
-                <div>
-                  <Label htmlFor="paymentMethod" className="text-sm">Selecione a forma de pagamento</Label>
+              )}
+
+              {/* Forma de Pagamento - Mostrar se valor > 0 ou se o usuário editou o valor */}
+              {(grandTotal > 0 || (manualTotal !== null && manualTotal > 0)) && (
+                <div className="space-y-2">
+                  <Label htmlFor="paymentMethod" className="text-sm">Forma de pagamento</Label>
                   <Select value={paymentMethod} onValueChange={setPaymentMethod}>
-                    <SelectTrigger id="paymentMethod" className="mt-2 bg-white">
+                    <SelectTrigger id="paymentMethod" className="bg-white">
                       <SelectValue placeholder="Escolha uma forma de pagamento" />
                     </SelectTrigger>
                     <SelectContent>
@@ -693,13 +790,6 @@ export function AppointmentEditDialog({
                   </Select>
                 </div>
               )}
-
-              <div className="bg-white rounded p-3 border">
-                <div className="flex justify-between text-sm">
-                  <span>Total</span>
-                  <span className="font-bold text-teal-700">{formatCurrency(grandTotal)}</span>
-                </div>
-              </div>
             </div>
 
             {/* Observações */}

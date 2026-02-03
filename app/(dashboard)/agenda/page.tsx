@@ -4,7 +4,7 @@ import { useState, useEffect } from 'react';
 import { DndContext, DragEndEvent, DragOverlay, useSensor, useSensors, PointerSensor } from '@dnd-kit/core';
 import { format, addDays, startOfWeek, addWeeks, subWeeks, parse, isSameDay, startOfDay } from 'date-fns';
 import { ptBR } from 'date-fns/locale';
-import { Calendar, ChevronLeft, ChevronRight, Filter, Search, Clock, User, DollarSign, Phone, CheckCircle, XCircle, Edit, Trash2, Globe, ShoppingCart, Plus, Minus, Award, Ban } from 'lucide-react';
+import { Calendar, ChevronLeft, ChevronRight, Filter, Search, Clock, User, DollarSign, Phone, CheckCircle, XCircle, Edit, Edit2, Trash2, Globe, ShoppingCart, Plus, Minus, Award, Ban } from 'lucide-react';
 import Image from 'next/image';
 import { Button } from '@/components/ui/button';
 import { Card } from '@/components/ui/card';
@@ -25,6 +25,7 @@ interface Barber {
   id: string;
   name: string;
   commissionRate: number;
+  hourlyRate: number;
 }
 
 interface Client {
@@ -58,6 +59,9 @@ interface Appointment {
   }>;
   isOnlineBooking?: boolean;
   isSubscriptionAppointment?: boolean;
+  commission?: {
+    amount: number;
+  };
   products?: Array<{
     productId: string;
     quantity: number;
@@ -149,13 +153,33 @@ function CompletionDialog({
   onPaymentMethodChange: (value: string) => void;
   notes: string;
   onNotesChange: (value: string) => void;
-  onComplete: () => void;
+  onComplete: (manualTotal?: number) => void;
   onClose: () => void;
 }) {
-  const servicesTotal = appointment.totalAmount;
+  const [manualTotal, setManualTotal] = useState<number | null>(null);
+  const [isEditingTotal, setIsEditingTotal] = useState(false);
+
+  const isSub = (appointment.isSubscriptionAppointment || appointment.client.isSubscriber) &&
+    appointment.services.some(s => s.service.name.toLowerCase().includes('corte'));
+
+  const servicesTotal = isSub
+    ? appointment.services.reduce((sum, s) => s.service.name.toLowerCase().includes('corte') ? sum : sum + s.service.price, 0)
+    : appointment.totalAmount;
+
   const productsTotal = selectedProducts.reduce((sum, p) => sum + (p.unitPrice * p.quantity), 0);
   const grandTotal = servicesTotal + productsTotal;
-  const commissionAmount = grandTotal * (appointment.barber.commissionRate / 100);
+
+  // Final total display (with potential override)
+  const finalTotalToPay = manualTotal !== null ? manualTotal : grandTotal;
+
+  // Robust commission calculation
+  const isSubForComission = appointment.isSubscriptionAppointment || appointment.client.isSubscriber;
+  const commissionAmount = isSubForComission
+    ? (() => {
+      const totalMinutes = appointment.services.reduce((sum, s) => sum + (s.service.duration || 0), 0);
+      return (totalMinutes / 60) * (appointment.barber.hourlyRate || 0);
+    })()
+    : (finalTotalToPay * (appointment.barber.commissionRate / 100));
 
   const getProductName = (productId: string) => {
     return products.find(p => p.id === productId)?.name || 'Produto';
@@ -183,14 +207,14 @@ function CompletionDialog({
             <div className="grid grid-cols-2 gap-4 text-sm">
               <div>
                 <span className="text-muted-foreground">Cliente:</span>
-                <p className="font-medium flex items-center gap-2">
+                <div className="font-medium flex items-center gap-2">
                   {appointment.client.name}
                   {(appointment.isSubscriptionAppointment || appointment.client.isSubscriber) && (
                     <Badge variant="outline" className="bg-amber-100 text-amber-700 border-amber-200 text-[10px] px-1 py-0 h-4 uppercase font-bold shrink-0">
                       ASSINANTE
                     </Badge>
                   )}
-                </p>
+                </div>
               </div>
               <div>
                 <span className="text-muted-foreground">Barbeiro:</span>
@@ -199,12 +223,20 @@ function CompletionDialog({
               <div className="col-span-2">
                 <span className="text-muted-foreground">Serviços:</span>
                 <ul className="mt-1">
-                  {appointment.services.map((s) => (
-                    <li key={s.service.id} className="flex justify-between">
-                      <span>{s.service.name}</span>
-                      <span className="font-medium">{formatCurrency(s.service.price)}</span>
-                    </li>
-                  ))}
+                  {appointment.services.map((s) => {
+                    const isExempt = isSub && s.service.name.toLowerCase().includes('corte');
+                    return (
+                      <li key={s.service.id} className="flex justify-between">
+                        <div className="flex flex-col">
+                          <span>{s.service.name}</span>
+                          {isExempt && <span className="text-[8px] text-amber-600 font-bold uppercase -mt-1">Incluso na Assinatura</span>}
+                        </div>
+                        <span className={`font-medium ${isExempt ? 'text-amber-600' : ''}`}>
+                          {formatCurrency(isExempt ? 0 : s.service.price)}
+                        </span>
+                      </li>
+                    );
+                  })}
                 </ul>
               </div>
             </div>
@@ -336,13 +368,68 @@ function CompletionDialog({
                   <span className="font-medium">{formatCurrency(productsTotal)}</span>
                 </div>
               )}
-              <Separator />
-              <div className="flex justify-between text-base">
-                <span className="font-semibold">Total:</span>
-                <span className="font-bold text-primary text-xl">{formatCurrency(grandTotal)}</span>
+
+              <Separator className="my-2" />
+
+              <div className="flex justify-between items-center py-1">
+                <div className="flex flex-col">
+                  <span className="font-semibold text-base">Valor Total</span>
+                  <span className="text-[10px] text-muted-foreground whitespace-nowrap">Original: {formatCurrency(grandTotal)}</span>
+                </div>
+                <div className="flex items-center gap-2">
+                  {manualTotal === null ? (
+                    <div className="flex items-center gap-2">
+                      <span className="font-bold text-xl text-primary">{formatCurrency(grandTotal)}</span>
+                      <Button
+                        variant="ghost"
+                        size="icon"
+                        className="h-8 w-8 text-primary"
+                        onClick={() => {
+                          setManualTotal(grandTotal);
+                          setIsEditingTotal(true);
+                        }}
+                      >
+                        <Edit2 className="w-4 h-4" />
+                      </Button>
+                    </div>
+                  ) : (
+                    <div className="flex items-center gap-2">
+                      <div className="relative group">
+                        <Input
+                          type="number"
+                          value={manualTotal}
+                          onChange={(e) => setManualTotal(parseFloat(e.target.value) || 0)}
+                          className="w-32 h-9 text-right font-bold pr-8 border-primary/30 focus-visible:ring-primary"
+                          step="0.01"
+                          autoFocus
+                        />
+                        <span className="absolute left-2 top-2 text-xs text-muted-foreground">R$</span>
+                      </div>
+                      <Button
+                        variant="ghost"
+                        size="icon"
+                        className="h-8 w-8 text-red-500 hover:text-red-700 hover:bg-red-50"
+                        onClick={() => setManualTotal(null)}
+                        title="Restaurar valor original"
+                      >
+                        <Trash2 className="w-4 h-4" />
+                      </Button>
+                    </div>
+                  )}
+                </div>
               </div>
-              <div className="flex justify-between pt-2 border-t border-border">
-                <span className="text-muted-foreground">Comissão ({appointment.barber.commissionRate}%):</span>
+
+              <div className="flex justify-between pt-2 border-t border-border mt-2">
+                <div className="flex flex-col">
+                  <span className="text-muted-foreground text-[11px]">
+                    {isSubForComission ? 'Comissão (Valor Fixo por Hora)' : `Comissão (${appointment.barber.commissionRate}%)`}
+                  </span>
+                  {isSubForComission && (
+                    <span className="text-[9px] text-muted-foreground leading-none">
+                      Ref: {appointment.barber.hourlyRate || 0}/hora
+                    </span>
+                  )}
+                </div>
                 <span className="font-semibold text-green-600">{formatCurrency(commissionAmount)}</span>
               </div>
             </div>
@@ -354,7 +441,7 @@ function CompletionDialog({
             Cancelar
           </Button>
           <Button
-            onClick={onComplete}
+            onClick={() => onComplete(manualTotal !== null ? manualTotal : undefined)}
             className="bg-green-600 hover:bg-green-700"
           >
             <CheckCircle className="w-4 h-4 mr-2" />
@@ -473,12 +560,23 @@ export default function AgendaPage() {
             ? booking.services.reduce((sum: number, s: any) => sum + (s.service?.price || 0), 0)
             : (booking.service?.price || 0);
 
+          let billingTotal = totalAmount;
+          if (booking.isSubscriber) {
+            // Se for assinante, o Corte é gratuito, mas outros serviços não
+            // TODO: No futuro buscar servicesIncluded da assinatura real
+            // Por enquanto, assumimos o padrão: Corte (ou 'corte') é isento
+            const subServices = bookingServices.filter((s: any) =>
+              !(s.service?.name?.toLowerCase().includes('corte'))
+            );
+            billingTotal = subServices.reduce((sum: number, s: any) => sum + (s.service?.price || 0), 0);
+          }
+
           return {
             id: `online-${booking.id}`,
             clientId: booking.clientId || 'temp',
             barberId: booking.barberId,
             date: booking.scheduledDate,
-            totalAmount: booking.isSubscriber ? 0 : totalAmount,
+            totalAmount: billingTotal,
             commissionAmount: 0,
             paymentMethod: 'A definir',
             notes: booking.observations,
@@ -693,7 +791,7 @@ export default function AgendaPage() {
     setCompletionNotes('');
   };
 
-  const handleCompleteAppointment = async () => {
+  const handleCompleteAppointment = async (manualGrandTotal?: number) => {
     if (!completionDialog) return;
 
     try {
@@ -714,6 +812,7 @@ export default function AgendaPage() {
             paymentMethod,
             notes: completionNotes,
             onlineBookingId: realId,
+            totalAmount: manualGrandTotal,
           }),
         });
 
@@ -743,7 +842,8 @@ export default function AgendaPage() {
           body: JSON.stringify({
             status: 'COMPLETED',
             paymentMethod,
-            notes: completionNotes
+            notes: completionNotes,
+            totalAmount: manualGrandTotal
           }),
         });
         if (!updateRes.ok) throw new Error('Erro ao finalizar atendimento');
@@ -764,11 +864,18 @@ export default function AgendaPage() {
         });
       }
 
-      // 5. Registrar comissão (o backend da criação não registra automaticamente)
+      // 5. Registrar comissão
+      const isSub = completionDialog.isSubscriptionAppointment || completionDialog.client.isSubscriber;
       const servicesTotal = completionDialog.totalAmount;
       const productsTotal = selectedProducts.reduce((sum, p) => sum + (p.unitPrice * p.quantity), 0);
-      const grandTotal = servicesTotal + productsTotal;
-      const commissionAmount = grandTotal * (completionDialog.barber.commissionRate / 100);
+      const grandTotal = (manualGrandTotal !== undefined) ? manualGrandTotal : (servicesTotal + productsTotal);
+
+      const commissionAmount = isSub
+        ? (() => {
+          const totalMinutes = completionDialog.services.reduce((sum, s) => sum + (s.service.duration || 0), 0);
+          return (totalMinutes / 60) * (completionDialog.barber.hourlyRate || 0);
+        })()
+        : (grandTotal * (completionDialog.barber.commissionRate / 100));
 
       if (commissionAmount > 0) {
         await fetch('/api/commissions', {
@@ -895,7 +1002,11 @@ export default function AgendaPage() {
         </div>
 
         <div className="text-[10px] font-medium mt-1">
-          {formatCurrency(appointment.totalAmount)}
+          {formatCurrency(
+            isSubscriber
+              ? appointment.services.reduce((sum, s) => s.service.name.toLowerCase().includes('corte') ? sum : sum + s.service.price, 0)
+              : appointment.totalAmount
+          )}
         </div>
 
         {isCompleted && (
@@ -1813,42 +1924,93 @@ function AppointmentDetailsDialog({
               </div>
             ) : (
               <div className="space-y-2">
-                {appointment.services.map((s) => (
-                  <div key={s.service.id} className="flex justify-between items-center">
-                    <span className="text-foreground">{s.service.name}</span>
-                    <span className="font-semibold text-primary">
-                      {formatCurrency(s.service.price)}
-                    </span>
-                  </div>
-                ))}
+                {(() => {
+                  const isSubscriber = appointment.isSubscriptionAppointment || appointment.client.isSubscriber;
+                  let calculatedServicesTotal = 0;
 
-                {appointment.products?.map((p) => (
-                  <div key={p.productId} className="flex justify-between items-center text-sm">
-                    <div className="flex items-center gap-1">
-                      <ShoppingCart className="w-3 h-3 text-muted-foreground" />
-                      <span className="text-foreground">{p.product.name} <span className="text-xs text-muted-foreground">(x{p.quantity})</span></span>
-                    </div>
-                    <span className="font-semibold text-primary">
-                      {formatCurrency(p.totalPrice)}
-                    </span>
-                  </div>
-                ))}
+                  return (
+                    <>
+                      {appointment.services.map((s) => {
+                        const isIncluded = isSubscriber && s.service.name.toLowerCase().includes('corte');
+                        const displayPrice = isIncluded ? 0 : s.service.price;
+                        calculatedServicesTotal += displayPrice;
+
+                        return (
+                          <div key={s.service.id} className="flex justify-between items-center">
+                            <div className="flex flex-col">
+                              <span className="text-foreground">{s.service.name}</span>
+                              {isIncluded && <span className="text-[9px] text-amber-600 font-bold uppercase">Incluso na Assinatura</span>}
+                            </div>
+                            <span className={`font-semibold ${isIncluded ? 'text-amber-600' : 'text-primary'}`}>
+                              {formatCurrency(displayPrice)}
+                            </span>
+                          </div>
+                        );
+                      })}
+
+                      {appointment.products?.map((p) => (
+                        <div key={p.productId} className="flex justify-between items-center text-sm">
+                          <div className="flex items-center gap-1">
+                            <ShoppingCart className="w-3 h-3 text-muted-foreground" />
+                            <span className="text-foreground">{p.product.name} <span className="text-xs text-muted-foreground">(x{p.quantity})</span></span>
+                          </div>
+                          <span className="font-semibold text-primary">
+                            {formatCurrency(p.totalPrice)}
+                          </span>
+                        </div>
+                      ))}
+                    </>
+                  );
+                })()}
               </div>
             )}
           </div>
 
           {/* Totais */}
           <div className="bg-primary/10 border border-primary/20 p-4 rounded-lg">
-            <div className="flex justify-between items-center">
-              <span className="font-medium">Valor Total:</span>
-              <span className="font-bold text-primary text-xl">
-                {formatCurrency(appointment.totalAmount)}
+            <div className="flex justify-between items-center text-gold">
+              <span className="font-medium text-lg">Valor Total:</span>
+              <span className="font-bold text-2xl">
+                {formatCurrency(
+                  (() => {
+                    const isSubscriber = appointment.isSubscriptionAppointment || appointment.client.isSubscriber;
+                    if (!isSubscriber) return appointment.totalAmount;
+
+                    const servicesTotal = appointment.services.reduce((sum, s) => {
+                      const isIncluded = s.service.name.toLowerCase().includes('corte');
+                      return isIncluded ? sum : sum + s.service.price;
+                    }, 0);
+                    const productsTotal = appointment.products?.reduce((sum, p) => sum + p.totalPrice, 0) || 0;
+                    return servicesTotal + productsTotal;
+                  })()
+                )}
               </span>
             </div>
-            <div className="flex justify-between items-center text-sm mt-2 pt-2 border-t border-border">
-              <span className="text-muted-foreground">Comissão do Barbeiro:</span>
-              <span className="font-semibold">
-                {formatCurrency(appointment.commissionAmount)}
+
+            <div className="flex justify-between items-center text-sm mt-3 pt-3 border-t border-primary/20">
+              <div className="flex flex-col">
+                <span className="text-muted-foreground">Comissão do Barbeiro</span>
+                <span className="text-[10px] text-muted-foreground">
+                  {appointment.isSubscriptionAppointment || appointment.client.isSubscriber
+                    ? `Base: ${appointment.barber.hourlyRate || 0}/hora`
+                    : `Base: ${appointment.barber.commissionRate || 0}% sobre serviços`}
+                </span>
+              </div>
+              <span className="font-bold text-lg text-white">
+                {formatCurrency(
+                  appointment.commission?.amount ??
+                  appointment.commissionAmount ??
+                  (() => {
+                    const isSub = appointment.isSubscriptionAppointment || appointment.client.isSubscriber;
+                    if (isSub) {
+                      const totalMinutes = appointment.services.reduce((sum, s) => sum + (s.service.duration || 0), 0);
+                      return (totalMinutes / 60) * (appointment.barber.hourlyRate || 0);
+                    } else {
+                      const servicesTotal = appointment.services.reduce((sum, s) => sum + (s.service.price || 0), 0);
+                      return (servicesTotal * (appointment.barber.commissionRate || 0)) / 100;
+                    }
+                  })()
+                )}
               </span>
             </div>
           </div>
