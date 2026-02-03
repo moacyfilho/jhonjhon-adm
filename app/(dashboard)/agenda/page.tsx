@@ -562,13 +562,10 @@ export default function AgendaPage() {
 
           let billingTotal = totalAmount;
           if (booking.isSubscriber) {
-            // Se for assinante, o Corte é gratuito, mas outros serviços não
-            // TODO: No futuro buscar servicesIncluded da assinatura real
-            // Por enquanto, assumimos o padrão: Corte (ou 'corte') é isento
             const subServices = bookingServices.filter((s: any) =>
-              !(s.service?.name?.toLowerCase().includes('corte'))
+              !(s.service?.name?.toLowerCase().trim().includes('corte'))
             );
-            billingTotal = subServices.reduce((sum: number, s: any) => sum + (s.service?.price || 0), 0);
+            billingTotal = subServices.reduce((sum: number, s: any) => sum + (Number(s.service?.price) || 0), 0);
           }
 
           return {
@@ -1931,14 +1928,16 @@ function AppointmentDetailsDialog({
                   return (
                     <>
                       {appointment.services.map((s) => {
-                        const isIncluded = isSubscriber && s.service.name.toLowerCase().includes('corte');
-                        const displayPrice = isIncluded ? 0 : s.service.price;
+                        const sName = (s.service?.name || '').toLowerCase().trim();
+                        const isIncluded = isSubscriber && (sName.includes('corte') || sName === 'corte');
+                        const price = Number(s.service?.price) || 0;
+                        const displayPrice = isIncluded ? 0 : price;
                         calculatedServicesTotal += displayPrice;
 
                         return (
                           <div key={s.service.id} className="flex justify-between items-center">
                             <div className="flex flex-col">
-                              <span className="text-foreground">{s.service.name}</span>
+                              <span className="text-foreground">{s.service?.name || 'Serviço'}</span>
                               {isIncluded && <span className="text-[9px] text-amber-600 font-bold uppercase">Incluso na Assinatura</span>}
                             </div>
                             <span className={`font-semibold ${isIncluded ? 'text-amber-600' : 'text-primary'}`}>
@@ -1974,13 +1973,14 @@ function AppointmentDetailsDialog({
                 {formatCurrency(
                   (() => {
                     const isSubscriber = appointment.isSubscriptionAppointment || appointment.client.isSubscriber;
-                    if (!isSubscriber) return appointment.totalAmount;
+                    if (!isSubscriber) return Number(appointment.totalAmount) || 0;
 
                     const servicesTotal = appointment.services.reduce((sum, s) => {
-                      const isIncluded = s.service.name.toLowerCase().includes('corte');
-                      return isIncluded ? sum : sum + s.service.price;
+                      const sName = (s.service?.name || '').toLowerCase().trim();
+                      const isIncluded = sName.includes('corte') || sName === 'corte';
+                      return isIncluded ? sum : sum + (Number(s.service?.price) || 0);
                     }, 0);
-                    const productsTotal = appointment.products?.reduce((sum, p) => sum + p.totalPrice, 0) || 0;
+                    const productsTotal = appointment.products?.reduce((sum, p) => sum + (Number(p.totalPrice) || 0), 0) || 0;
                     return servicesTotal + productsTotal;
                   })()
                 )}
@@ -1998,18 +1998,21 @@ function AppointmentDetailsDialog({
               </div>
               <span className="font-bold text-lg text-white">
                 {formatCurrency(
-                  appointment.commission?.amount ??
-                  appointment.commissionAmount ??
                   (() => {
                     const isSub = appointment.isSubscriptionAppointment || appointment.client.isSubscriber;
+                    const amount = appointment.commission?.amount ?? appointment.commissionAmount;
+                    if (amount !== undefined && amount !== null && !isNaN(Number(amount))) return Number(amount);
+
                     if (isSub) {
-                      const totalMinutes = appointment.services.reduce((sum, s) => sum + (s.service.duration || 0), 0);
-                      return (totalMinutes / 60) * (appointment.barber.hourlyRate || 0);
+                      const totalMinutes = appointment.services.reduce((sum, s) => sum + (Number(s.service?.duration) || 0), 0);
+                      const rate = Number(appointment.barber?.hourlyRate) || 0;
+                      return (totalMinutes / 60) * rate;
                     } else {
-                      const servicesTotal = appointment.services.reduce((sum, s) => sum + (s.service.price || 0), 0);
-                      return (servicesTotal * (appointment.barber.commissionRate || 0)) / 100;
+                      const servicesTotal = appointment.services.reduce((sum, s) => sum + (Number(s.service?.price) || 0), 0);
+                      const rate = Number(appointment.barber?.commissionRate) || 0;
+                      return (servicesTotal * rate) / 100;
                     }
-                  })()
+                  })() || 0
                 )}
               </span>
             </div>
