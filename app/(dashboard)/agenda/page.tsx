@@ -453,6 +453,7 @@ function CompletionDialog({
   );
 }
 export default function AgendaPage() {
+  console.log('--- AGENDA LOADED [VERSION 2.3] ---');
   const [appointments, setAppointments] = useState<Appointment[]>([]);
   const [barbers, setBarbers] = useState<Barber[]>([]);
   const [loading, setLoading] = useState(true);
@@ -1027,10 +1028,10 @@ export default function AgendaPage() {
           <div>
             <h1 className="text-3xl font-bold text-foreground flex items-center gap-2">
               <Calendar className="w-8 h-8 text-primary" />
-              Agenda <span className="text-[10px] bg-primary/20 text-primary px-1.5 py-0.5 rounded font-mono ml-2">v2.2 - Build OK</span>
+              Agenda <span className="text-[10px] bg-red-600 text-white px-1.5 py-0.5 rounded font-mono ml-2 shadow-sm">v2.3 - ATUALIZADO</span>
             </h1>
             <p className="text-muted-foreground mt-1">
-              Visualize e gerencie os agendamentos em grade
+              [v2.3] Controle total dos agendamentos e assinaturas
             </p>
           </div>
 
