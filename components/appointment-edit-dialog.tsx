@@ -1,7 +1,7 @@
 'use client';
 
 import { useState, useEffect } from 'react';
-import { User, Phone, Award, Plus, Minus, Edit2, Trash2, CheckCircle } from 'lucide-react';
+import { User, Phone, Award, Plus, Minus, Edit2, Trash2, CheckCircle, Search } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter } from '@/components/ui/dialog';
 import { Input } from '@/components/ui/input';
@@ -95,7 +95,7 @@ export function AppointmentEditDialog({
 }) {
   const [loading, setLoading] = useState(false);
   const [saving, setSaving] = useState(false);
-  
+
   // Dados disponíveis
   const [clients, setClients] = useState<Client[]>([]);
   const [barbers, setBarbers] = useState<Barber[]>([]);
@@ -120,6 +120,7 @@ export function AppointmentEditDialog({
 
   // UI States
   const [activeTab, setActiveTab] = useState<'services' | 'products'>('services');
+  const [clientSearch, setClientSearch] = useState('');
 
   useEffect(() => {
     fetchData();
@@ -159,10 +160,10 @@ export function AppointmentEditDialog({
         })
       );
 
-      setClients(clientsWithSubscription);
-      setBarbers(barbersData.filter((b: any) => b.isActive));
-      setServices(servicesData.filter((s: any) => s.isActive));
-      setProducts(productsData.filter((p: any) => p.isActive && p.stock > 0));
+      setClients(clientsWithSubscription.sort((a, b) => a.name.localeCompare(b.name)));
+      setBarbers(barbersData.filter((b: any) => b.isActive).sort((a, b) => a.name.localeCompare(b.name)));
+      setServices(servicesData.filter((s: any) => s.isActive).sort((a, b) => a.name.localeCompare(b.name)));
+      setProducts(productsData.filter((p: any) => p.isActive && p.stock > 0).sort((a, b) => a.name.localeCompare(b.name)));
     } catch (error) {
       console.error('Error fetching data:', error);
       toast.error('Erro ao carregar dados');
@@ -267,10 +268,10 @@ export function AppointmentEditDialog({
       toast.error('Adicione pelo menos um serviço ou produto');
       return;
     }
-    
+
     const client = getClient();
     const isSubscriber = client?.isSubscriber || false;
-    
+
     // Para assinantes, não exigir forma de pagamento (usar PIX como padrão)
     if (!isSubscriber && !paymentMethod) {
       toast.error('Selecione a forma de pagamento');
@@ -306,7 +307,7 @@ export function AppointmentEditDialog({
         const isOnlineBooking = appointment.id.startsWith('online-');
         const realId = isOnlineBooking ? appointment.id.replace('online-', '') : appointment.id;
         const endpoint = isOnlineBooking ? `/api/online-bookings/${realId}` : `/api/appointments/${realId}`;
-        
+
         // Para agendamentos online, converter para Appointment ao finalizar
         if (isOnlineBooking) {
           // Primeiro, criar o appointment baseado no online booking
@@ -318,7 +319,7 @@ export function AppointmentEditDialog({
               onlineBookingId: realId,
             }),
           });
-          
+
           if (res.ok) {
             // Marcar o online booking como COMPLETED
             await fetch(`/api/online-bookings/${realId}`, {
@@ -372,325 +373,348 @@ export function AppointmentEditDialog({
     <Dialog open={true} onOpenChange={onClose}>
       <DialogContent>
         <div className="max-h-[80vh] overflow-y-auto">
-        <DialogHeader>
-          <DialogTitle>
-            <div className="flex items-center gap-2">
-              {isNew ? 'Novo Atendimento' : 'Editar Atendimento'}
-              {isOnline && (
-                <Badge variant="outline" className="border-blue-500 text-blue-600">
-                  ONLINE
-                </Badge>
-              )}
-            </div>
-          </DialogTitle>
-        </DialogHeader>
+          <DialogHeader>
+            <DialogTitle>
+              <div className="flex items-center gap-2">
+                {isNew ? 'Novo Atendimento' : 'Editar Atendimento'}
+                {isOnline && (
+                  <Badge variant="outline" className="border-blue-500 text-blue-600">
+                    ONLINE
+                  </Badge>
+                )}
+              </div>
+            </DialogTitle>
+          </DialogHeader>
 
-        <div className="space-y-4">
-          {/* Cliente e Barbeiro */}
-          <div className="grid grid-cols-2 gap-4">
-            <div>
-              <Label htmlFor="client" className="flex items-center gap-2">
-                <User className="w-4 h-4" />
-                Cliente
-              </Label>
-              {client ? (
-                <div className="mt-2 p-3 bg-secondary/50 rounded-lg">
-                  <div className="flex items-center justify-between">
-                    <div>
-                      <p className="font-medium">{client.name}</p>
-                      <p className="text-sm text-muted-foreground flex items-center gap-1">
-                        <Phone className="w-3 h-3" />
-                        {client.phone}
-                      </p>
+          <div className="space-y-4">
+            {/* Cliente e Barbeiro */}
+            <div className="grid grid-cols-2 gap-4">
+              <div>
+                <Label htmlFor="client" className="flex items-center gap-2">
+                  <User className="w-4 h-4" />
+                  Cliente
+                </Label>
+                {client ? (
+                  <div className="mt-2 p-3 bg-secondary/50 rounded-lg">
+                    <div className="flex items-center justify-between">
+                      <div>
+                        <p className="font-medium">{client.name}</p>
+                        <p className="text-sm text-muted-foreground flex items-center gap-1">
+                          <Phone className="w-3 h-3" />
+                          {client.phone}
+                        </p>
+                      </div>
+                      {client.isSubscriber && (
+                        <Badge variant="outline" className="border-yellow-500 text-yellow-600">
+                          <Award className="w-3 h-3 mr-1" />
+                          Assinante
+                        </Badge>
+                      )}
                     </div>
-                    {client.isSubscriber && (
-                      <Badge variant="outline" className="border-yellow-500 text-yellow-600">
-                        <Award className="w-3 h-3 mr-1" />
-                        Assinante
-                      </Badge>
-                    )}
                   </div>
-                </div>
-              ) : (
-                <Select value={clientId} onValueChange={setClientId} disabled={!isNew && isOnline}>
-                  <SelectTrigger id="client" className="mt-2">
-                    <SelectValue placeholder="Selecione um cliente" />
+                ) : (
+                  <div className="space-y-2">
+                    <div className="relative">
+                      <Search className="absolute left-2 top-2.5 h-4 w-4 text-muted-foreground" />
+                      <Input
+                        placeholder="Pesquisar cliente..."
+                        className="pl-8"
+                        value={clientSearch}
+                        onChange={(e) => setClientSearch(e.target.value)}
+                      />
+                    </div>
+                    <Select value={clientId} onValueChange={setClientId} disabled={!isNew && isOnline}>
+                      <SelectTrigger id="client">
+                        <SelectValue placeholder="Selecione um cliente" />
+                      </SelectTrigger>
+                      <SelectContent>
+                        {clients
+                          .filter(c =>
+                            c.name.toLowerCase().includes(clientSearch.toLowerCase()) ||
+                            c.phone.includes(clientSearch)
+                          )
+                          .map(c => (
+                            <SelectItem key={c.id} value={c.id}>
+                              <div className="flex items-center justify-between w-full gap-2">
+                                <span>{c.name} - {c.phone}</span>
+                                {c.isSubscriber && (
+                                  <Badge variant="outline" className="ml-auto bg-yellow-100 text-yellow-700 border-yellow-200 text-[10px] px-1 py-0 h-4 uppercase font-bold shrink-0">
+                                    ASSINANTE
+                                  </Badge>
+                                )}
+                              </div>
+                            </SelectItem>
+                          ))}
+                      </SelectContent>
+                    </Select>
+                  </div>
+                )}
+              </div>
+
+              <div>
+                <Label htmlFor="barber">Barbeiro</Label>
+                <Select value={barberId} onValueChange={setBarberId} disabled={!isNew && isOnline}>
+                  <SelectTrigger id="barber" className="mt-2">
+                    <SelectValue placeholder="Selecione um barbeiro" />
                   </SelectTrigger>
                   <SelectContent>
-                    {clients.map(c => (
-                      <SelectItem key={c.id} value={c.id}>
-                        {c.name} - {c.phone}
+                    {barbers.map(b => (
+                      <SelectItem key={b.id} value={b.id}>
+                        {b.name} ({b.commissionRate}%)
                       </SelectItem>
                     ))}
                   </SelectContent>
                 </Select>
-              )}
+              </div>
             </div>
 
-            <div>
-              <Label htmlFor="barber">Barbeiro</Label>
-              <Select value={barberId} onValueChange={setBarberId} disabled={!isNew && isOnline}>
-                <SelectTrigger id="barber" className="mt-2">
-                  <SelectValue placeholder="Selecione um barbeiro" />
-                </SelectTrigger>
-                <SelectContent>
-                  {barbers.map(b => (
-                    <SelectItem key={b.id} value={b.id}>
-                      {b.name} ({b.commissionRate}%)
-                    </SelectItem>
-                  ))}
-                </SelectContent>
-              </Select>
-            </div>
-          </div>
+            <Separator />
 
-          <Separator />
+            {/* Tabs: Serviços e Produtos */}
+            <Tabs value={activeTab} onValueChange={(v) => setActiveTab(v as 'services' | 'products')}>
+              <TabsList className="grid w-full grid-cols-2">
+                <TabsTrigger value="services">Serviços</TabsTrigger>
+                <TabsTrigger value="products">Produtos</TabsTrigger>
+              </TabsList>
 
-          {/* Tabs: Serviços e Produtos */}
-          <Tabs value={activeTab} onValueChange={(v) => setActiveTab(v as 'services' | 'products')}>
-            <TabsList className="grid w-full grid-cols-2">
-              <TabsTrigger value="services">Serviços</TabsTrigger>
-              <TabsTrigger value="products">Produtos</TabsTrigger>
-            </TabsList>
+              {/* Tab: Serviços */}
+              <TabsContent value="services" className="space-y-4">
+                <div className="flex gap-2">
+                  <Select
+                    onValueChange={(value) => {
+                      addService(value);
+                    }}
+                  >
+                    <SelectTrigger className="flex-1">
+                      <SelectValue placeholder="Selecione um serviço" />
+                    </SelectTrigger>
+                    <SelectContent>
+                      {services
+                        .filter(s => !selectedServices.find(ss => ss.serviceId === s.id))
+                        .map(service => (
+                          <SelectItem key={service.id} value={service.id}>
+                            {service.name} - {formatCurrency(service.price)}
+                          </SelectItem>
+                        ))}
+                    </SelectContent>
+                  </Select>
+                  <Button size="icon" variant="outline" disabled>
+                    <Plus className="w-4 h-4" />
+                  </Button>
+                </div>
 
-            {/* Tab: Serviços */}
-            <TabsContent value="services" className="space-y-4">
-              <div className="flex gap-2">
-                <Select
-                  onValueChange={(value) => {
-                    addService(value);
-                  }}
-                >
-                  <SelectTrigger className="flex-1">
-                    <SelectValue placeholder="Selecione um serviço" />
-                  </SelectTrigger>
-                  <SelectContent>
-                    {services
-                      .filter(s => !selectedServices.find(ss => ss.serviceId === s.id))
-                      .map(service => (
-                        <SelectItem key={service.id} value={service.id}>
-                          {service.name} - {formatCurrency(service.price)}
-                        </SelectItem>
-                      ))}
-                  </SelectContent>
-                </Select>
-                <Button size="icon" variant="outline" disabled>
-                  <Plus className="w-4 h-4" />
-                </Button>
-              </div>
-
-              {/* Lista de serviços selecionados */}
-              <div className="space-y-2">
-                {selectedServices.map(item => {
-                  const service = getService(item.serviceId);
-                  if (!service) return null;
-                  return (
-                    <div key={item.serviceId} className="bg-teal-50 p-3 rounded-lg border border-teal-200">
-                      <div className="flex items-center justify-between">
-                        <div className="flex-1">
-                          <p className="font-medium text-sm">{service.name}</p>
-                          <p className="text-xs text-muted-foreground">
-                            {formatCurrency(service.price)} • {service.duration} min
-                          </p>
-                        </div>
-                        <div className="flex items-center gap-2">
-                          <Input
-                            type="number"
-                            value={item.price}
-                            onChange={(e) =>
-                              updateServicePrice(item.serviceId, parseFloat(e.target.value) || 0)
-                            }
-                            className="w-24 h-8 text-sm"
-                            step="0.01"
-                            min="0"
-                          />
-                          <Button
-                            size="icon"
-                            variant="ghost"
-                            className="h-8 w-8 text-teal-600 hover:text-teal-700 hover:bg-teal-100"
-                            disabled
-                          >
-                            <Edit2 className="w-4 h-4" />
-                          </Button>
-                          <Button
-                            size="icon"
-                            variant="ghost"
-                            className="h-8 w-8 text-red-600 hover:text-red-700 hover:bg-red-100"
-                            onClick={() => removeService(item.serviceId)}
-                          >
-                            <Trash2 className="w-4 h-4" />
-                          </Button>
-                        </div>
-                      </div>
-                    </div>
-                  );
-                })}
-                {selectedServices.length === 0 && (
-                  <p className="text-sm text-muted-foreground text-center py-4">
-                    Nenhum serviço selecionado
-                  </p>
-                )}
-              </div>
-            </TabsContent>
-
-            {/* Tab: Produtos */}
-            <TabsContent value="products" className="space-y-4">
-              <div className="flex gap-2">
-                <Select
-                  onValueChange={(value) => {
-                    addProduct(value);
-                  }}
-                >
-                  <SelectTrigger className="flex-1">
-                    <SelectValue placeholder="Selecione um produto" />
-                  </SelectTrigger>
-                  <SelectContent>
-                    {products
-                      .filter(p => !selectedProducts.find(sp => sp.productId === p.id))
-                      .map(product => (
-                        <SelectItem key={product.id} value={product.id}>
-                          {product.name} - {formatCurrency(product.price)} (Estoque: {product.stock})
-                        </SelectItem>
-                      ))}
-                  </SelectContent>
-                </Select>
-                <Button size="icon" variant="outline" disabled>
-                  <Plus className="w-4 h-4" />
-                </Button>
-              </div>
-
-              {/* Lista de produtos selecionados */}
-              <div className="space-y-2">
-                {selectedProducts.map(item => {
-                  const product = getProduct(item.productId);
-                  if (!product) return null;
-                  return (
-                    <div key={item.productId} className="bg-teal-50 p-3 rounded-lg border border-teal-200">
-                      <div className="flex items-center justify-between">
-                        <div className="flex-1">
-                          <p className="font-medium text-sm">{product.name}</p>
-                          <p className="text-xs text-muted-foreground">
-                            {formatCurrency(product.price)}/{product.unit}
-                          </p>
-                        </div>
-                        <div className="flex items-center gap-2">
-                          <div className="flex items-center gap-1 bg-white rounded border px-2 py-1">
+                {/* Lista de serviços selecionados */}
+                <div className="space-y-2">
+                  {selectedServices.map(item => {
+                    const service = getService(item.serviceId);
+                    if (!service) return null;
+                    return (
+                      <div key={item.serviceId} className="bg-teal-50 p-3 rounded-lg border border-teal-200">
+                        <div className="flex items-center justify-between">
+                          <div className="flex-1">
+                            <p className="font-medium text-sm">{service.name}</p>
+                            <p className="text-xs text-muted-foreground">
+                              {formatCurrency(service.price)} • {service.duration} min
+                            </p>
+                          </div>
+                          <div className="flex items-center gap-2">
+                            <Input
+                              type="number"
+                              value={item.price}
+                              onChange={(e) =>
+                                updateServicePrice(item.serviceId, parseFloat(e.target.value) || 0)
+                              }
+                              className="w-24 h-8 text-sm"
+                              step="0.01"
+                              min="0"
+                            />
                             <Button
                               size="icon"
                               variant="ghost"
-                              className="h-6 w-6"
-                              onClick={() => updateProductQuantity(item.productId, -1)}
-                              disabled={item.quantity <= 1}
+                              className="h-8 w-8 text-teal-600 hover:text-teal-700 hover:bg-teal-100"
+                              disabled
                             >
-                              <Minus className="w-3 h-3" />
+                              <Edit2 className="w-4 h-4" />
                             </Button>
-                            <span className="w-8 text-center text-sm font-medium">{item.quantity}</span>
                             <Button
                               size="icon"
                               variant="ghost"
-                              className="h-6 w-6"
-                              onClick={() => updateProductQuantity(item.productId, 1)}
+                              className="h-8 w-8 text-red-600 hover:text-red-700 hover:bg-red-100"
+                              onClick={() => removeService(item.serviceId)}
                             >
-                              <Plus className="w-3 h-3" />
+                              <Trash2 className="w-4 h-4" />
                             </Button>
                           </div>
-                          <span className="text-sm font-medium w-20 text-right">
-                            {formatCurrency(item.unitPrice * item.quantity)}
-                          </span>
-                          <Button
-                            size="icon"
-                            variant="ghost"
-                            className="h-8 w-8 text-red-600 hover:text-red-700 hover:bg-red-100"
-                            onClick={() => removeProduct(item.productId)}
-                          >
-                            <Trash2 className="w-4 h-4" />
-                          </Button>
                         </div>
                       </div>
-                    </div>
-                  );
-                })}
-                {selectedProducts.length === 0 && (
-                  <p className="text-sm text-muted-foreground text-center py-4">
-                    Nenhum produto selecionado
-                  </p>
-                )}
-              </div>
-            </TabsContent>
-          </Tabs>
+                    );
+                  })}
+                  {selectedServices.length === 0 && (
+                    <p className="text-sm text-muted-foreground text-center py-4">
+                      Nenhum serviço selecionado
+                    </p>
+                  )}
+                </div>
+              </TabsContent>
 
-          <Separator />
+              {/* Tab: Produtos */}
+              <TabsContent value="products" className="space-y-4">
+                <div className="flex gap-2">
+                  <Select
+                    onValueChange={(value) => {
+                      addProduct(value);
+                    }}
+                  >
+                    <SelectTrigger className="flex-1">
+                      <SelectValue placeholder="Selecione um produto" />
+                    </SelectTrigger>
+                    <SelectContent>
+                      {products
+                        .filter(p => !selectedProducts.find(sp => sp.productId === p.id))
+                        .map(product => (
+                          <SelectItem key={product.id} value={product.id}>
+                            {product.name} - {formatCurrency(product.price)} (Estoque: {product.stock})
+                          </SelectItem>
+                        ))}
+                    </SelectContent>
+                  </Select>
+                  <Button size="icon" variant="outline" disabled>
+                    <Plus className="w-4 h-4" />
+                  </Button>
+                </div>
 
-          {/* Resumo de Pagamento */}
-          <div className="bg-teal-50 border border-teal-200 rounded-lg p-4 space-y-3">
-            <h3 className="font-semibold text-teal-900">Resumo de pagamento</h3>
-            
-            <div className="space-y-2">
-              <div className="flex justify-between text-sm">
-                <span>Serviços:</span>
-                <span className="font-medium">{formatCurrency(servicesTotal)}</span>
-              </div>
-              {productsTotal > 0 && (
+                {/* Lista de produtos selecionados */}
+                <div className="space-y-2">
+                  {selectedProducts.map(item => {
+                    const product = getProduct(item.productId);
+                    if (!product) return null;
+                    return (
+                      <div key={item.productId} className="bg-teal-50 p-3 rounded-lg border border-teal-200">
+                        <div className="flex items-center justify-between">
+                          <div className="flex-1">
+                            <p className="font-medium text-sm">{product.name}</p>
+                            <p className="text-xs text-muted-foreground">
+                              {formatCurrency(product.price)}/{product.unit}
+                            </p>
+                          </div>
+                          <div className="flex items-center gap-2">
+                            <div className="flex items-center gap-1 bg-white rounded border px-2 py-1">
+                              <Button
+                                size="icon"
+                                variant="ghost"
+                                className="h-6 w-6"
+                                onClick={() => updateProductQuantity(item.productId, -1)}
+                                disabled={item.quantity <= 1}
+                              >
+                                <Minus className="w-3 h-3" />
+                              </Button>
+                              <span className="w-8 text-center text-sm font-medium">{item.quantity}</span>
+                              <Button
+                                size="icon"
+                                variant="ghost"
+                                className="h-6 w-6"
+                                onClick={() => updateProductQuantity(item.productId, 1)}
+                              >
+                                <Plus className="w-3 h-3" />
+                              </Button>
+                            </div>
+                            <span className="text-sm font-medium w-20 text-right">
+                              {formatCurrency(item.unitPrice * item.quantity)}
+                            </span>
+                            <Button
+                              size="icon"
+                              variant="ghost"
+                              className="h-8 w-8 text-red-600 hover:text-red-700 hover:bg-red-100"
+                              onClick={() => removeProduct(item.productId)}
+                            >
+                              <Trash2 className="w-4 h-4" />
+                            </Button>
+                          </div>
+                        </div>
+                      </div>
+                    );
+                  })}
+                  {selectedProducts.length === 0 && (
+                    <p className="text-sm text-muted-foreground text-center py-4">
+                      Nenhum produto selecionado
+                    </p>
+                  )}
+                </div>
+              </TabsContent>
+            </Tabs>
+
+            <Separator />
+
+            {/* Resumo de Pagamento */}
+            <div className="bg-teal-50 border border-teal-200 rounded-lg p-4 space-y-3">
+              <h3 className="font-semibold text-teal-900">Resumo de pagamento</h3>
+
+              <div className="space-y-2">
                 <div className="flex justify-between text-sm">
-                  <span>Produtos:</span>
-                  <span className="font-medium">{formatCurrency(productsTotal)}</span>
+                  <span>Serviços:</span>
+                  <span className="font-medium">{formatCurrency(servicesTotal)}</span>
+                </div>
+                {productsTotal > 0 && (
+                  <div className="flex justify-between text-sm">
+                    <span>Produtos:</span>
+                    <span className="font-medium">{formatCurrency(productsTotal)}</span>
+                  </div>
+                )}
+                <Separator />
+                <div className="flex justify-between">
+                  <span className="font-semibold">Total pendente</span>
+                  <span className="font-bold text-lg text-teal-700">{formatCurrency(grandTotal)}</span>
+                </div>
+              </div>
+
+              {client?.isSubscriber ? (
+                <div className="bg-yellow-50 border border-yellow-300 rounded p-3">
+                  <div className="flex items-center gap-2 mb-2">
+                    <Award className="w-4 h-4 text-yellow-600" />
+                    <span className="font-semibold text-yellow-900">Cliente Assinante</span>
+                  </div>
+                  <p className="text-sm text-yellow-700">
+                    Este atendimento já está incluído na assinatura. Não há cobrança adicional.
+                  </p>
+                </div>
+              ) : (
+                <div>
+                  <Label htmlFor="paymentMethod" className="text-sm">Selecione a forma de pagamento</Label>
+                  <Select value={paymentMethod} onValueChange={setPaymentMethod}>
+                    <SelectTrigger id="paymentMethod" className="mt-2 bg-white">
+                      <SelectValue placeholder="Escolha uma forma de pagamento" />
+                    </SelectTrigger>
+                    <SelectContent>
+                      <SelectItem value="CASH">Dinheiro</SelectItem>
+                      <SelectItem value="DEBIT_CARD">Cartão de Débito</SelectItem>
+                      <SelectItem value="CREDIT_CARD">Cartão de Crédito</SelectItem>
+                      <SelectItem value="PIX">PIX</SelectItem>
+                    </SelectContent>
+                  </Select>
                 </div>
               )}
-              <Separator />
-              <div className="flex justify-between">
-                <span className="font-semibold">Total pendente</span>
-                <span className="font-bold text-lg text-teal-700">{formatCurrency(grandTotal)}</span>
-              </div>
-            </div>
 
-            {client?.isSubscriber ? (
-              <div className="bg-yellow-50 border border-yellow-300 rounded p-3">
-                <div className="flex items-center gap-2 mb-2">
-                  <Award className="w-4 h-4 text-yellow-600" />
-                  <span className="font-semibold text-yellow-900">Cliente Assinante</span>
+              <div className="bg-white rounded p-3 border">
+                <div className="flex justify-between text-sm">
+                  <span>Total</span>
+                  <span className="font-bold text-teal-700">{formatCurrency(grandTotal)}</span>
                 </div>
-                <p className="text-sm text-yellow-700">
-                  Este atendimento já está incluído na assinatura. Não há cobrança adicional.
-                </p>
-              </div>
-            ) : (
-              <div>
-                <Label htmlFor="paymentMethod" className="text-sm">Selecione a forma de pagamento</Label>
-                <Select value={paymentMethod} onValueChange={setPaymentMethod}>
-                  <SelectTrigger id="paymentMethod" className="mt-2 bg-white">
-                    <SelectValue placeholder="Escolha uma forma de pagamento" />
-                  </SelectTrigger>
-                  <SelectContent>
-                    <SelectItem value="CASH">Dinheiro</SelectItem>
-                    <SelectItem value="DEBIT_CARD">Cartão de Débito</SelectItem>
-                    <SelectItem value="CREDIT_CARD">Cartão de Crédito</SelectItem>
-                    <SelectItem value="PIX">PIX</SelectItem>
-                  </SelectContent>
-                </Select>
-              </div>
-            )}
-
-            <div className="bg-white rounded p-3 border">
-              <div className="flex justify-between text-sm">
-                <span>Total</span>
-                <span className="font-bold text-teal-700">{formatCurrency(grandTotal)}</span>
               </div>
             </div>
-          </div>
 
-          {/* Observações */}
-          <div>
-            <Label htmlFor="observations">Observações (Opcional)</Label>
-            <Textarea
-              id="observations"
-              value={observations}
-              onChange={(e) => setObservations(e.target.value)}
-              placeholder="Adicione observações sobre o atendimento..."
-              rows={3}
-              className="mt-2"
-            />
+            {/* Observações */}
+            <div>
+              <Label htmlFor="observations">Observações (Opcional)</Label>
+              <Textarea
+                id="observations"
+                value={observations}
+                onChange={(e) => setObservations(e.target.value)}
+                placeholder="Adicione observações sobre o atendimento..."
+                rows={3}
+                className="mt-2"
+              />
+            </div>
           </div>
-        </div>
         </div>
 
         <DialogFooter>

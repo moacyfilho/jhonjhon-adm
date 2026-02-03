@@ -20,10 +20,11 @@ export const authOptions: NextAuthOptions = {
             throw new Error("Email e senha são obrigatórios");
           }
 
-          console.log("[AUTH] Looking up user:", credentials.email);
+          const email = credentials.email.toLowerCase();
+          console.log("[AUTH] Looking up user:", email);
           const user = await prisma.user.findUnique({
             where: {
-              email: credentials.email,
+              email: email,
             },
           });
 

@@ -57,6 +57,7 @@ interface Appointment {
     service: Service;
   }>;
   isOnlineBooking?: boolean;
+  isSubscriptionAppointment?: boolean;
   products?: Array<{
     productId: string;
     quantity: number;
@@ -182,7 +183,14 @@ function CompletionDialog({
             <div className="grid grid-cols-2 gap-4 text-sm">
               <div>
                 <span className="text-muted-foreground">Cliente:</span>
-                <p className="font-medium">{appointment.client.name}</p>
+                <p className="font-medium flex items-center gap-2">
+                  {appointment.client.name}
+                  {(appointment.isSubscriptionAppointment || appointment.client.isSubscriber) && (
+                    <Badge variant="outline" className="bg-amber-100 text-amber-700 border-amber-200 text-[10px] px-1 py-0 h-4 uppercase font-bold shrink-0">
+                      ASSINANTE
+                    </Badge>
+                  )}
+                </p>
               </div>
               <div>
                 <span className="text-muted-foreground">Barbeiro:</span>
@@ -846,7 +854,7 @@ export default function AgendaPage() {
     const color = getBarberColor(appointment.barber.id);
     const isCompleted = appointment.status === 'COMPLETED';
     const isOnline = appointment.isOnlineBooking;
-    const isSubscriber = appointment.client.isSubscriber;
+    const isSubscriber = appointment.isSubscriptionAppointment || appointment.client.isSubscriber;
 
     return (
       <div
@@ -1641,7 +1649,15 @@ function AppointmentDetailsDialog({
               <User className="w-4 h-4 text-primary" />
               <span className="text-sm font-semibold">Cliente</span>
             </div>
-            <p className="text-foreground font-medium">{appointment.client.name}</p>
+            <div className="flex items-center justify-between">
+              <p className="text-foreground font-medium">{appointment.client.name}</p>
+              {(appointment.isSubscriptionAppointment || appointment.client.isSubscriber) && (
+                <Badge variant="outline" className="bg-amber-100 text-amber-700 border-amber-200 text-[10px] px-1 py-0 h-4 uppercase font-bold shrink-0">
+                  <Award className="w-3 h-3 mr-1" />
+                  ASSINANTE
+                </Badge>
+              )}
+            </div>
             <div className="flex items-center gap-1 mt-1">
               <Phone className="w-3 h-3 text-muted-foreground" />
               <p className="text-sm text-muted-foreground">{appointment.client.phone}</p>
