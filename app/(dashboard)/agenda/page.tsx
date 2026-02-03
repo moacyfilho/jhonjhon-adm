@@ -1027,7 +1027,7 @@ export default function AgendaPage() {
           <div>
             <h1 className="text-3xl font-bold text-foreground flex items-center gap-2">
               <Calendar className="w-8 h-8 text-primary" />
-              Agenda
+              Agenda <span className="text-[10px] bg-primary/20 text-primary px-1.5 py-0.5 rounded font-mono ml-2">v2.2 - Build OK</span>
             </h1>
             <p className="text-muted-foreground mt-1">
               Visualize e gerencie os agendamentos em grade
@@ -1941,7 +1941,7 @@ function AppointmentDetailsDialog({
                               {isIncluded && <span className="text-[9px] text-amber-600 font-bold uppercase">Incluso na Assinatura</span>}
                             </div>
                             <span className={`font-semibold ${isIncluded ? 'text-amber-600' : 'text-primary'}`}>
-                              {formatCurrency(displayPrice)}
+                              {formatCurrency(Number(displayPrice) || 0)}
                             </span>
                           </div>
                         );
@@ -1999,18 +1999,18 @@ function AppointmentDetailsDialog({
               <span className="font-bold text-lg text-white">
                 {formatCurrency(
                   (() => {
-                    const isSub = appointment.isSubscriptionAppointment || appointment.client.isSubscriber;
+                    const isSub = (appointment.isSubscriptionAppointment || appointment.client.isSubscriber);
                     const amount = appointment.commission?.amount ?? appointment.commissionAmount;
                     if (amount !== undefined && amount !== null && !isNaN(Number(amount))) return Number(amount);
 
                     if (isSub) {
-                      const totalMinutes = appointment.services.reduce((sum, s) => sum + (Number(s.service?.duration) || 0), 0);
+                      const totalMinutes = appointment.services?.reduce((sum, s) => sum + (Number(s.service?.duration) || 0), 0) || 0;
                       const rate = Number(appointment.barber?.hourlyRate) || 0;
                       return (totalMinutes / 60) * rate;
                     } else {
-                      const servicesTotal = appointment.services.reduce((sum, s) => sum + (Number(s.service?.price) || 0), 0);
+                      const sTotal = appointment.services?.reduce((sum, s) => sum + (Number(s.service?.price) || 0), 0) || 0;
                       const rate = Number(appointment.barber?.commissionRate) || 0;
-                      return (servicesTotal * rate) / 100;
+                      return (sTotal * rate) / 100;
                     }
                   })() || 0
                 )}
