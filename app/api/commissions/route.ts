@@ -17,12 +17,17 @@ export async function GET(request: NextRequest) {
     const where: any = {};
 
     if (startDate && endDate) {
-      where.appointment = {
-        date: {
-          gte: new Date(startDate),
-          lte: new Date(endDate),
-        },
-      };
+      const start = new Date(startDate);
+      const end = new Date(endDate);
+
+      if (!isNaN(start.getTime()) && !isNaN(end.getTime())) {
+        where.appointment = {
+          date: {
+            gte: start,
+            lte: end,
+          },
+        };
+      }
     }
 
     const commissions = await prisma.commission.findMany({
