@@ -160,10 +160,10 @@ export function AppointmentEditDialog({
         })
       );
 
-      setClients(clientsWithSubscription.sort((a, b) => a.name.localeCompare(b.name)));
-      setBarbers(barbersData.filter((b: any) => b.isActive).sort((a, b) => a.name.localeCompare(b.name)));
-      setServices(servicesData.filter((s: any) => s.isActive).sort((a, b) => a.name.localeCompare(b.name)));
-      setProducts(productsData.filter((p: any) => p.isActive && p.stock > 0).sort((a, b) => a.name.localeCompare(b.name)));
+      setClients(clientsWithSubscription.sort((a: Client, b: Client) => a.name.localeCompare(b.name)));
+      setBarbers(barbersData.filter((b: any) => b.isActive).sort((a: any, b: any) => a.name.localeCompare(b.name)));
+      setServices(servicesData.filter((s: any) => s.isActive).sort((a: any, b: any) => a.name.localeCompare(b.name)));
+      setProducts(productsData.filter((p: any) => p.isActive && p.stock > 0).sort((a: any, b: any) => a.name.localeCompare(b.name)));
     } catch (error) {
       console.error('Error fetching data:', error);
       toast.error('Erro ao carregar dados');
