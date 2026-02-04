@@ -3,6 +3,7 @@ generator client {
     // Suporte multiplataforma: Windows, Linux (Ubuntu/Debian), e ARM64
     binaryTargets = ["native", "linux-musl-arm64-openssl-3.0.x", "windows", "debian-openssl-3.0.x", "rhel-openssl-1.0.x", "rhel-openssl-3.0.x"]
     // Usar output padrão (node_modules/.prisma/client) para compatibilidade
+    previewFeatures = ["driverAdapters"]
 }
 
 datasource db {
