@@ -11,8 +11,8 @@ const connectionString = process.env.DATABASE_URL!
 
 const createPrismaClient = () => {
   const pool = new Pool({ connectionString })
-  const adapter = new PrismaNeon(pool)
-  return new PrismaClient({ adapter })
+  const adapter = new PrismaNeon(pool as any)
+  return new PrismaClient({ adapter } as any)
 }
 
 const globalForPrisma = globalThis as unknown as {
