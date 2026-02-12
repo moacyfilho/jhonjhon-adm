@@ -195,36 +195,35 @@ export async function POST(request: NextRequest) {
       },
     });
 
-    // Enviar notificações WhatsApp (não aguardar para não bloquear a resposta)
-    console.log(`\ud83d\udce7 Enviando notificações WhatsApp para agendamento ${booking.id}...`);
-
-    // Formata nomes dos serviços para notificação
+    // Enviar notificações WhatsApp (AGUARDAR para garantir envio em Serverless/Netlify)
     const serviceNames = services.map(s => s.name).join(' + ');
     const totalPrice = services.reduce((sum, s) => sum + s.price, 0);
 
-    sendBookingNotifications({
-      clientName: booking.clientName,
-      clientPhone: booking.clientPhone,
-      serviceName: serviceNames, // Envia nomes combinados
-      servicePrice: totalPrice, // Envia preço total
-      barberName: booking.barber?.name,
-      scheduledDate: booking.scheduledDate,
-      bookingId: booking.id,
-    }).then((result) => {
+    try {
+      const result = await sendBookingNotifications({
+        clientName: booking.clientName,
+        clientPhone: booking.clientPhone,
+        serviceName: serviceNames,
+        servicePrice: totalPrice,
+        barberName: booking.barber?.name,
+        scheduledDate: booking.scheduledDate,
+        bookingId: booking.id,
+      });
+
       if (result.clientNotification.success) {
-        console.log(`\u2705 Notificação enviada para o cliente`);
+        console.log(`✅ Notificação enviada para o cliente`);
       } else {
-        console.error(`\u274c Falha ao enviar notificação para o cliente: ${result.clientNotification.error}`);
+        console.error(`❌ Falha ao enviar notificação para o cliente: ${result.clientNotification.error}`);
       }
 
       if (result.barbershopNotification.success) {
-        console.log(`\u2705 Notificação enviada para a barbearia`);
+        console.log(`✅ Notificação enviada para a barbearia`);
       } else {
-        console.error(`\u274c Falha ao enviar notificação para a barbearia: ${result.barbershopNotification.error}`);
+        console.error(`❌ Falha ao enviar notificação para a barbearia: ${result.barbershopNotification.error}`);
       }
-    }).catch((error) => {
-      console.error(`\u274c Erro ao enviar notificações WhatsApp:`, error);
-    });
+    } catch (error) {
+      console.error(`❌ Erro ao enviar notificações WhatsApp:`, error);
+    }
 
     return NextResponse.json(booking, { status: 201 });
   } catch (error) {

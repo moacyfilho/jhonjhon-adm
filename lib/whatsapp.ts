@@ -1,15 +1,5 @@
-import twilio from 'twilio';
+import { env } from './env';
 import { formatManausDateTime } from './timezone';
-
-const accountSid = process.env.TWILIO_ACCOUNT_SID;
-const authToken = process.env.TWILIO_AUTH_TOKEN;
-const whatsappFrom = process.env.TWILIO_WHATSAPP_FROM;
-
-if (!accountSid || !authToken || !whatsappFrom) {
-  console.error('⚠️ Twilio credentials not configured. WhatsApp notifications will not work.');
-}
-
-const client = accountSid && authToken ? twilio(accountSid, authToken) : null;
 
 export interface BookingNotificationData {
   clientName: string;
@@ -21,52 +11,106 @@ export interface BookingNotificationData {
   bookingId: string;
 }
 
+// Helper to call UZAPI directly (Server-to-Server)
+async function sendToUzapi(phone: string, text: string) {
+  const { WHATSAPP_UZAPI_URL, WHATSAPP_UZAPI_SESSION, WHATSAPP_UZAPI_SESSION_KEY } = env;
+
+  if (!WHATSAPP_UZAPI_URL || !WHATSAPP_UZAPI_SESSION || !WHATSAPP_UZAPI_SESSION_KEY) {
+    console.error('[WhatsApp] UZAPI configuration missing in environment variables');
+    return { success: false, error: 'Configuration missing' };
+  }
+
+  // Normalize phone number to 55 + Number
+  let cleanPhone = phone.replace(/\D/g, '');
+  if (!cleanPhone.startsWith('55')) {
+    cleanPhone = '55' + cleanPhone;
+  }
+
+  try {
+    // Create simple timeout signal
+    const controller = new AbortController();
+    const timeoutId = setTimeout(() => controller.abort(), 15000); // 15s timeout for production
+
+    console.log(`[WhatsApp] Sending to ${cleanPhone} via ${WHATSAPP_UZAPI_URL}`);
+
+    const response = await fetch(`${WHATSAPP_UZAPI_URL}/sendText`, {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+        'sessionkey': WHATSAPP_UZAPI_SESSION_KEY,
+      },
+      body: JSON.stringify({
+        session: WHATSAPP_UZAPI_SESSION,
+        number: cleanPhone,
+        text: text
+      }),
+      signal: controller.signal
+    });
+
+    clearTimeout(timeoutId);
+
+    if (!response.ok) {
+      const errText = await response.text();
+      console.error(`[WhatsApp] API Error ${response.status}: ${errText}`);
+      return { success: false, error: `API Error: ${errText}` };
+    }
+
+    // Try to parse JSON strictly
+    try {
+      const data = await response.json();
+      console.log('[WhatsApp] Success:', JSON.stringify(data));
+    } catch (e) {
+      // Ignore JSON parse error if status was OK
+      console.log('[WhatsApp] Sent (Non-JSON response)');
+    }
+
+    return { success: true };
+  } catch (error: any) {
+    console.error('[WhatsApp] Fetch Exception:', error.message);
+    return { success: false, error: error.message };
+  }
+}
+
 /**
  * Envia mensagem WhatsApp para o cliente confirmando o agendamento
  */
 export async function sendBookingConfirmationToClient(
   data: BookingNotificationData
 ): Promise<{ success: boolean; error?: string }> {
-  if (!client || !whatsappFrom) {
-    console.error('Twilio not configured');
-    return { success: false, error: 'Twilio not configured' };
+
+  const formattedDateTime = formatManausDateTime(data.scheduledDate);
+
+  // Robust split for various date formats
+  let dateStr = formattedDateTime;
+  let timeStr = '';
+
+  if (formattedDateTime.includes(' às ')) {
+    [dateStr, timeStr] = formattedDateTime.split(' às ');
+  } else if (formattedDateTime.includes(', ')) {
+    [dateStr, timeStr] = formattedDateTime.split(', ');
+  } else {
+    // Fallback: assume last part is time (e.g. "dd/mm/yyyy HH:mm")
+    const parts = formattedDateTime.trim().split(' ');
+    if (parts.length > 1) {
+      timeStr = parts.pop() || '';
+      dateStr = parts.join(' ');
+    }
   }
 
-  try {
-    const formattedDateTime = formatManausDateTime(data.scheduledDate);
-    const barberInfo = data.barberName ? `\nBarbeiro: ${data.barberName}` : '';
+  const barberInfo = data.barberName || 'Barbearia Jhon Jhon';
 
-    const message = `🎉 *Agendamento Confirmado - Jhon Jhon Barbearia*\n\n` +
-      `Olá ${data.clientName}!\n\n` +
-      `Seu agendamento foi confirmado com sucesso:\n\n` +
-      `📅 Data/Hora: ${formattedDateTime}${barberInfo}\n` +
-      `💈 Serviço: ${data.serviceName}\n` +
-      `💰 Valor: R$ ${data.servicePrice.toFixed(2)}\n\n` +
-      `📍 Estamos te esperando!\n\n` +
-      `Para reagendar ou cancelar, entre em contato conosco.\n\n` +
-      `Código do agendamento: ${data.bookingId}`;
+  const message = `*Olá ${data.clientName}!* 👋\n\n` +
+    `Seu agendamento foi confirmado com sucesso! ✅\n\n` +
+    `📅 *Data:* ${dateStr}\n` +
+    `⏰ *Hora:* ${timeStr}\n` +
+    `💈 *Serviço:* ${data.serviceName}\n` +
+    `✂️ *Profissional:* ${barberInfo}\n` +
+    `💰 *Valor:* R$ ${data.servicePrice.toFixed(2)}\n\n` +
+    `📍 _Te esperamos no horário marcado!_\n` +
+    `Caso precise reagendar, entre em contato.`;
 
-    // Remove caracteres não-numéricos do telefone e adiciona "whatsapp:+"
-    const cleanPhone = data.clientPhone.replace(/\D/g, '');
-    const whatsappTo = `whatsapp:+${cleanPhone}`;
-
-    console.log(`📱 Enviando WhatsApp para cliente: ${whatsappTo}`);
-
-    const result = await client.messages.create({
-      from: whatsappFrom,
-      to: whatsappTo,
-      body: message,
-    });
-
-    console.log(`✅ Mensagem enviada para cliente. SID: ${result.sid}`);
-    return { success: true };
-  } catch (error: any) {
-    console.error('❌ Erro ao enviar WhatsApp para cliente:', error);
-    return { 
-      success: false, 
-      error: error.message || 'Erro desconhecido ao enviar mensagem' 
-    };
-  }
+  console.log(`📱 Notificando cliente: ${data.clientPhone}`);
+  return sendToUzapi(data.clientPhone, message);
 }
 
 /**
@@ -75,47 +119,27 @@ export async function sendBookingConfirmationToClient(
 export async function sendBookingNotificationToBarbershop(
   data: BookingNotificationData
 ): Promise<{ success: boolean; error?: string }> {
-  if (!client || !whatsappFrom) {
-    console.error('Twilio not configured');
-    return { success: false, error: 'Twilio not configured' };
-  }
 
-  try {
-    const formattedDateTime = formatManausDateTime(data.scheduledDate);
-    const barberInfo = data.barberName ? `\nBarbeiro: ${data.barberName}` : ' (Sem preferência de barbeiro)';
+  const formattedDateTime = formatManausDateTime(data.scheduledDate);
+  const barberInfo = data.barberName || 'Sem preferência';
 
-    const message = `🔔 *Novo Agendamento Online*\n\n` +
-      `Cliente: ${data.clientName}\n` +
-      `Telefone: ${data.clientPhone}\n` +
-      `Data/Hora: ${formattedDateTime}${barberInfo}\n` +
-      `Serviço: ${data.serviceName}\n` +
-      `Valor: R$ ${data.servicePrice.toFixed(2)}\n\n` +
-      `Código: ${data.bookingId}`;
+  const message = `🔔 *NOVO AGENDAMENTO ONLINE*\n\n` +
+    `👤 *Cliente:* ${data.clientName}\n` +
+    `📱 *Telefone:* ${data.clientPhone}\n` +
+    `📅 *Data/Hora:* ${formattedDateTime}\n` +
+    `💈 *Serviço:* ${data.serviceName}\n` +
+    `✂️ *Profissional:* ${barberInfo}\n` +
+    `💰 *Valor:* R$ ${data.servicePrice.toFixed(2)}`;
 
-    // Número da barbearia (hardcoded conforme solicitado)
-    const barbershopPhone = 'whatsapp:+5592985950190';
+  // Número da Barbearia (Admin)
+  const barbershopPhone = '5592985950190';
 
-    console.log(`📱 Enviando WhatsApp para barbearia: ${barbershopPhone}`);
-
-    const result = await client.messages.create({
-      from: whatsappFrom,
-      to: barbershopPhone,
-      body: message,
-    });
-
-    console.log(`✅ Mensagem enviada para barbearia. SID: ${result.sid}`);
-    return { success: true };
-  } catch (error: any) {
-    console.error('❌ Erro ao enviar WhatsApp para barbearia:', error);
-    return { 
-      success: false, 
-      error: error.message || 'Erro desconhecido ao enviar mensagem' 
-    };
-  }
+  console.log(`📱 Notificando barbearia: ${barbershopPhone}`);
+  return sendToUzapi(barbershopPhone, message);
 }
 
 /**
- * Envia ambas as notificações (cliente e barbearia)
+ * Envia ambas as notificações
  */
 export async function sendBookingNotifications(
   data: BookingNotificationData
@@ -123,6 +147,7 @@ export async function sendBookingNotifications(
   clientNotification: { success: boolean; error?: string };
   barbershopNotification: { success: boolean; error?: string };
 }> {
+  // Envia em paralelo
   const [clientResult, barbershopResult] = await Promise.all([
     sendBookingConfirmationToClient(data),
     sendBookingNotificationToBarbershop(data),
