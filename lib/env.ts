@@ -11,7 +11,7 @@ const envSchema = z.object({
     INTERNAL_API_TOKEN: z.string().optional().default('ShRZdv'),
 
     // App URL needed for server side calls to self
-    NEXT_PUBLIC_APP_URL: z.string().url().default("https://jhonjhonbarbearia.com.br"),
+    NEXT_PUBLIC_APP_URL: z.string().optional().default("https://jhonjhonbarbearia.com.br"),
 
     // Existing vars
     DATABASE_URL: z.string().optional(),
@@ -19,10 +19,22 @@ const envSchema = z.object({
     NEXTAUTH_URL: z.string().optional(),
 });
 
-const _env = envSchema.parse(process.env);
+let _env: z.infer<typeof envSchema>;
 
-// Log seguro para debug (apenas confirma se pegou valores)
-console.log('[ENV] UZAPI URL Configured:', !!_env.WHATSAPP_UZAPI_URL);
-console.log('[ENV] DB URL Configured:', !!_env.DATABASE_URL || !!process.env.DATABASE_URL);
+try {
+    _env = envSchema.parse(process.env);
+} catch (e) {
+    console.error('[ENV] ⚠️ Failed to parse environment variables, using defaults:', e);
+    _env = {
+        WHATSAPP_UZAPI_URL: 'https://jhonjhonbarbearia.uzapi.com.br:3333',
+        WHATSAPP_UZAPI_SESSION: 'jhonjhonbarbearia',
+        WHATSAPP_UZAPI_SESSION_KEY: 'ShRZdv',
+        INTERNAL_API_TOKEN: 'ShRZdv',
+        NEXT_PUBLIC_APP_URL: 'https://jhonjhonbarbearia.com.br',
+        DATABASE_URL: undefined,
+        NEXTAUTH_SECRET: undefined,
+        NEXTAUTH_URL: undefined,
+    };
+}
 
 export const env = _env;
