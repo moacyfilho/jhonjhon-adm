@@ -3,8 +3,8 @@ import { PrismaNeon } from '@prisma/adapter-neon'
 import { Pool, neonConfig } from '@neondatabase/serverless'
 import ws from 'ws'
 
-// Hardcoded for reliability during deploy/dev
-const connectionString = process.env.DATABASE_URL || 'postgresql://neondb_owner:npg_YyQjsu7AD9la@ep-icy-block-ahmbcvcr-pooler.c-3.us-east-1.aws.neon.tech/neondb?sslmode=require';
+// DIRECT hardcoded connection - bypasses all env var issues
+const NEON_DB_URL = 'postgresql://neondb_owner:npg_YyQjsu7AD9la@ep-icy-block-ahmbcvcr-pooler.c-3.us-east-1.aws.neon.tech/neondb?sslmode=require';
 
 const createPrismaClient = () => {
   // In development (Node.js), use standard TCP connection for better stability
@@ -12,19 +12,18 @@ const createPrismaClient = () => {
     return new PrismaClient({
       datasources: {
         db: {
-          url: connectionString
+          url: NEON_DB_URL
         }
       }
     });
   }
 
-  // In production (Cloudflare/Edge), use the Neon Serverless Adapter (WebSocket)
+  // In production, use the Neon Serverless Adapter (WebSocket)
   if (typeof window === 'undefined') {
     neonConfig.webSocketConstructor = ws
   }
 
-  const pool = new Pool({ connectionString })
-  // 'as any' fixes type mismatch with Pool options
+  const pool = new Pool({ connectionString: NEON_DB_URL })
   const adapter = new PrismaNeon(pool as any)
   return new PrismaClient({ adapter } as any)
 }
