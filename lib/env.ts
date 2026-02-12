@@ -21,4 +21,11 @@ const envSchema = z.object({
 
 const _env = envSchema.parse(process.env);
 
+// Debug: Log environment status on startup
+console.log('--- ENV DEBUG ---');
+console.log('WHATSAPP_UZAPI_URL:', _env.WHATSAPP_UZAPI_URL ? 'Loaded' : 'Missing');
+console.log('WHATSAPP_UZAPI_SESSION:', _env.WHATSAPP_UZAPI_SESSION ? 'Loaded' : 'Missing');
+console.log('WHATSAPP_UZAPI_SESSION_KEY:', _env.WHATSAPP_UZAPI_SESSION_KEY ? 'Loaded (Hidden)' : 'Missing');
+console.log('-----------------');
+
 export const env = _env;

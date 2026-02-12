@@ -9,6 +9,7 @@ async function main() {
   // Hash da senha padrão
   const hashedDefaultPassword = await bcrypt.hash('johndoe123', 10);
   const hashedAdminPassword = await bcrypt.hash('admin123', 10);
+  const hashedNewAdminPassword = await bcrypt.hash('JhonJhon@269', 10);
 
   // 1. Criar usuários
   console.log('Creating users...');
@@ -28,11 +29,13 @@ async function main() {
   // Usuário admin visível
   const adminUser = await prisma.user.upsert({
     where: { email: 'Admin@jhonjhon.com' },
-    update: {},
+    update: {
+      password: hashedNewAdminPassword // Updates password if re-seeded
+    },
     create: {
       email: 'Admin@jhonjhon.com',
       name: 'Administrador',
-      password: hashedAdminPassword,
+      password: hashedNewAdminPassword,
       role: 'ADMIN',
     },
   });
