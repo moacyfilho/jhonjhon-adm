@@ -4,7 +4,16 @@ import { Pool, neonConfig } from '@neondatabase/serverless'
 import ws from 'ws'
 
 // Hardcoded for reliability during deploy/dev
-const connectionString = process.env.DATABASE_URL || 'postgresql://neondb_owner:npg_YyQjsu7AD9la@ep-icy-block-ahmbcvcr-pooler.c-3.us-east-1.aws.neon.tech/neondb?sslmode=require';
+// Hardcoded for reliability during deploy/dev
+const connectionString = process.env.DATABASE_URL
+  ? process.env.DATABASE_URL
+  : 'postgresql://neondb_owner:npg_YyQjsu7AD9la@ep-icy-block-ahmbcvcr-pooler.c-3.us-east-1.aws.neon.tech/neondb?sslmode=require';
+
+if (!process.env.DATABASE_URL) {
+  console.warn('[DB] ⚠️ DATABASE_URL missing! Using hardcoded fallback.');
+} else {
+  console.log('[DB] ✅ DATABASE_URL found.');
+}
 
 const createPrismaClient = () => {
   // In development (Node.js), use standard TCP connection for better stability
