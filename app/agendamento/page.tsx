@@ -217,12 +217,15 @@ export default function AgendamentoPage() {
     }
   };
 
-  const fetchAvailableSlots = useCallback(async (date: string, barberId?: string) => {
+  const fetchAvailableSlots = useCallback(async (date: string, barberId?: string, duration?: number) => {
     try {
       setLoadingSlots(true);
       const params = new URLSearchParams({ date });
       if (barberId) {
         params.append('barberId', barberId);
+      }
+      if (duration) {
+        params.append('duration', duration.toString());
       }
 
       const response = await fetch(`/api/public/available-slots?${params.toString()}`);
@@ -258,11 +261,11 @@ export default function AgendamentoPage() {
   // Buscar horários disponíveis quando a data for selecionada
   useEffect(() => {
     if (formData.scheduledDate) {
-      fetchAvailableSlots(formData.scheduledDate, formData.barberId);
+      fetchAvailableSlots(formData.scheduledDate, formData.barberId, selectedServicesDuration);
     } else {
       setAvailableSlots([]);
     }
-  }, [formData.scheduledDate, formData.barberId, fetchAvailableSlots]);
+  }, [formData.scheduledDate, formData.barberId, selectedServicesDuration, fetchAvailableSlots]);
 
   const handleServiceToggle = (serviceId: string) => {
     setFormData(prev => {
@@ -324,7 +327,7 @@ export default function AgendamentoPage() {
         if (response.status === 409) {
           toast.error('Ops! Este horário acabou de ser reservado por outra pessoa. Por favor, escolha outro horário.');
           if (formData.scheduledDate) {
-            await fetchAvailableSlots(formData.scheduledDate, formData.barberId);
+            await fetchAvailableSlots(formData.scheduledDate, formData.barberId, selectedServicesDuration);
           }
           setFormData(prev => ({ ...prev, scheduledTime: '' }));
           setSubmitting(false);

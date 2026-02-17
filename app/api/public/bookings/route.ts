@@ -78,42 +78,104 @@ export async function POST(request: NextRequest) {
     console.log(`[bookings] Data/hora criada (Manaus → UTC): ${requestedDateTime.toISOString()}`);
     console.log(`[bookings] Horário solicitado (local Manaus): ${requestedTimeSlot}`);
 
-    // Verificar agendamentos online conflitantes
-    const conflictingOnlineBooking = await prisma.onlineBooking.findFirst({
+    // === VERIFICAÇÃO DE CONFLITOS DE HORÁRIO (COM DURAÇÃO) ===
+
+    // 1. Calcular a duração total dos serviços solicitados
+    const totalDuration = services.reduce((sum, s) => sum + s.duration, 0) || 30;
+    const requestedEndTime = new Date(requestedDateTime.getTime() + totalDuration * 60000); // Adiciona duração em ms
+
+    // 2. Definir janela de busca (Dia inteiro em Manaus)
+    // Precisamos buscar todos os agendamentos do dia para verificar sobreposição
+    // Usamos UTC para garantir que pegamos o intervalo correto
+    const startOfDay = new Date(requestedDateTime);
+    startOfDay.setUTCHours(0, 0, 0, 0); // Início do dia em UTC (aproximado, ideal seria usar helpers de timezone se crítico)
+
+    // Melhor usar uma margem de segurança de +/- 1 dia se não tivermos certeza do timezone exato aqui, 
+    // mas vamos confiar que requestedDateTime está correto (Manaus Time).
+    // Para simplificar e evitar erros de timezone complexos na query, vamos buscar +/- 12h do horário solicitado
+    const searchStart = new Date(requestedDateTime.getTime() - 12 * 60 * 60 * 1000);
+    const searchEnd = new Date(requestedDateTime.getTime() + 12 * 60 * 60 * 1000);
+
+    // 3. Buscar agendamentos online existentes no período
+    const existingOnlineBookings = await prisma.onlineBooking.findMany({
       where: {
-        scheduledDate: requestedDateTime,
+        scheduledDate: {
+          gte: searchStart,
+          lte: searchEnd,
+        },
         status: {
           in: ['PENDING', 'CONFIRMED'],
         },
         ...(barberId ? { barberId } : {}),
       },
+      include: {
+        services: {
+          include: { service: true }
+        }
+      }
     });
 
-    if (conflictingOnlineBooking) {
+    // 4. Buscar agendamentos admin existentes no período
+    const existingAppointments = await prisma.appointment.findMany({
+      where: {
+        date: {
+          gte: searchStart,
+          lte: searchEnd,
+        },
+        status: {
+          not: 'CANCELLED',
+        },
+        ...(barberId ? { barberId } : {}),
+      },
+      include: {
+        services: {
+          include: { service: true }
+        }
+      }
+    });
+
+    // 5. Verificar sobreposição
+    let conflictFound = false;
+
+    // Verificar OnlineBookings
+    for (const booking of existingOnlineBookings) {
+      const existingStart = new Date(booking.scheduledDate);
+      const existingDuration = booking.services.reduce((sum, s) => sum + (s.service.duration || 30), 0) || 30;
+      const existingEnd = new Date(existingStart.getTime() + existingDuration * 60000);
+
+      // Lógica de colisão de intervalos: (StartA < EndB) && (EndA > StartB)
+      if (requestedDateTime < existingEnd && requestedEndTime > existingStart) {
+        conflictFound = true;
+        break;
+      }
+    }
+
+    if (conflictFound) {
       return NextResponse.json(
         {
-          error: 'Horário já ocupado por outro agendamento online',
+          error: 'Horário já ocupado por outro agendamento online (conflito de horário)',
           slot: requestedTimeSlot,
         },
         { status: 409 }
       );
     }
 
-    // Verificar atendimentos admin conflitantes
-    const conflictingAppointment = await prisma.appointment.findFirst({
-      where: {
-        date: requestedDateTime,
-        status: {
-          not: 'CANCELLED',
-        },
-        ...(barberId ? { barberId } : {}),
-      },
-    });
+    // Verificar Appointments
+    for (const appointment of existingAppointments) {
+      const existingStart = new Date(appointment.date);
+      const existingDuration = appointment.services.reduce((sum, s) => sum + (s.service.duration || 30), 0) || 30;
+      const existingEnd = new Date(existingStart.getTime() + existingDuration * 60000);
 
-    if (conflictingAppointment) {
+      if (requestedDateTime < existingEnd && requestedEndTime > existingStart) {
+        conflictFound = true;
+        break;
+      }
+    }
+
+    if (conflictFound) {
       return NextResponse.json(
         {
-          error: 'Horário já ocupado por um atendimento',
+          error: 'Horário já ocupado por um atendimento (conflito de horário)',
           slot: requestedTimeSlot,
         },
         { status: 409 }

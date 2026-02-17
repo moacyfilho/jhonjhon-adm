@@ -26,6 +26,8 @@ export async function GET(request: NextRequest) {
     const { searchParams } = new URL(request.url);
     const dateStr = searchParams.get('date'); // formato: YYYY-MM-DD
     const barberId = searchParams.get('barberId') || null;
+    const durationParam = searchParams.get('duration');
+    const requestedDuration = durationParam ? parseInt(durationParam) : 0;
 
     if (!dateStr) {
       return NextResponse.json({ error: 'Data é obrigatória' }, { status: 400 });
@@ -102,10 +104,13 @@ export async function GET(request: NextRequest) {
         },
         ...(barberId ? { barberId } : {}),
       },
-      select: {
-        scheduledDate: true,
-        barberId: true,
-      },
+      include: {
+        services: {
+          include: {
+            service: true
+          }
+        }
+      }
     });
 
     // Busca agendamentos do sistema administrativo (atendimentos)
@@ -120,26 +125,49 @@ export async function GET(request: NextRequest) {
         },
         ...(barberId ? { barberId } : {}),
       },
-      select: {
-        date: true,
-        barberId: true,
-      },
+      include: {
+        services: {
+          include: {
+            service: true
+          }
+        }
+      }
     });
 
-    // Combina horários ocupados de AMBAS as tabelas (convertendo para horário de Manaus)
-    const occupiedSlotsArray = [
-      ...existingOnlineBookings.map((booking) => {
-        const manausDate = toManausTime(new Date(booking.scheduledDate));
-        return `${String(manausDate.getUTCHours()).padStart(2, '0')}:${String(manausDate.getUTCMinutes()).padStart(2, '0')}`;
-      }),
-      ...existingAppointments.map((appointment) => {
-        const manausDate = toManausTime(new Date(appointment.date));
-        return `${String(manausDate.getUTCHours()).padStart(2, '0')}:${String(manausDate.getUTCMinutes()).padStart(2, '0')}`;
-      }),
-    ];
+    // Identificar quais slots base estão ocupados
+    const occupiedSlots = new Set<string>();
+    const slotDuration = settings.slotDuration || 30;
 
-    // Remove duplicatas (caso o mesmo horário esteja ocupado em ambas as tabelas)
-    const occupiedSlots = [...new Set(occupiedSlotsArray)];
+    // Função auxiliar para marcar slots como ocupados com base na duração
+    const markOccupiedSlots = (startTime: Date, totalDuration: number) => {
+      // Ajuste para horário de Manaus para cálculo correto de slots
+      const startManaus = toManausTime(startTime);
+
+      // Calcular quantos slots de 30min (ou slotDuration) esse agendamento ocupa
+      // Arredonda para cima (ex: 45min ocupa 2 slots de 30min)
+      const slotsCount = Math.ceil(totalDuration / slotDuration);
+
+      for (let i = 0; i < slotsCount; i++) {
+        // Calcula o horário de cada slot ocupado
+        const slotTime = new Date(startManaus.getTime() + (i * slotDuration * 60 * 1000));
+        const slotString = `${String(slotTime.getUTCHours()).padStart(2, '0')}:${String(slotTime.getUTCMinutes()).padStart(2, '0')}`;
+        occupiedSlots.add(slotString);
+      }
+    };
+
+    // Processar Agendamentos Online
+    existingOnlineBookings.forEach(booking => {
+      const duration = booking.services.reduce((sum, s) => sum + (s.service.duration || 30), 0) || 30;
+      markOccupiedSlots(booking.scheduledDate, duration);
+    });
+
+    // Processar Agendamentos Admin
+    existingAppointments.forEach(appointment => {
+      // Tenta calcular duração pelos serviços, se não tiver, usa 30min padrão
+      // Nota: Appointments podem ter workedHours, mas ideal é usar a soma dos serviços previstos
+      const duration = appointment.services.reduce((sum, s) => sum + (s.service.duration || 30), 0) || 30;
+      markOccupiedSlots(appointment.date, duration);
+    });
 
     console.log(`\n========== HORÁRIOS DISPONÍVEIS - ${dateStr} ==========`);
     console.log(`[available-slots] Horário atual (UTC): ${new Date().toISOString()}`);
@@ -148,7 +176,7 @@ export async function GET(request: NextRequest) {
     console.log(`[available-slots] É hoje? ${isSameDayManaus(targetDate, nowManaus)}`);
     console.log(`[available-slots] Agendamentos online: ${existingOnlineBookings.length}`);
     console.log(`[available-slots] Atendimentos admin: ${existingAppointments.length}`);
-    console.log(`[available-slots] Horários ocupados:`, occupiedSlots);
+    console.log(`[available-slots] Slots ocupados (com duração):`, Array.from(occupiedSlots));
     console.log(`[available-slots] Tempo mínimo de aviso: ${settings.minimumNotice} horas`);
 
     // Criar array com todos os horários e seus status
@@ -157,9 +185,44 @@ export async function GET(request: NextRequest) {
       let reason = '';
 
       // Verifica se está ocupado
-      if (occupiedSlots.includes(slot)) {
+      if (occupiedSlots.has(slot)) {
         isAvailable = false;
         reason = 'occupied';
+      }
+
+      // Se a duração solicitada for maior que o slot padrão, verificar slots subsequentes
+      if (isAvailable && requestedDuration > slotDuration) {
+        const slotsNeeded = Math.ceil(requestedDuration / slotDuration);
+
+        // Encontrar índice atual
+        const currentIndex = allSlots.indexOf(slot);
+        if (currentIndex === -1) {
+          isAvailable = false; // Slot não está na grade oficial!?
+        } else {
+          // Verificar se existem slots suficientes e se estão livres
+          for (let i = 1; i < slotsNeeded; i++) {
+            const nextSlotIndex = currentIndex + i;
+
+            // Se não existe mais slot no dia (ex: fim do expediente)
+            if (nextSlotIndex >= allSlots.length) {
+              isAvailable = false;
+              reason = 'duration_exceeds_closing';
+              break;
+            }
+
+            const nextSlot = allSlots[nextSlotIndex];
+            // Verifica se o slot seguinte está ocupado
+            if (occupiedSlots.has(nextSlot)) {
+              isAvailable = false;
+              reason = 'overlap';
+              break;
+            }
+
+            // Verificar continuidade temporal (se os slots são contíguos)
+            // Assumimos que allSlots está ordenado e contíguo conforme slotDuration
+            // Mas idealmente checaria se nextSlotTime == currentSlotTime + duration
+          }
+        }
       }
 
       // Se for hoje (no fuso de Manaus), verifica se já passou ou está dentro do tempo mínimo de aviso
