@@ -1360,7 +1360,7 @@ function DayGridView({
 
             {/* Células para cada barbeiro */}
             {barbers.map((barber: Barber) => {
-              const dateStr = format(date, 'yyyy-MM-dd');
+              const dateStr = format(currentDate, 'yyyy-MM-dd');
               const dropId = `${dateStr}|${time}|${barber.id}`;
               const currentMinutes = getMinutes(time);
 
