@@ -74,7 +74,7 @@ export async function POST(request: Request) {
     }
 
     const data = await request.json();
-    const { productId, quantity, paymentMethod, soldBy, observations } = data;
+    const { productId, quantity, paymentMethod, soldBy, observations, skipStockUpdate } = data;
 
     // Validações
     if (!productId || !quantity || !paymentMethod) {
@@ -108,7 +108,7 @@ export async function POST(request: Request) {
     }
 
     // Verificar estoque
-    if (product.stock < quantity) {
+    if (!skipStockUpdate && product.stock < quantity) {
       return NextResponse.json(
         {
           error: `Estoque insuficiente. Disponível: ${product.stock} ${product.unit}`,
@@ -138,15 +138,17 @@ export async function POST(request: Request) {
         },
       });
 
-      // Atualizar estoque
-      await tx.product.update({
-        where: { id: productId },
-        data: {
-          stock: {
-            decrement: parseFloat(quantity),
+      // Atualizar estoque (apenas se não for pulado)
+      if (!skipStockUpdate) {
+        await tx.product.update({
+          where: { id: productId },
+          data: {
+            stock: {
+              decrement: parseFloat(quantity),
+            },
           },
-        },
-      });
+        });
+      }
 
       // Verificar se há caixa aberto e registrar movimentação
       const openCashRegister = await tx.cashRegister.findFirst({

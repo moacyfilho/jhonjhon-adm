@@ -786,9 +786,21 @@ export default function AgendaPage() {
     // Abrir modal de conclusão
     setCompletionDialog(appointment);
     setDetailsDialog(null);
-    setSelectedProducts([]);
-    setPaymentMethod('CASH');
-    setCompletionNotes('');
+
+    // Carregar produtos já existentes no agendamento, se houver
+    if (appointment.products && appointment.products.length > 0) {
+      setSelectedProducts(appointment.products.map((p: any) => ({
+        productId: p.productId,
+        quantity: p.quantity,
+        unitPrice: p.unitPrice || p.product?.price || 0,
+        name: p.product?.name // Opcional, para exibição se necessário
+      })));
+    } else {
+      setSelectedProducts([]);
+    }
+
+    setPaymentMethod(appointment.paymentMethod || 'CASH');
+    setCompletionNotes(appointment.observations || '');
   };
 
   const handleCompleteAppointment = async (manualGrandTotal?: number) => {
@@ -866,6 +878,7 @@ export default function AgendaPage() {
             paymentMethod,
             soldBy: completionDialog.barber.name,
             observations: `Venda durante atendimento - Cliente: ${completionDialog.client.name}`,
+            skipStockUpdate: true // Evitar dupla baixa de estoque
           }),
         });
       }
