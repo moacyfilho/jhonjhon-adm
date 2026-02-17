@@ -14,6 +14,26 @@ export async function GET(request: NextRequest) {
     const startDate = searchParams.get("startDate");
     const endDate = searchParams.get("endDate");
 
+    // Verificar role e filtrar se for BARBER
+    let filterBarberId: string | null = null;
+    const userRole = (session.user as any).role;
+
+    if (userRole === 'BARBER') {
+      if (!session.user.email) {
+        return NextResponse.json({ error: "Email não encontrado na sessão" }, { status: 400 });
+      }
+
+      const barber = await prisma.barber.findUnique({
+        where: { email: session.user.email }
+      });
+
+      if (!barber) {
+        // Usuário tem role BARBER mas não achamos o registro na tabela Barber
+        return NextResponse.json([]);
+      }
+      filterBarberId = barber.id;
+    }
+
     const where: any = {};
 
     if (startDate && endDate) {
@@ -28,6 +48,11 @@ export async function GET(request: NextRequest) {
           },
         };
       }
+    }
+
+    // Filtro de segurança
+    if (filterBarberId) {
+      where.barberId = filterBarberId;
     }
 
     const commissions = await prisma.commission.findMany({
@@ -50,9 +75,12 @@ export async function GET(request: NextRequest) {
       },
     });
 
-    // Group by barber
+    // Group by barber (filtrando se necessário)
     const barbers = await prisma.barber.findMany({
-      where: { isActive: true },
+      where: {
+        isActive: true,
+        ...(filterBarberId ? { id: filterBarberId } : {})
+      },
     });
 
     const commissionsData = barbers.map(barber => {

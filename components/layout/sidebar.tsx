@@ -128,6 +128,13 @@ export function Sidebar() {
     await signOut({ callbackUrl: "/login" });
   };
 
+  const filteredMenuItems = menuItems.filter((item) => {
+    if (userRole === "BARBER") {
+      return ["/comissoes", "/horas-comissoes"].includes(item.href);
+    }
+    return true;
+  });
+
   return (
     <aside className="hidden lg:flex flex-col w-64 bg-card border-r border-border h-screen sticky top-0">
       {/* Logo */}
@@ -144,7 +151,7 @@ export function Sidebar() {
       {/* Menu */}
       <nav className="flex-1 p-4 overflow-y-auto">
         <div className="space-y-1">
-          {menuItems.map((item) => {
+          {filteredMenuItems.map((item) => {
             const Icon = item.icon;
             const isActive = pathname === item.href;
 
@@ -178,7 +185,7 @@ export function Sidebar() {
           </p>
           {userRole && (
             <span className="inline-block mt-2 px-2 py-1 bg-primary/10 text-primary text-xs font-semibold rounded">
-              {userRole === "ADMIN" ? "Administrador" : "Secretária"}
+              {userRole === "ADMIN" ? "Administrador" : userRole === "BARBER" ? "Barbeiro" : "Secretária"}
             </span>
           )}
         </div>
