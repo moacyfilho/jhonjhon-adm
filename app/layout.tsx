@@ -1,6 +1,7 @@
 import type { Metadata } from "next";
 import "./globals.css";
 import { Providers } from "./providers";
+import { VersionLogger } from "@/components/version-logger";
 
 export const metadata: Metadata = {
   title: "Jhon Jhon Barbearia - Sistema Administrativo",
@@ -27,7 +28,10 @@ export default function RootLayout({
         <script src="https://apps.abacus.ai/chatllm/appllm-lib.js"></script>
       </head>
       <body suppressHydrationWarning>
-        <Providers>{children}</Providers>
+        <Providers>
+          <VersionLogger />
+          {children}
+        </Providers>
       </body>
     </html>
   );
