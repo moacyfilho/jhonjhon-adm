@@ -241,11 +241,13 @@ export async function PATCH(
 
       let commissionAmount = 0;
       if (barber) {
+        const productCommission = (productsTotal * barber.commissionRate) / 100;
+
         if (isSubscriber) {
-          commissionAmount = workedHours * barber.hourlyRate;
+          commissionAmount = (workedHours * barber.hourlyRate) + productCommission;
         } else {
-          // Comissão sobre o total de serviços (preços customizados)
-          commissionAmount = (servicesTotal * barber.commissionRate) / 100;
+          // Comissão sobre o total de serviços + produtos
+          commissionAmount = ((servicesTotal * barber.commissionRate) / 100) + productCommission;
         }
       }
 
