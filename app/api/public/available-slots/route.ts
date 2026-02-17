@@ -149,11 +149,15 @@ export async function GET(request: NextRequest) {
     });
 
     // Busca bloqueios manuais de horário (ScheduleBlock)
+    // Usamos UTC puro aqui porque o ScheduleBlock salva a data como 00:00 UTC
+    const startOfDayUTC = new Date(`${dateStr}T00:00:00.00Z`);
+    const endOfDayUTC = new Date(`${dateStr}T23:59:59.999Z`);
+
     const scheduleBlocks = await prisma.scheduleBlock.findMany({
       where: {
         date: {
-          gte: startOfDay,
-          lte: endOfDay,
+          gte: startOfDayUTC,
+          lte: endOfDayUTC,
         },
         ...(barberId ? { barberId } : {}),
       },

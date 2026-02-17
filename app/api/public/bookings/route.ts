@@ -206,11 +206,16 @@ export async function POST(request: NextRequest) {
     }
 
     // Verificar Schedule Blocks
+    // ScheduleBlock usa data UTC pura (00:00:00.000Z), então precisamos buscar o dia inteiro UTC
+    // searchStart pode começar DEPOIS de 00:00 UTC (devido ao fuso 12h+), o que perderia o block
+    const blockStartUTC = new Date(`${datePart}T00:00:00.000Z`);
+    const blockEndUTC = new Date(`${datePart}T23:59:59.999Z`);
+
     const existingBlocks = await prisma.scheduleBlock.findMany({
       where: {
         date: {
-          gte: searchStart,
-          lte: searchEnd,
+          gte: blockStartUTC,
+          lte: blockEndUTC,
         },
         ...(barberId ? { barberId } : {}),
       },
