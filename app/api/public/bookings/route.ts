@@ -139,11 +139,12 @@ export async function POST(request: NextRequest) {
     let conflictFound = false;
 
     // Verificar OnlineBookings
-    for (const booking of existingOnlineBookings) {
+    for (const bookingItem of existingOnlineBookings) {
+      const booking = bookingItem as any;
       const existingStart = new Date(booking.scheduledDate);
       let existingDuration = 0;
       if (booking.services && booking.services.length > 0) {
-        existingDuration = booking.services.reduce((sum, s) => sum + (s.service.duration || 30), 0);
+        existingDuration = booking.services.reduce((sum: number, s: any) => sum + (s.service.duration || 30), 0);
       } else if (booking.service) {
         existingDuration = booking.service.duration || 30;
       } else {
