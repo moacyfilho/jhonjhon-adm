@@ -111,7 +111,8 @@ export async function POST(request: NextRequest) {
       include: {
         services: {
           include: { service: true }
-        }
+        },
+        service: true // Inclui serviço legado para fallback
       }
     });
 
@@ -140,7 +141,14 @@ export async function POST(request: NextRequest) {
     // Verificar OnlineBookings
     for (const booking of existingOnlineBookings) {
       const existingStart = new Date(booking.scheduledDate);
-      const existingDuration = booking.services.reduce((sum, s) => sum + (s.service.duration || 30), 0) || 30;
+      let existingDuration = 0;
+      if (booking.services && booking.services.length > 0) {
+        existingDuration = booking.services.reduce((sum, s) => sum + (s.service.duration || 30), 0);
+      } else if (booking.service) {
+        existingDuration = booking.service.duration || 30;
+      } else {
+        existingDuration = 30;
+      }
       const existingEnd = new Date(existingStart.getTime() + existingDuration * 60000);
 
       // Lógica de colisão de intervalos: (StartA < EndB) && (EndA > StartB)
