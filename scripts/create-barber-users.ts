@@ -41,7 +41,7 @@ async function main() {
                         role: 'BARBER',
                     }
                 });
-                console.log(`Usuário criado: ${userData.email} (BARBER)`);
+                console.log(`Usuário criado: ${userData.email} (SECRETARY)`);
             }
         } catch (error) {
             console.error(`Erro ao processar ${userData.email}:`, error);

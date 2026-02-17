@@ -177,7 +177,9 @@ function CompletionDialog({
   const commissionAmount = isSubForComission
     ? (() => {
       const totalMinutes = appointment.services.reduce((sum, s) => sum + (s.service.duration || 0), 0);
-      return (totalMinutes / 60) * (appointment.barber.hourlyRate || 0);
+      const serviceCommission = (totalMinutes / 60) * (appointment.barber.hourlyRate || 0);
+      const productCommission = productsTotal * (appointment.barber.commissionRate / 100);
+      return serviceCommission + productCommission;
     })()
     : (finalTotalToPay * (appointment.barber.commissionRate / 100));
 
@@ -871,7 +873,9 @@ export default function AgendaPage() {
       const commissionAmount = isSub
         ? (() => {
           const totalMinutes = completionDialog.services.reduce((sum, s) => sum + (s.service.duration || 0), 0);
-          return (totalMinutes / 60) * (completionDialog.barber.hourlyRate || 0);
+          const serviceCommission = (totalMinutes / 60) * (completionDialog.barber.hourlyRate || 0);
+          const productCommission = productsTotal * (completionDialog.barber.commissionRate / 100);
+          return serviceCommission + productCommission;
         })()
         : (grandTotal * (completionDialog.barber.commissionRate / 100));
 
