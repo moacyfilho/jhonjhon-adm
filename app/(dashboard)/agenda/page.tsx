@@ -794,6 +794,12 @@ export default function AgendaPage() {
   const handleCompleteAppointment = async (manualGrandTotal?: number) => {
     if (!completionDialog) return;
 
+    // Calcular totais ANTES de salvar
+    const servicesTotal = completionDialog.totalAmount;
+    const productsTotal = selectedProducts.reduce((sum, p) => sum + (p.unitPrice * p.quantity), 0);
+    const grandTotalCalculation = servicesTotal + productsTotal;
+    const finalTotalToSave = manualGrandTotal !== undefined ? manualGrandTotal : grandTotalCalculation;
+
     try {
       const isOnline = completionDialog.id.startsWith('online-');
       const realId = isOnline ? completionDialog.id.replace('online-', '') : completionDialog.id;
@@ -812,7 +818,7 @@ export default function AgendaPage() {
             paymentMethod,
             notes: completionNotes,
             onlineBookingId: realId,
-            totalAmount: manualGrandTotal,
+            totalAmount: finalTotalToSave, // Usar o total calculado (incluindo produtos)
           }),
         });
 
@@ -843,7 +849,7 @@ export default function AgendaPage() {
             status: 'COMPLETED',
             paymentMethod,
             notes: completionNotes,
-            totalAmount: manualGrandTotal
+            totalAmount: finalTotalToSave // Usar o total calculado (incluindo produtos)
           }),
         });
         if (!updateRes.ok) throw new Error('Erro ao finalizar atendimento');
@@ -866,9 +872,6 @@ export default function AgendaPage() {
 
       // 5. Registrar comissão
       const isSub = completionDialog.isSubscriptionAppointment || completionDialog.client.isSubscriber;
-      const servicesTotal = completionDialog.totalAmount;
-      const productsTotal = selectedProducts.reduce((sum, p) => sum + (p.unitPrice * p.quantity), 0);
-      const grandTotal = (manualGrandTotal !== undefined) ? manualGrandTotal : (servicesTotal + productsTotal);
 
       const commissionAmount = isSub
         ? (() => {
@@ -877,7 +880,7 @@ export default function AgendaPage() {
           const productCommission = productsTotal * (completionDialog.barber.commissionRate / 100);
           return serviceCommission + productCommission;
         })()
-        : (grandTotal * (completionDialog.barber.commissionRate / 100));
+        : (finalTotalToSave * (completionDialog.barber.commissionRate / 100));
 
       if (commissionAmount > 0) {
         await fetch('/api/commissions', {
