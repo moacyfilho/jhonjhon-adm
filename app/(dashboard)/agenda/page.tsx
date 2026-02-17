@@ -883,7 +883,8 @@ export default function AgendaPage() {
         });
       }
 
-      // 5. Registrar comissão
+      // 5. Comissão já é calculada e salva automaticamente pelo endpoint PATCH /api/appointments
+      // mantemos o cálculo aqui apenas para exibir no toast
       const isSub = completionDialog.isSubscriptionAppointment || completionDialog.client.isSubscriber;
 
       const commissionAmount = isSub
@@ -895,20 +896,8 @@ export default function AgendaPage() {
         })()
         : (finalTotalToSave * (completionDialog.barber.commissionRate / 100));
 
-      if (commissionAmount > 0) {
-        await fetch('/api/commissions', {
-          method: 'POST',
-          headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify({
-            appointmentId: finalAppointmentId,
-            barberId: completionDialog.barber.id,
-            clientId: completionDialog.client.id,
-            serviceId: completionDialog.services[0]?.service.id || null,
-            amount: commissionAmount,
-            status: 'PENDING',
-          }),
-        });
-      }
+      // Removido POST /api/commissions explicito pois gera conflito com o backend
+
 
       toast.success(`Atendimento finalizado! Comissão de ${formatCurrency(commissionAmount)} registrada.`);
       setCompletionDialog(null);
