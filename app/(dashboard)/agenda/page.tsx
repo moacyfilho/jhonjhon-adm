@@ -1291,6 +1291,16 @@ function DayGridView({
 }: any) {
   const { useDraggable, useDroppable } = require('@dnd-kit/core');
 
+  const getAppointmentDuration = (appointment: any) => {
+    if (!appointment.services || appointment.services.length === 0) return 30;
+    return appointment.services.reduce((sum: number, s: any) => sum + (Number(s.service?.duration) || 30), 0);
+  };
+
+  const getMinutes = (timeStr: string) => {
+    const [h, m] = timeStr.split(':').map(Number);
+    return h * 60 + m;
+  };
+
   return (
     <div className="min-w-[800px]">
       {/* Header com barbeiros */}
@@ -1352,8 +1362,9 @@ function DayGridView({
             {barbers.map((barber: Barber) => {
               const dateStr = format(date, 'yyyy-MM-dd');
               const dropId = `${dateStr}|${time}|${barber.id}`;
+              const currentMinutes = getMinutes(time);
 
-              // Encontrar agendamento neste horário utilizando comparação robusta
+              // Encontrar agendamento neste horário utilizando comparação robusta (Start Time)
               const appointment = appointments.find((a: Appointment) => {
                 const aDate = new Date(a.date);
                 try {
@@ -1364,6 +1375,29 @@ function DayGridView({
                   return false;
                 }
               });
+
+              // Verificar se é continuação de um agendamento anterior
+              let continuationAppointment = null;
+              if (!appointment) {
+                continuationAppointment = appointments.find((a: Appointment) => {
+                  const aDate = new Date(a.date);
+                  try {
+                    const appointmentDate = new Intl.DateTimeFormat('en-CA', { timeZone: 'America/Manaus' }).format(aDate);
+                    // Deve ser do mesmo dia e mesmo barbeiro
+                    if (appointmentDate !== dateStr || a.barber?.id !== barber.id) return false;
+
+                    const startTimeStr = getManausTimeString(aDate);
+                    const startMinutes = getMinutes(startTimeStr);
+                    const duration = getAppointmentDuration(a);
+                    const endMinutes = startMinutes + duration;
+
+                    // Verifica se o horário atual está dentro do intervalo (excluindo o início exato, que é o appointment principal)
+                    return currentMinutes > startMinutes && currentMinutes < endMinutes;
+                  } catch (e) {
+                    return false;
+                  }
+                });
+              }
 
               // Verificar se há bloqueio neste horário
               const block = scheduleBlocks.find((b: ScheduleBlock) => {
@@ -1376,8 +1410,10 @@ function DayGridView({
                   key={dropId}
                   id={dropId}
                   appointment={appointment}
+                  continuationAppointment={continuationAppointment}
                   block={block}
                   renderAppointmentCard={renderAppointmentCard}
+                  getBarberColor={getBarberColor}
                   onEmptySlotClick={() => {
                     const datetime = `${dateStr}T${time}:00`;
                     setEditDialog({ isNew: true, date: datetime, barberId: barber.id });
@@ -1468,40 +1504,61 @@ function WeekGridView({
 }
 
 // Componente: Célula de Horário (Droppable + Draggable)
-function TimeSlotCell({ id, appointment, block, renderAppointmentCard, onEmptySlotClick, onDeleteBlock }: any) {
+function TimeSlotCell({
+  id,
+  appointment,
+  continuationAppointment,
+  block,
+  renderAppointmentCard,
+  getBarberColor,
+  onEmptySlotClick,
+  onDeleteBlock
+}: any) {
   const { useDraggable, useDroppable } = require('@dnd-kit/core');
 
   const { setNodeRef: setDroppableRef, isOver } = useDroppable({ id });
 
   const draggableId = appointment?.id;
   const isOnlineBooking = appointment?.isOnlineBooking;
+  // Desabilitar drag para continuação, agendamentos online e bloqueios
   const { attributes, listeners, setNodeRef: setDraggableRef, transform, isDragging } = useDraggable({
     id: draggableId || 'none',
-    disabled: !appointment || isOnlineBooking || !!block, // Desabilitar drag para agendamentos online e bloqueios
+    disabled: !appointment || isOnlineBooking || !!block,
   });
 
   const style = transform ? {
     transform: `translate3d(${transform.x}px, ${transform.y}px, 0)`,
   } : undefined;
 
+  // Determine se a célula está ocupada (por start, continuação ou bloqueio)
+  const isOccupied = appointment || continuationAppointment || block;
+
+  // Cor para continuação
+  const continuationColor = continuationAppointment && getBarberColor ? getBarberColor(continuationAppointment.barber.id) : null;
+
   return (
     <div
       ref={setDroppableRef}
       className={`
         border border-border rounded p-1 min-h-[60px] transition-colors
-        ${isOver && !block ? 'bg-primary/10 border-primary' : 'bg-background'}
-        ${!appointment && !block ? 'cursor-pointer hover:bg-primary/5 hover:border-primary/40' : ''}
+        ${isOver && !isOccupied ? 'bg-primary/10 border-primary' : ''}
+        ${!isOccupied ? 'bg-background cursor-pointer hover:bg-primary/5 hover:border-primary/40' : ''}
         ${block ? 'bg-gray-100 border-gray-400 cursor-not-allowed' : ''}
+        ${continuationAppointment ? `${continuationColor?.bg || 'bg-secondary/30'} border-l-4 ${continuationColor?.border || 'border-primary/30'} opacity-70` : ''}
       `}
       onClick={() => {
-        if (!appointment && !block && onEmptySlotClick) {
+        if (!isOccupied && onEmptySlotClick) {
           onEmptySlotClick();
         }
       }}
-      title={!appointment && !block ? 'Clique para criar novo atendimento' : block ? 'Horário bloqueado' : ''}
+      title={
+        !isOccupied ? 'Clique para criar novo atendimento' :
+          block ? 'Horário bloqueado' :
+            continuationAppointment ? `Em atendimento: ${continuationAppointment.client.name}` : ''
+      }
     >
       {block ? (
-        <div className="relative p-2 rounded border-l-4 border-red-500 bg-red-50 text-xs group">
+        <div className="relative p-2 rounded border-l-4 border-red-500 bg-red-50 text-xs group h-full">
           <div className="flex items-center gap-1 mb-1">
             <Ban className="w-3 h-3 text-red-600" />
             <span className="text-[10px] font-bold text-red-700">BLOQUEADO</span>
@@ -1534,6 +1591,14 @@ function TimeSlotCell({ id, appointment, block, renderAppointmentCard, onEmptySl
           title={isOnlineBooking ? 'Agendamento online - não pode ser arrastado' : 'Arrastar para reagendar'}
         >
           {renderAppointmentCard(appointment)}
+        </div>
+      ) : continuationAppointment ? (
+        <div className="h-full w-full flex flex-col justify-center items-center text-muted-foreground/50">
+          {/* Visual indicativo de continuação */}
+          <div className="w-1 h-3 bg-current rounded-full opacity-20 mb-1"></div>
+          <p className="text-[9px] font-medium opacity-50 truncate w-full text-center px-1">
+            (cont. {continuationAppointment.client.name})
+          </p>
         </div>
       ) : (
         <div className="flex items-center justify-center h-full opacity-0 hover:opacity-100 transition-opacity">
