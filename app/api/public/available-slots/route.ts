@@ -10,6 +10,17 @@ import {
   createManausDate
 } from '@/lib/timezone';
 
+
+interface ServiceDuration {
+  duration: number | null;
+}
+
+interface BookingWithServices {
+  scheduledDate: Date | string;
+  services: { service: ServiceDuration }[];
+  service: ServiceDuration | null;
+}
+
 export const dynamic = 'force-dynamic';
 
 const dayMapping: { [key: string]: string } = {
@@ -159,11 +170,7 @@ export async function GET(request: NextRequest) {
 
     // Processar Agendamentos Online
     existingOnlineBookings.forEach(bookingItem => {
-      const booking = bookingItem as unknown as {
-        scheduledDate: Date | string;
-        services?: { service: { duration: number } }[];
-        service?: { duration: number };
-      };
+      const booking = bookingItem as unknown as BookingWithServices;
       // Calcula duração: soma dos serviços lista OU serviço legado OU 30min padrão
       let duration = 0;
 

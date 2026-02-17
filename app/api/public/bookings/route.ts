@@ -3,6 +3,17 @@ import { prisma } from '@/lib/db';
 import { sendBookingNotifications } from '@/lib/whatsapp';
 import { createManausDate } from '@/lib/timezone';
 
+interface ServiceDuration {
+  duration: number | null;
+}
+
+interface BookingWithServices {
+  scheduledDate: Date | string;
+  services: { service: ServiceDuration }[];
+  service: ServiceDuration | null;
+}
+
+
 // POST - Criar agendamento online (API pública)
 export async function POST(request: NextRequest) {
   try {
@@ -136,12 +147,8 @@ export async function POST(request: NextRequest) {
 
     // Verificar OnlineBookings
     for (const bookingItem of existingOnlineBookings) {
-      // Tipagem explícita para evitar erros de build com Prisma Include complexo
-      const booking = bookingItem as unknown as {
-        scheduledDate: Date | string;
-        services?: { service: { duration: number } }[];
-        service?: { duration: number };
-      };
+      // Tipagem explícita a partir da interface
+      const booking = bookingItem as unknown as BookingWithServices;
 
       const existingStart = new Date(booking.scheduledDate);
       let existingDuration = 0;
