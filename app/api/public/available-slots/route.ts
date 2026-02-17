@@ -148,6 +148,17 @@ export async function GET(request: NextRequest) {
       }
     });
 
+    // Busca bloqueios manuais de horário (ScheduleBlock)
+    const scheduleBlocks = await prisma.scheduleBlock.findMany({
+      where: {
+        date: {
+          gte: startOfDay,
+          lte: endOfDay,
+        },
+        ...(barberId ? { barberId } : {}),
+      },
+    });
+
     // Identificar quais slots base estão ocupados
     const occupiedSlots = new Set<string>();
     const slotDuration = settings.slotDuration || 30;
@@ -191,7 +202,23 @@ export async function GET(request: NextRequest) {
       // Tenta calcular duração pelos serviços, se não tiver, usa 30min padrão
       // Nota: Appointments podem ter workedHours, mas ideal é usar a soma dos serviços previstos
       const duration = appointment.services.reduce((sum, s) => sum + (s.service.duration || 30), 0) || 30;
+
       markOccupiedSlots(appointment.date, duration);
+    });
+
+    // Processar Bloqueios Manuais (ScheduleBlock)
+    scheduleBlocks.forEach(block => {
+      // block.startTime e endTime são strings "HH:MM"
+      const [startHour, startMin] = block.startTime.split(':').map(Number);
+      const [endHour, endMin] = block.endTime.split(':').map(Number);
+
+      // Calcula duração em minutos
+      const duration = (endHour * 60 + endMin) - (startHour * 60 + startMin);
+
+      // Cria a data/hora correta usando o dia consultado e a hora do bloqueio
+      const blockStartDateTime = createManausDate(dateStr, startHour, startMin);
+
+      markOccupiedSlots(blockStartDateTime, duration);
     });
 
     console.log(`\n========== HORÁRIOS DISPONÍVEIS - ${dateStr} ==========`);
