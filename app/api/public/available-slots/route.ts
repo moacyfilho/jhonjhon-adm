@@ -157,12 +157,13 @@ export async function GET(request: NextRequest) {
     };
 
     // Processar Agendamentos Online
-    existingOnlineBookings.forEach(booking => {
+    existingOnlineBookings.forEach(item => {
+      const booking = item as any;
       // Calcula duração: soma dos serviços lista OU serviço legado OU 30min padrão
       let duration = 0;
 
       if (booking.services && booking.services.length > 0) {
-        duration = booking.services.reduce((sum, s) => sum + (s.service.duration || 30), 0);
+        duration = booking.services.reduce((sum: number, s: any) => sum + (Number(s.service?.duration) || 30), 0);
       } else if (booking.service) { // Fallback para serviço legado
         duration = booking.service.duration || 30;
       } else {
