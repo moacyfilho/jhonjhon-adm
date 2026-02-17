@@ -870,7 +870,7 @@ export default function AgendamentoPage() {
                                   disabled={!slot.available}
                                   className={
                                     formData.scheduledTime === slot.time
-                                      ? 'bg-gold text-white hover:bg-gold/90'
+                                      ? 'bg-green-600 text-white hover:bg-green-700 shadow-[0_0_15px_rgba(22,163,74,0.5)] scale-105 transition-all'
                                       : !slot.available
                                         ? 'bg-red-900/30 border-red-500/50 text-red-400 hover:bg-red-900/30 cursor-not-allowed opacity-70'
                                         : 'bg-gray-900/50 border-gold/20 hover:bg-gold/20'
