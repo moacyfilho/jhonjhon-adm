@@ -194,6 +194,49 @@ export async function POST(request: NextRequest) {
       }
     }
 
+
+    if (conflictFound) {
+      return NextResponse.json(
+        {
+          error: 'Horário já ocupado por um atendimento (conflito de horário)',
+          slot: requestedTimeSlot,
+        },
+        { status: 409 }
+      );
+    }
+
+    // Verificar Schedule Blocks
+    const existingBlocks = await prisma.scheduleBlock.findMany({
+      where: {
+        date: {
+          gte: searchStart,
+          lte: searchEnd,
+        },
+        ...(barberId ? { barberId } : {}),
+      },
+    });
+
+    for (const block of existingBlocks) {
+      const [startHour, startMin] = block.startTime.split(':').map(Number);
+      const [endHour, endMin] = block.endTime.split(':').map(Number);
+
+      // Cria a data/hora correta usando o dia consultado
+      const blockStart = createManausDate(datePart, startHour, startMin);
+      const blockEnd = createManausDate(datePart, endHour, endMin);
+
+      // Lógica de colisão de intervalos
+      if (requestedDateTime < blockEnd && requestedEndTime > blockStart) {
+        return NextResponse.json(
+          {
+            error: 'Este horário está bloqueado pelo estabelecimento',
+            slot: requestedTimeSlot,
+            reason: block.reason
+          },
+          { status: 409 }
+        );
+      }
+    }
+
     if (conflictFound) {
       return NextResponse.json(
         {
