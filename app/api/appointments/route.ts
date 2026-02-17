@@ -163,26 +163,30 @@ export async function POST(request: NextRequest) {
       : [];
 
     if (serviceItems && serviceItems.length > 0) {
-      servicesToCreate = serviceItems.map((item: any) => {
-        const dbService = dbServices.find(s => s.id === item.serviceId);
-        servicesTotal += item.price;
-        totalMinutes += dbService?.duration || 0;
-        return {
-          serviceId: item.serviceId,
-          price: item.price
-        };
-      });
+      servicesToCreate = serviceItems
+        .filter((item: any) => dbServices.some(s => s.id === item.serviceId))
+        .map((item: any) => {
+          const dbService = dbServices.find(s => s.id === item.serviceId);
+          servicesTotal += item.price;
+          totalMinutes += dbService?.duration || 0;
+          return {
+            serviceId: item.serviceId,
+            price: item.price
+          };
+        });
     } else if (serviceIds && serviceIds.length > 0) {
-      servicesToCreate = serviceIds.map((sId: string) => {
-        const s = dbServices.find(service => service.id === sId);
-        const price = s?.price || 0;
-        servicesTotal += price;
-        totalMinutes += s?.duration || 0;
-        return {
-          serviceId: sId,
-          price: price
-        };
-      });
+      servicesToCreate = serviceIds
+        .filter((sId: string) => dbServices.some(s => s.id === sId))
+        .map((sId: string) => {
+          const s = dbServices.find(service => service.id === sId);
+          const price = s?.price || 0;
+          servicesTotal += price;
+          totalMinutes += s?.duration || 0;
+          return {
+            serviceId: sId,
+            price: price
+          };
+        });
     }
 
     // Get products and calculate products total
@@ -194,18 +198,22 @@ export async function POST(request: NextRequest) {
       : [];
 
     let productsTotal = 0;
-    const productsToCreate = productItems ? productItems.map((item: any) => {
-      const product = products.find(p => p.id === item.productId);
-      const unitPrice = item.unitPrice !== undefined ? item.unitPrice : (product?.price || 0);
-      const totalPrice = unitPrice * item.quantity;
-      productsTotal += totalPrice;
-      return {
-        productId: item.productId,
-        quantity: item.quantity,
-        unitPrice,
-        totalPrice
-      };
-    }) : [];
+    const productsToCreate = productItems
+      ? productItems
+        .filter((item: any) => products.some(p => p.id === item.productId))
+        .map((item: any) => {
+          const product = products.find(p => p.id === item.productId);
+          const unitPrice = item.unitPrice !== undefined ? item.unitPrice : (product?.price || 0);
+          const totalPrice = unitPrice * item.quantity;
+          productsTotal += totalPrice;
+          return {
+            productId: item.productId,
+            quantity: item.quantity,
+            unitPrice,
+            totalPrice
+          };
+        })
+      : [];
 
     // Check if client has an active subscription
     const activeSubscription = await prisma.subscription.findFirst({
