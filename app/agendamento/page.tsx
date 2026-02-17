@@ -258,6 +258,16 @@ export default function AgendamentoPage() {
     }
   }, []); // Dependências vazias, pois usamos setStates funcionais
 
+  // Calcular totais dos serviços selecionados
+  // Movemos para cá para poder usar no useEffect abaixo
+  const selectedServicesTotal = services
+    .filter(s => formData.serviceIds.includes(s.id))
+    .reduce((sum, s) => sum + s.price, 0);
+
+  const selectedServicesDuration = services
+    .filter(s => formData.serviceIds.includes(s.id))
+    .reduce((sum, s) => sum + s.duration, 0);
+
   // Buscar horários disponíveis quando a data for selecionada
   useEffect(() => {
     if (formData.scheduledDate) {
@@ -422,13 +432,7 @@ export default function AgendamentoPage() {
     }
   };
 
-  const selectedServicesTotal = services
-    .filter(s => formData.serviceIds.includes(s.id))
-    .reduce((sum, s) => sum + s.price, 0);
 
-  const selectedServicesDuration = services
-    .filter(s => formData.serviceIds.includes(s.id))
-    .reduce((sum, s) => sum + s.duration, 0);
 
   // Só renderiza o conteúdo principal após a montagem no cliente para evitar erros de hidratação
   if (!mounted) return null;
