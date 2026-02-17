@@ -1,4 +1,4 @@
-// @ts-nocheck
+// @ts-nocheck removed
 import { NextRequest, NextResponse } from 'next/server';
 import { prisma } from '@/lib/db';
 import {
@@ -158,13 +158,17 @@ export async function GET(request: NextRequest) {
     };
 
     // Processar Agendamentos Online
-    existingOnlineBookings.forEach(item => {
-      const booking = item as any;
+    existingOnlineBookings.forEach(bookingItem => {
+      const booking = bookingItem as unknown as {
+        scheduledDate: Date | string;
+        services?: { service: { duration: number } }[];
+        service?: { duration: number };
+      };
       // Calcula duração: soma dos serviços lista OU serviço legado OU 30min padrão
       let duration = 0;
 
       if (booking.services && booking.services.length > 0) {
-        duration = booking.services.reduce((sum: number, s: any) => sum + (Number(s.service?.duration) || 30), 0);
+        duration = booking.services.reduce((sum: number, s) => sum + (Number(s.service?.duration) || 30), 0);
       } else if (booking.service) { // Fallback para serviço legado
         duration = booking.service.duration || 30;
       } else {
