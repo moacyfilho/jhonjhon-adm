@@ -1033,7 +1033,7 @@ export default function AgendaPage() {
 
         <div className="text-[10px] font-medium mt-1">
           {formatCurrency(
-            isSubscriber
+            (isSubscriber && appointment.status !== 'COMPLETED')
               ? appointment.services.reduce((sum, s) => s.service.name.toLowerCase().includes('corte') ? sum : sum + s.service.price, 0)
               : appointment.totalAmount
           )}
@@ -2071,6 +2071,9 @@ function AppointmentDetailsDialog({
                 {formatCurrency(
                   (() => {
                     const isSubscriber = appointment.isSubscriptionAppointment || appointment.client.isSubscriber;
+                    // FIX: Se estiver concluído, usar o valor total salvo (que inclui descontos manuais)
+                    if (appointment.status === 'COMPLETED') return Number(appointment.totalAmount) || 0;
+
                     if (!isSubscriber) return Number(appointment.totalAmount) || 0;
 
                     const servicesTotal = appointment.services.reduce((sum, s) => {

@@ -22,6 +22,7 @@ import {
   Clock,
   Sparkles,
   Scale,
+  Calculator,
 } from "lucide-react";
 import { signOut, useSession } from "next-auth/react";
 import { cn } from "@/lib/utils";
@@ -111,6 +112,11 @@ const menuItems = [
     title: "Relatórios",
     icon: BarChart3,
     href: "/relatorios",
+  },
+  {
+    title: "Fechamento Diário",
+    icon: Calculator,
+    href: "/relatorios/fechamento-dia",
   },
   {
     title: "Fechamento Mensal",
