@@ -823,6 +823,13 @@ export default function AgendaPage() {
     const grandTotalCalculation = servicesTotal + productsTotal;
     const finalTotalToSave = manualGrandTotal !== undefined ? manualGrandTotal : grandTotalCalculation;
 
+    // Preparar itens de produto para envio
+    const productItems = selectedProducts.map(p => ({
+      productId: p.productId,
+      quantity: p.quantity,
+      unitPrice: p.unitPrice
+    }));
+
     try {
       const isOnline = completionDialog.id.startsWith('online-');
       const realId = isOnline ? completionDialog.id.replace('online-', '') : completionDialog.id;
@@ -841,6 +848,7 @@ export default function AgendaPage() {
             paymentMethod,
             notes: completionNotes,
             onlineBookingId: realId,
+            productItems, // Envia produtos para vincular
             totalAmount: finalTotalToSave, // Usar o total calculado (incluindo produtos)
           }),
         });
@@ -867,7 +875,7 @@ export default function AgendaPage() {
         });
       } else {
         // Para agendamentos administrativos já existentes:
-        // 1. Atualizar status, pagamento e notas
+        // 1. Atualizar status, pagamento e notas + PRODUTOS
         const updateRes = await fetch(`/api/appointments/${realId}`, {
           method: 'PATCH',
           headers: { 'Content-Type': 'application/json' },
@@ -875,6 +883,7 @@ export default function AgendaPage() {
             status: 'COMPLETED',
             paymentMethod,
             notes: completionNotes,
+            productItems, // Envia produtos para vincular e atualizar
             totalAmount: finalTotalToSave // Usar o total calculado (incluindo produtos)
           }),
         });
