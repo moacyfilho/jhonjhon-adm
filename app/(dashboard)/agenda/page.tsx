@@ -504,6 +504,10 @@ export default function AgendaPage() {
   );
 
   useEffect(() => {
+    console.log('--- AGENDA LOADED [VERSION 3.0 STABLE PATCHED] ---');
+  }, []);
+
+  useEffect(() => {
     fetchData();
     fetchProducts();
   }, [currentDate, viewMode]);
@@ -1040,10 +1044,10 @@ export default function AgendaPage() {
           <div>
             <h1 className="text-3xl font-bold text-foreground flex items-center gap-2">
               <Calendar className="w-8 h-8 text-primary" />
-              Agenda <span className="text-[10px] bg-green-600 text-white px-1.5 py-0.5 rounded font-mono ml-2 shadow-sm">v2.5 (Fix Visual) - NETLIFY FIX</span>
+              Agenda <span className="text-[10px] bg-green-600 text-white px-1.5 py-0.5 rounded font-mono ml-2 shadow-sm">v3.0 (STABLE) - PATCHED</span>
             </h1>
             <p className="text-muted-foreground mt-1">
-              [v2.5] Controle total dos agendamentos e assinaturas
+              [v3.0] Controle total dos agendamentos e assinaturas
             </p>
           </div>
 
