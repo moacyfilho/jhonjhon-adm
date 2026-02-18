@@ -96,7 +96,7 @@ export async function POST(request: NextRequest) {
     }
 
     const body = await request.json();
-    const {
+    let {
       clientId,
       barberId,
       serviceIds,
@@ -109,9 +109,42 @@ export async function POST(request: NextRequest) {
       totalAmount: manualTotalAmount // Novo: Valor final editado manualmente
     } = body;
 
+    // Lógica para Clientes Temporários (Agendamento Online sem login)
+    if (clientId === 'temp' && onlineBookingId) {
+      const booking = await prisma.onlineBooking.findUnique({
+        where: { id: onlineBookingId },
+      });
+
+      if (booking) {
+        // Tenta achar cliente existente pelo telefone (prioridade) ou nome
+        const existingClient = await prisma.client.findFirst({
+          where: {
+            OR: [
+              { phone: booking.clientPhone },
+              { name: booking.clientName } // Fallback, embora telefone seja melhor identificador
+            ]
+          }
+        });
+
+        if (existingClient) {
+          clientId = existingClient.id;
+        } else {
+          // Cria novo cliente rápido
+          const newClient = await prisma.client.create({
+            data: {
+              name: booking.clientName,
+              phone: booking.clientPhone,
+              email: booking.clientEmail || null,
+            }
+          });
+          clientId = newClient.id;
+        }
+      }
+    }
+
     if (!clientId || !barberId || !date || (!paymentMethod && !manualTotalAmount)) {
       return NextResponse.json(
-        { error: "Missing required fields" },
+        { error: `Missing required fields (Client ID: ${clientId})` },
         { status: 400 }
       );
     }
