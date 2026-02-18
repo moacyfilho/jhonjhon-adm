@@ -20,6 +20,8 @@ export async function GET(request: NextRequest) {
     const { searchParams } = new URL(request.url);
     const period = searchParams.get("period") || "month"; // month, week, today
 
+    const barberId = searchParams.get("barberId");
+
     // Define o período
     const now = new Date();
     let startDate: Date;
@@ -33,24 +35,25 @@ export async function GET(request: NextRequest) {
       startDate = new Date(now.getFullYear(), now.getMonth(), 1);
     }
 
+    const baseWhere: any = {
+      date: {
+        gte: startDate,
+      },
+      status: "COMPLETED",
+    };
+
+    if (barberId && barberId !== 'all') {
+      baseWhere.barberId = barberId;
+    }
+
     // Total de atendimentos no período
     const totalAppointments = await prisma.appointment.count({
-      where: {
-        date: {
-          gte: startDate,
-        },
-        status: "COMPLETED",
-      },
+      where: baseWhere,
     });
 
     // Faturamento total no período
     const revenue = await prisma.appointment.aggregate({
-      where: {
-        date: {
-          gte: startDate,
-        },
-        status: "COMPLETED",
-      },
+      where: baseWhere,
       _sum: {
         totalAmount: true,
       },
@@ -65,12 +68,7 @@ export async function GET(request: NextRequest) {
     // Barbeiro destaque (mais atendimentos)
     const topBarber = await prisma.appointment.groupBy({
       by: ["barberId"],
-      where: {
-        date: {
-          gte: startDate,
-        },
-        status: "COMPLETED",
-      },
+      where: baseWhere,
       _count: {
         id: true,
       },
@@ -106,14 +104,17 @@ export async function GET(request: NextRequest) {
         const nextDate = new Date(date);
         nextDate.setDate(nextDate.getDate() + 1);
 
-        const dayRevenue = await prisma.appointment.aggregate({
-          where: {
-            date: {
-              gte: date,
-              lt: nextDate,
-            },
-            status: "COMPLETED",
+        const dayWhere = {
+          date: {
+            gte: date,
+            lt: nextDate,
           },
+          status: "COMPLETED",
+          ...(barberId && barberId !== 'all' ? { barberId } : {})
+        };
+
+        const dayRevenue = await prisma.appointment.aggregate({
+          where: dayWhere,
           _sum: {
             totalAmount: true,
           },
@@ -132,18 +133,14 @@ export async function GET(request: NextRequest) {
     // Atendimentos por barbeiro
     const appointmentsByBarber = await prisma.appointment.groupBy({
       by: ["barberId"],
-      where: {
-        date: {
-          gte: startDate,
-        },
-        status: "COMPLETED",
-      },
+      where: baseWhere,
       _count: {
         id: true,
       },
     });
 
     // Buscar todos os barbeiros de uma vez (mais eficiente)
+    // Se filtramos por um barbeiro, só vai ter ele.
     const barberIds = appointmentsByBarber.map(item => item.barberId);
     const barbers = await prisma.barber.findMany({
       where: { id: { in: barberIds } },
@@ -157,8 +154,21 @@ export async function GET(request: NextRequest) {
     }));
 
     // Serviços mais vendidos
+    // Note: AppointmentService doesn't have barberId directly, need relational filter
     const topServices = await prisma.appointmentService.groupBy({
       by: ["serviceId"],
+      where: barberId && barberId !== 'all' ? {
+        appointment: {
+          barberId: barberId,
+          date: { gte: startDate },
+          status: "COMPLETED"
+        }
+      } : {
+        appointment: { // Need to replicate baseWhere logic for relation
+          date: { gte: startDate },
+          status: "COMPLETED"
+        }
+      },
       _count: {
         id: true,
       },
@@ -186,12 +196,7 @@ export async function GET(request: NextRequest) {
     // Formas de pagamento
     const paymentMethods = await prisma.appointment.groupBy({
       by: ["paymentMethod"],
-      where: {
-        date: {
-          gte: startDate,
-        },
-        status: "COMPLETED",
-      },
+      where: baseWhere,
       _count: {
         id: true,
       },

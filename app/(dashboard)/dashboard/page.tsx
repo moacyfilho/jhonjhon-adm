@@ -27,11 +27,29 @@ export default function DashboardPage() {
   const [data, setData] = useState<DashboardData | null>(null);
   const [loading, setLoading] = useState(true);
   const [period, setPeriod] = useState("month");
+  const [barbers, setBarbers] = useState<any[]>([]);
+  const [selectedBarber, setSelectedBarber] = useState("all");
+
+  useEffect(() => {
+    // Buscar lista de barbeiros
+    async function fetchBarbers() {
+      try {
+        const res = await fetch('/api/barbers');
+        if (res.ok) {
+          const data = await res.json();
+          setBarbers(data);
+        }
+      } catch (error) {
+        console.error("Erro ao buscar barbeiros:", error);
+      }
+    }
+    fetchBarbers();
+  }, []);
 
   useEffect(() => {
     const fetchData = async () => {
       setLoading(true);
-      
+
       // Timeout de 10 segundos
       const timeoutId = setTimeout(() => {
         setLoading(false);
@@ -39,9 +57,13 @@ export default function DashboardPage() {
       }, 10000);
 
       try {
-        const response = await fetch(`/api/stats?period=${period}`);
+        const queryParams = new URLSearchParams({
+          period,
+          ...(selectedBarber !== 'all' ? { barberId: selectedBarber } : {})
+        });
+        const response = await fetch(`/api/stats?${queryParams}`);
         clearTimeout(timeoutId);
-        
+
         if (response.ok) {
           const result = await response.json();
           setData(result);
@@ -57,7 +79,7 @@ export default function DashboardPage() {
     };
 
     fetchData();
-  }, [period]);
+  }, [period, selectedBarber]);
 
   if (loading) {
     return (
@@ -91,38 +113,51 @@ export default function DashboardPage() {
           </p>
         </div>
 
-        {/* Period Filter */}
-        <div className="flex gap-2">
-          <button
-            onClick={() => setPeriod("today")}
-            className={`px-4 py-2 rounded-lg font-medium transition-colors ${
-              period === "today"
-                ? "bg-primary text-primary-foreground"
-                : "bg-card text-muted-foreground hover:bg-secondary"
-            }`}
+        <div className="flex flex-wrap items-center gap-4">
+          {/* Barber Filter */}
+          <select
+            value={selectedBarber}
+            onChange={(e) => setSelectedBarber(e.target.value)}
+            className="h-10 rounded-lg border border-input bg-card px-3 py-2 text-sm ring-offset-background focus:outline-none focus:ring-2 focus:ring-ring focus:ring-offset-2"
           >
-            Hoje
-          </button>
-          <button
-            onClick={() => setPeriod("week")}
-            className={`px-4 py-2 rounded-lg font-medium transition-colors ${
-              period === "week"
-                ? "bg-primary text-primary-foreground"
-                : "bg-card text-muted-foreground hover:bg-secondary"
-            }`}
-          >
-            Semana
-          </button>
-          <button
-            onClick={() => setPeriod("month")}
-            className={`px-4 py-2 rounded-lg font-medium transition-colors ${
-              period === "month"
-                ? "bg-primary text-primary-foreground"
-                : "bg-card text-muted-foreground hover:bg-secondary"
-            }`}
-          >
-            Mês
-          </button>
+            <option value="all">Todos os Barbeiros</option>
+            {barbers.map(barber => (
+              <option key={barber.id} value={barber.id}>
+                {barber.name}
+              </option>
+            ))}
+          </select>
+
+          {/* Period Filter */}
+          <div className="flex gap-2">
+            <button
+              onClick={() => setPeriod("today")}
+              className={`px-4 py-2 rounded-lg font-medium transition-colors ${period === "today"
+                  ? "bg-primary text-primary-foreground"
+                  : "bg-card text-muted-foreground hover:bg-secondary"
+                }`}
+            >
+              Hoje
+            </button>
+            <button
+              onClick={() => setPeriod("week")}
+              className={`px-4 py-2 rounded-lg font-medium transition-colors ${period === "week"
+                  ? "bg-primary text-primary-foreground"
+                  : "bg-card text-muted-foreground hover:bg-secondary"
+                }`}
+            >
+              Semana
+            </button>
+            <button
+              onClick={() => setPeriod("month")}
+              className={`px-4 py-2 rounded-lg font-medium transition-colors ${period === "month"
+                  ? "bg-primary text-primary-foreground"
+                  : "bg-card text-muted-foreground hover:bg-secondary"
+                }`}
+            >
+              Mês
+            </button>
+          </div>
         </div>
       </div>
 
@@ -136,8 +171,8 @@ export default function DashboardPage() {
             period === "today"
               ? "Hoje"
               : period === "week"
-              ? "Últimos 7 dias"
-              : "Este mês"
+                ? "Últimos 7 dias"
+                : "Este mês"
           }
         />
         <StatCard
@@ -148,8 +183,8 @@ export default function DashboardPage() {
             period === "today"
               ? "Hoje"
               : period === "week"
-              ? "Últimos 7 dias"
-              : "Este mês"
+                ? "Últimos 7 dias"
+                : "Este mês"
           }
         />
         <StatCard
