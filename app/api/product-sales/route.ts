@@ -77,12 +77,16 @@ export async function POST(request: Request) {
     const { productId, quantity, paymentMethod, soldBy, observations, skipStockUpdate } = data;
 
     // Validações
-    if (!productId || !quantity || !paymentMethod) {
+    if (!productId || !quantity) {
       return NextResponse.json(
-        { error: 'Produto, quantidade e forma de pagamento são obrigatórios' },
+        { error: 'Produto e quantidade são obrigatórios' },
         { status: 400 }
       );
     }
+
+    // Sanitizar Payment Method
+    const validPaymentMethods = ['CASH', 'DEBIT_CARD', 'CREDIT_CARD', 'PIX'];
+    const finalPaymentMethod = validPaymentMethods.includes(paymentMethod) ? paymentMethod : 'CASH';
 
     if (quantity <= 0) {
       return NextResponse.json(
@@ -129,7 +133,7 @@ export async function POST(request: Request) {
           quantity: parseFloat(quantity),
           unitPrice,
           totalAmount,
-          paymentMethod,
+          paymentMethod: finalPaymentMethod,
           soldBy: soldBy || session.user?.name || null,
           observations: observations || null,
         },
@@ -177,10 +181,10 @@ export async function POST(request: Request) {
 
     console.log('Venda de produto registrada:', sale);
     return NextResponse.json(sale, { status: 201 });
-  } catch (error) {
+  } catch (error: any) {
     console.error('Erro ao registrar venda de produto:', error);
     return NextResponse.json(
-      { error: 'Erro ao registrar venda de produto' },
+      { error: `Erro ao registrar venda de produto: ${error.message}` },
       { status: 500 }
     );
   }
