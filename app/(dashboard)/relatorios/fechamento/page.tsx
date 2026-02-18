@@ -207,10 +207,11 @@ export default function FechamentoMensalPage() {
         doc.text('Detalhamento de Vendas de Produtos', 14, 20);
         autoTable(doc, {
             startY: 25,
-            head: [['Data', 'Produto', 'Cliente/Obs', 'Qtd', 'Total']],
+            head: [['Data', 'Produto', 'Barbeiro', 'Cliente/Obs', 'Qtd', 'Total']],
             body: report.details.products.map((p: any) => [
                 format(parseISO(p.date), 'dd/MM/yyyy'),
                 p.productName,
+                p.barberName,
                 p.clientName,
                 p.quantity,
                 `R$ ${p.totalPrice.toFixed(2)}`
@@ -439,6 +440,7 @@ export default function FechamentoMensalPage() {
                                         <tr>
                                             <th className="px-6 py-4">Data</th>
                                             <th className="px-6 py-4">Produto</th>
+                                            <th className="px-6 py-4">Barbeiro</th>
                                             <th className="px-6 py-4">Cliente/Obs</th>
                                             <th className="px-6 py-4 text-right">Qtd</th>
                                             <th className="px-6 py-4 text-right">Total</th>
@@ -449,6 +451,7 @@ export default function FechamentoMensalPage() {
                                             <tr key={p.id} className="hover:bg-secondary/20 transition-colors">
                                                 <td className="px-6 py-4 text-sm text-muted-foreground">{format(parseISO(p.date), 'dd/MM HH:mm')}</td>
                                                 <td className="px-6 py-4 font-semibold">{p.productName}</td>
+                                                <td className="px-6 py-4 text-sm text-muted-foreground">{p.barberName}</td>
                                                 <td className="px-6 py-4 text-sm text-muted-foreground">{p.clientName}</td>
                                                 <td className="px-6 py-4 text-right font-medium">{p.quantity}</td>
                                                 <td className="px-6 py-4 text-right font-bold text-emerald-500">R$ {p.totalPrice.toFixed(2)}</td>

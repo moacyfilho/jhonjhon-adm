@@ -129,6 +129,7 @@ export async function GET(request: NextRequest) {
                 appointment: {
                     include: {
                         client: true,
+                        barber: true,
                     },
                 },
             },
@@ -155,6 +156,7 @@ export async function GET(request: NextRequest) {
                 quantity: p.quantity,
                 totalPrice: p.totalPrice,
                 clientName: p.appointment.client.name,
+                barberName: p.appointment.barber.name,
                 type: 'APPOINTMENT'
             })),
             ...standaloneSalesDetails.map(p => ({
@@ -164,6 +166,7 @@ export async function GET(request: NextRequest) {
                 quantity: p.quantity,
                 totalPrice: p.totalAmount, // Note: ProductSale uses totalAmount, AppointmentProduct uses totalPrice (schema check confirmed)
                 clientName: p.observations || 'Venda Balcão',
+                barberName: p.soldBy || 'Balcão',
                 type: 'STANDALONE'
             }))
         ].sort((a, b) => new Date(b.date).getTime() - new Date(a.date).getTime());

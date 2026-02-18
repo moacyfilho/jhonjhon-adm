@@ -289,13 +289,30 @@ export async function PATCH(
               }))
             });
 
-            // Ajustar estoque novo
-            for (const item of productsToCreate) {
-              await tx.product.update({
-                where: { id: item.productId },
-                data: { stock: { decrement: item.quantity } }
-              });
+            // Ajustar estoque novo (apenas se não estiver cancelando)
+            // Se estiver cancelando, não debitamos o estoque (pois tecnicamente não saiu)
+            const isBecomingCancelled = status === 'CANCELLED' && currentAppointment.status !== 'CANCELLED';
+
+            if (!isBecomingCancelled && status !== 'CANCELLED') {
+              for (const item of productsToCreate) {
+                await tx.product.update({
+                  where: { id: item.productId },
+                  data: { stock: { decrement: item.quantity } }
+                });
+              }
             }
+          }
+        }
+
+        // Se estiver cancelando e NÃO mudou produtos (se mudou, o bloco acima já devolveu o estoque antigo)
+        // Precisamos garantir que o estoque volte
+        const isBecomingCancelled = status === 'CANCELLED' && currentAppointment.status !== 'CANCELLED';
+        if (isBecomingCancelled && !areProductsChanging) {
+          for (const oldItem of currentAppointment.products) {
+            await tx.product.update({
+              where: { id: oldItem.productId },
+              data: { stock: { increment: oldItem.quantity } }
+            });
           }
         }
 
@@ -370,9 +387,29 @@ export async function DELETE(
 
     const { id } = await params;
 
-    await prisma.appointment.delete({
+    // 1. Fetch appointment to check for products and status before deleting
+    const appointment = await prisma.appointment.findUnique({
       where: { id },
+      include: { products: true }
     });
+
+    if (appointment) {
+      // 2. Restore stock if the appointment was valid (not Cancelled)
+      // If it was already CANCELLED, stock should have been restored during status change.
+      if (appointment.status !== 'CANCELLED') {
+        for (const p of appointment.products) {
+          await prisma.product.update({
+            where: { id: p.productId },
+            data: { stock: { increment: p.quantity } }
+          });
+        }
+      }
+
+      // 3. Delete
+      await prisma.appointment.delete({
+        where: { id },
+      });
+    }
 
     return NextResponse.json({ success: true });
   } catch (error) {
