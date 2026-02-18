@@ -85,11 +85,40 @@ export async function DELETE(
 
     const { id } = await params;
 
+    // Check for dependencies to avoid Initial Server Error (Foreign Key Constraint)
+    const appointmentCount = await prisma.appointmentService.count({
+      where: { serviceId: id },
+    });
+
+    const onlineBookingCount = await prisma.onlineBooking.count({
+      where: { serviceId: id },
+    });
+
+    const onlineBookingServiceCount = await prisma.onlineBookingService.count({
+      where: { serviceId: id },
+    });
+
+    const totalDependencies = appointmentCount + onlineBookingCount + onlineBookingServiceCount;
+
+    if (totalDependencies > 0) {
+      // Soft delete: Archive the service instead of deleting
+      await prisma.service.update({
+        where: { id },
+        data: { isActive: false },
+      });
+      console.log(`Service ${id} soft-deleted (archived) due to ${totalDependencies} dependencies.`);
+      return NextResponse.json({
+        message: "Serviço arquivado com sucesso (possui histórico de agendamentos)",
+        archived: true
+      });
+    }
+
+    // Hard delete: Remove if no history
     await prisma.service.delete({
       where: { id },
     });
 
-    return NextResponse.json({ message: "Serviço excluído com sucesso" });
+    return NextResponse.json({ message: "Serviço excluído permanentemente" });
   } catch (error) {
     console.error("Error deleting service:", error);
     return NextResponse.json({ error: "Erro ao excluir serviço" }, { status: 500 });
