@@ -174,14 +174,21 @@ function CompletionDialog({
 
   // Robust commission calculation
   const isSubForComission = appointment.isSubscriptionAppointment || appointment.client.isSubscriber;
+
+  // Base de cálculo para comissão (Apenas Serviços)
+  // Se houver valor manual, tentamos isolar a parte dos serviços subtraindo os produtos
+  const commissionBase = manualTotal !== null
+    ? Math.max(0, manualTotal - productsTotal)
+    : servicesTotal;
+
   const commissionAmount = isSubForComission
     ? (() => {
+      // Para assinantes: mantém lógica de valor por hora apenas sobre o tempo de serviço
       const totalMinutes = appointment.services.reduce((sum, s) => sum + (s.service.duration || 0), 0);
       const serviceCommission = (totalMinutes / 60) * (appointment.barber.hourlyRate || 0);
-      const productCommission = productsTotal * (appointment.barber.commissionRate / 100);
-      return serviceCommission + productCommission;
+      return serviceCommission;
     })()
-    : (finalTotalToPay * (appointment.barber.commissionRate / 100));
+    : (commissionBase * (appointment.barber.commissionRate / 100));
 
   const getProductName = (productId: string) => {
     return products.find(p => p.id === productId)?.name || 'Produto';

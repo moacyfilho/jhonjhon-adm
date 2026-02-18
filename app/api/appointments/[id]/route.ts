@@ -241,13 +241,17 @@ export async function PATCH(
 
       let commissionAmount = 0;
       if (barber) {
-        const productCommission = (productsTotal * barber.commissionRate) / 100;
-
+        // Comissão APENAS sobre serviços (produtos excluídos da base de comissão)
         if (isSubscriber) {
-          commissionAmount = (workedHours * barber.hourlyRate) + productCommission;
+          commissionAmount = (workedHours * barber.hourlyRate);
         } else {
-          // Comissão sobre o total de serviços + produtos
-          commissionAmount = ((servicesTotal * barber.commissionRate) / 100) + productCommission;
+          // Se houve valor manual, a base é (Total Manual - Total Produtos)
+          // Se não, usa o Total de Serviços de tabela
+          const commissionBase = (manualTotalAmount !== undefined && manualTotalAmount !== null)
+            ? Math.max(0, manualTotalAmount - productsTotal)
+            : servicesTotal;
+
+          commissionAmount = (commissionBase * barber.commissionRate) / 100;
         }
       }
 
