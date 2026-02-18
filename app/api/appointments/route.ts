@@ -291,6 +291,10 @@ export async function POST(request: NextRequest) {
       }
     }
 
+    // Validar Payment Method
+    const validPaymentMethods = ['CASH', 'DEBIT_CARD', 'CREDIT_CARD', 'PIX'];
+    const finalPaymentMethod = validPaymentMethods.includes(paymentMethod) ? paymentMethod : 'CASH';
+
     // Create appointment
     const appointment = await prisma.$transaction(async (tx) => {
       const newAppointment = await tx.appointment.create({
@@ -302,7 +306,7 @@ export async function POST(request: NextRequest) {
           workedHours: isSubscriptionAppointment ? 0 : workedHours,
           workedHoursSubscription: isSubscriptionAppointment ? workedHours : 0,
           isSubscriptionAppointment,
-          paymentMethod: paymentMethod || 'PIX',
+          paymentMethod: finalPaymentMethod,
           observations: notes || null,
           status: "SCHEDULED",
           onlineBookingId: onlineBookingId || null,
