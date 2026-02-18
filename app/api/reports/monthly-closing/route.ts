@@ -114,7 +114,7 @@ export async function GET(request: NextRequest) {
             },
         });
 
-        const products = await prisma.appointmentProduct.findMany({
+        const appointmentProducts = await prisma.appointmentProduct.findMany({
             where: {
                 appointment: {
                     date: {
@@ -132,12 +132,41 @@ export async function GET(request: NextRequest) {
                     },
                 },
             },
-            orderBy: {
-                appointment: {
-                    date: 'desc',
+        });
+
+        const standaloneSalesDetails = await prisma.productSale.findMany({
+            where: {
+                soldAt: {
+                    gte: startDate,
+                    lte: endDate,
                 },
             },
+            include: {
+                product: true,
+            },
         });
+
+        // Normalize and combine
+        const combinedProducts = [
+            ...appointmentProducts.map(p => ({
+                id: p.id,
+                date: p.appointment.date,
+                productName: p.product.name,
+                quantity: p.quantity,
+                totalPrice: p.totalPrice,
+                clientName: p.appointment.client.name,
+                type: 'APPOINTMENT'
+            })),
+            ...standaloneSalesDetails.map(p => ({
+                id: p.id,
+                date: p.soldAt,
+                productName: p.product.name,
+                quantity: p.quantity,
+                totalPrice: p.totalAmount, // Note: ProductSale uses totalAmount, AppointmentProduct uses totalPrice (schema check confirmed)
+                clientName: p.observations || 'Venda Balcão',
+                type: 'STANDALONE'
+            }))
+        ].sort((a, b) => new Date(b.date).getTime() - new Date(a.date).getTime());
 
         const commissions = await prisma.commission.findMany({
             where: {
@@ -168,7 +197,7 @@ export async function GET(request: NextRequest) {
             },
             details: {
                 services,
-                products,
+                products: combinedProducts,
                 commissions,
             },
             period: {

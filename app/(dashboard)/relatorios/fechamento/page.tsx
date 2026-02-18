@@ -187,6 +187,7 @@ export default function FechamentoMensalPage() {
         });
 
         // New pages for details
+        // Services Details
         doc.addPage();
         doc.text('Detalhamento de Entradas (Serviços)', 14, 20);
         autoTable(doc, {
@@ -198,6 +199,21 @@ export default function FechamentoMensalPage() {
                 s.service.name,
                 s.appointment.barber.name,
                 `R$ ${s.price.toFixed(2)}`
+            ]),
+        });
+
+        // Products Details (Added)
+        doc.addPage();
+        doc.text('Detalhamento de Vendas de Produtos', 14, 20);
+        autoTable(doc, {
+            startY: 25,
+            head: [['Data', 'Produto', 'Cliente/Obs', 'Qtd', 'Total']],
+            body: report.details.products.map((p: any) => [
+                format(parseISO(p.date), 'dd/MM/yyyy'),
+                p.productName,
+                p.clientName,
+                p.quantity,
+                `R$ ${p.totalPrice.toFixed(2)}`
             ]),
         });
 
@@ -284,7 +300,7 @@ export default function FechamentoMensalPage() {
                     color="text-red-500"
                     invertedTrend
                 />
-                < KPICard
+                <KPICard
                     title="Resultado Líquido"
                     value={report.summary.netTotal}
                     icon={<DollarSign className="w-5 h-5" />}
@@ -423,6 +439,7 @@ export default function FechamentoMensalPage() {
                                         <tr>
                                             <th className="px-6 py-4">Data</th>
                                             <th className="px-6 py-4">Produto</th>
+                                            <th className="px-6 py-4">Cliente/Obs</th>
                                             <th className="px-6 py-4 text-right">Qtd</th>
                                             <th className="px-6 py-4 text-right">Total</th>
                                         </tr>
@@ -430,8 +447,9 @@ export default function FechamentoMensalPage() {
                                     <tbody className="divide-y divide-border">
                                         {report.details.products.map((p: any) => (
                                             <tr key={p.id} className="hover:bg-secondary/20 transition-colors">
-                                                <td className="px-6 py-4 text-sm text-muted-foreground">{format(parseISO(p.appointment.date), 'dd/MM')}</td>
-                                                <td className="px-6 py-4 font-semibold">{p.product.name}</td>
+                                                <td className="px-6 py-4 text-sm text-muted-foreground">{format(parseISO(p.date), 'dd/MM HH:mm')}</td>
+                                                <td className="px-6 py-4 font-semibold">{p.productName}</td>
+                                                <td className="px-6 py-4 text-sm text-muted-foreground">{p.clientName}</td>
                                                 <td className="px-6 py-4 text-right font-medium">{p.quantity}</td>
                                                 <td className="px-6 py-4 text-right font-bold text-emerald-500">R$ {p.totalPrice.toFixed(2)}</td>
                                             </tr>
