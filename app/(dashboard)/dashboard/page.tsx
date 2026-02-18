@@ -7,6 +7,7 @@ import { RevenueChart } from "@/components/dashboard/revenue-chart";
 import { BarbersChart } from "@/components/dashboard/barbers-chart";
 import { ServicesChart } from "@/components/dashboard/services-chart";
 import { PaymentChart } from "@/components/dashboard/payment-chart";
+import { OccupancyHeatmap } from "@/components/dashboard/occupancy-heatmap";
 
 interface DashboardData {
   summary: {
@@ -133,8 +134,8 @@ export default function DashboardPage() {
             <button
               onClick={() => setPeriod("today")}
               className={`px-4 py-2 rounded-lg font-medium transition-colors ${period === "today"
-                  ? "bg-primary text-primary-foreground"
-                  : "bg-card text-muted-foreground hover:bg-secondary"
+                ? "bg-primary text-primary-foreground"
+                : "bg-card text-muted-foreground hover:bg-secondary"
                 }`}
             >
               Hoje
@@ -142,8 +143,8 @@ export default function DashboardPage() {
             <button
               onClick={() => setPeriod("week")}
               className={`px-4 py-2 rounded-lg font-medium transition-colors ${period === "week"
-                  ? "bg-primary text-primary-foreground"
-                  : "bg-card text-muted-foreground hover:bg-secondary"
+                ? "bg-primary text-primary-foreground"
+                : "bg-card text-muted-foreground hover:bg-secondary"
                 }`}
             >
               Semana
@@ -151,8 +152,8 @@ export default function DashboardPage() {
             <button
               onClick={() => setPeriod("month")}
               className={`px-4 py-2 rounded-lg font-medium transition-colors ${period === "month"
-                  ? "bg-primary text-primary-foreground"
-                  : "bg-card text-muted-foreground hover:bg-secondary"
+                ? "bg-primary text-primary-foreground"
+                : "bg-card text-muted-foreground hover:bg-secondary"
                 }`}
             >
               Mês
@@ -211,6 +212,10 @@ export default function DashboardPage() {
         <BarbersChart data={data?.charts?.appointmentsByBarber ?? []} />
         <ServicesChart data={data?.charts?.topServices ?? []} />
         <PaymentChart data={data?.charts?.paymentMethods ?? []} />
+      </div>
+
+      <div className="grid grid-cols-1 gap-6">
+        <OccupancyHeatmap period={period} barberId={selectedBarber} />
       </div>
     </div>
   );
