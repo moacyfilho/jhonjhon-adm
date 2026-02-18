@@ -834,7 +834,10 @@ export default function AgendaPage() {
           }),
         });
 
-        if (!res.ok) throw new Error('Erro ao criar atendimento administrativo');
+        if (!res.ok) {
+          const errData = await res.json().catch(() => ({}));
+          throw new Error(errData.error || 'Erro ao criar atendimento administrativo');
+        }
         const newAppointment = await res.json();
         finalAppointmentId = newAppointment.id;
 
