@@ -123,15 +123,20 @@ export async function POST(request: NextRequest) {
       );
     }
 
-    // Converter hora local de Manaus (GMT-4) para UTC
-    const [datePart, timePart] = date.split('T');
-    const [hoursStr, minutesStr] = timePart.split(':');
-    const hours = parseInt(hoursStr, 10);
-    const minutes = parseInt(minutesStr, 10);
+    // Converter data
+    let appointmentDate: Date;
+    if (date.endsWith('Z')) {
+      // Se for ISO UTC, usa diretamente
+      appointmentDate = new Date(date);
+    } else {
+      // Se for formato local ou parcial (sem Z), tenta converter considerando Manaus
+      const [datePart, timePart] = date.includes('T') ? date.split('T') : [date, '00:00'];
+      const [hoursStr, minutesStr] = timePart ? timePart.split(':') : ['00', '00'];
+      const hours = parseInt(hoursStr, 10);
+      const minutes = parseInt(minutesStr, 10);
+      appointmentDate = createManausDate(datePart, hours, minutes);
+    }
 
-    const appointmentDate = createManausDate(datePart, hours, minutes);
-
-    // Verificar se já existe um agendamento para este barbeiro neste horário
     const existingAppointment = await prisma.appointment.findFirst({
       where: {
         barberId,
@@ -353,10 +358,10 @@ export async function POST(request: NextRequest) {
     });
 
     return NextResponse.json(appointment);
-  } catch (error) {
+  } catch (error: any) {
     console.error("Error creating appointment:", error);
     return NextResponse.json(
-      { error: "Failed to create appointment" },
+      { error: `Failed to create appointment: ${error.message}` },
       { status: 500 }
     );
   }
