@@ -1,5 +1,5 @@
 /** @type {import('next').NextConfig} */
-// Force rebuild trigger
+// Force rebuild trigger - 2
 const nextConfig = {
   images: {
     unoptimized: true
