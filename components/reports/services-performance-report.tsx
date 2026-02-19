@@ -11,7 +11,7 @@ import { ptBR } from "date-fns/locale";
 
 interface ServiceStats {
     count: number;
-    revenue: number; // This might be an object if prisma returns aggregated sum object, but we mapped it to number
+    revenue: number;
 }
 
 interface ServiceReportItem {
@@ -22,7 +22,7 @@ interface ServiceReportItem {
     monthly: ServiceStats;
 }
 
-export default function RelatorioServicosPage() {
+export function ServicesPerformanceReport() {
     const [reportData, setReportData] = useState<ServiceReportItem[]>([]);
     const [loading, setLoading] = useState(true);
     const [search, setSearch] = useState("");
@@ -34,7 +34,7 @@ export default function RelatorioServicosPage() {
     const fetchData = async () => {
         try {
             setLoading(true);
-            const res = await fetch("/api/reports/services-summary"); // Assumes this endpoint exists
+            const res = await fetch("/api/reports/services-summary");
             if (res.ok) {
                 const data = await res.json();
                 setReportData(data);
@@ -54,18 +54,12 @@ export default function RelatorioServicosPage() {
     );
 
     return (
-        <div className="p-4 md:p-8 space-y-8 bg-background max-w-7xl mx-auto">
-            {/* Header */}
-            <div className="flex flex-col md:flex-row md:items-center justify-between gap-6 bg-card p-6 rounded-2xl border border-border/50 shadow-sm">
+        <div className="space-y-6">
+            <div className="flex flex-col md:flex-row md:items-center justify-between gap-6">
                 <div className="space-y-1">
-                    <div className="flex items-center gap-3">
-                        <div className="p-2 bg-primary/10 rounded-lg">
-                            <BarChart3 className="w-6 h-6 text-gold" />
-                        </div>
-                        <h1 className="text-3xl font-extrabold tracking-tight text-foreground">Desempenho de Serviços</h1>
-                    </div>
-                    <p className="text-muted-foreground pl-11">
-                        Acompanhe a quantidade e receita de cada serviço por período
+                    <h2 className="text-2xl font-bold tracking-tight text-foreground">Desempenho de Serviços</h2>
+                    <p className="text-muted-foreground">
+                        Quantidade e receita detalhada por período
                     </p>
                 </div>
 
@@ -76,13 +70,12 @@ export default function RelatorioServicosPage() {
                             placeholder="Filtrar serviço..."
                             value={search}
                             onChange={(e) => setSearch(e.target.value)}
-                            className="pl-9 bg-background border-gold/20 focus:ring-gold/30"
+                            className="pl-9"
                         />
                     </div>
                 </div>
             </div>
 
-            {/* Content */}
             <Card className="border-none bg-card shadow-sm overflow-hidden">
                 <CardContent className="p-0">
                     <div className="overflow-x-auto">

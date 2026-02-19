@@ -113,11 +113,7 @@ const menuItems = [
     icon: BarChart3,
     href: "/relatorios",
   },
-  {
-    title: "Desempenho Serviços",
-    icon: BarChart3,
-    href: "/service-metrics",
-  },
+
   {
     title: "Fechamento Diário",
     icon: Calculator,
