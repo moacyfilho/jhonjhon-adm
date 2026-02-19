@@ -256,8 +256,13 @@ export default function ClientsPage() {
       {/* Header */}
       <div className="flex flex-col md:flex-row md:items-center md:justify-between gap-4">
         <div>
-          <h1 className="text-3xl font-bold text-foreground mb-2">
+          <h1 className="text-3xl font-bold text-foreground mb-2 flex items-center gap-2">
             Clientes
+            {!loading && (
+              <span className="text-lg font-normal text-muted-foreground bg-secondary px-2 py-1 rounded-md">
+                {clients.length}
+              </span>
+            )}
           </h1>
           <p className="text-muted-foreground">
             Gerencie o cadastro de clientes
