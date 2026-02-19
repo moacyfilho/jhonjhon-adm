@@ -258,11 +258,9 @@ export default function ClientsPage() {
         <div>
           <h1 className="text-3xl font-bold text-foreground mb-2 flex items-center gap-2">
             Clientes
-            {!loading && (
-              <span className="text-lg font-normal text-muted-foreground bg-secondary px-2 py-1 rounded-md">
-                {clients.length}
-              </span>
-            )}
+            <span className="inline-flex items-center justify-center text-sm font-bold text-white bg-emerald-600 px-3 py-1 rounded-full shadow-sm ml-2">
+              {clients?.length || 0}
+            </span>
           </h1>
           <p className="text-muted-foreground">
             Gerencie o cadastro de clientes
