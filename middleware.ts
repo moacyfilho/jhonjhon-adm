@@ -27,7 +27,7 @@ export const config = {
     "/contas-pagar/:path*",
     "/contas-receber/:path*",
     "/relatorios/:path*",
-    "/desempenho-servicos/:path*",
+    "/performance/:path*",
     "/configuracoes/:path*",
   ],
 };

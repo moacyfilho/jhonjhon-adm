@@ -116,7 +116,7 @@ const menuItems = [
   {
     title: "Desempenho Serviços",
     icon: BarChart3,
-    href: "/desempenho-servicos",
+    href: "/performance",
   },
   {
     title: "Fechamento Diário",
