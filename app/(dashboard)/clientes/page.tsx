@@ -257,8 +257,11 @@ export default function ClientsPage() {
       <div className="flex flex-col md:flex-row md:items-center md:justify-between gap-4">
         <div>
           <h1 className="text-3xl font-bold text-foreground mb-2">
-            Clientes ({clients?.length || 0})
+            Clientes
           </h1>
+          <p className="text-lg font-semibold text-emerald-500 mb-1">
+            Total cadastrado: {clients?.length || 0}
+          </p>
           <p className="text-muted-foreground">
             Gerencie o cadastro de clientes
           </p>
