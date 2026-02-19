@@ -166,7 +166,7 @@ export default function RelatoriosPage() {
 
         <div className="flex items-center gap-4">
           <Button asChild variant="outline">
-            <Link href="/relatorios/performance">
+            <Link href="/desempenho-servicos">
               <BarChart2 className="w-4 h-4 mr-2" />
               Desempenho de Serviços
             </Link>

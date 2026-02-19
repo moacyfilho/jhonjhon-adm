@@ -114,9 +114,9 @@ const menuItems = [
     href: "/relatorios",
   },
   {
-    title: "Relatório Serviços",
+    title: "Desempenho Serviços",
     icon: BarChart3,
-    href: "/relatorios/performance",
+    href: "/desempenho-servicos",
   },
   {
     title: "Fechamento Diário",
