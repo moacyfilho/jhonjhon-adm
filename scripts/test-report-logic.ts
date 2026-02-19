@@ -1,52 +1,63 @@
-import { PrismaClient } from '@prisma/client';
-import { startOfMonth, endOfMonth, isWithinInterval } from 'date-fns';
 
-const prisma = new PrismaClient();
+import { prisma } from "@/lib/db";
 
-async function checkReport() {
-    const referenceDate = new Date(); // Janeiro 2026
-    const startDate = startOfMonth(referenceDate);
-    const endDate = endOfMonth(referenceDate);
+async function testDailyReportLogic() {
+    try {
+        const date = new Date('2026-02-18');
+        const startDate = new Date(date); startDate.setUTCHours(0, 0, 0, 0);
+        const endDate = new Date(date); endDate.setUTCHours(23, 59, 59, 999);
 
-    console.log('--- Diagnóstico de Relatório ---');
-    console.log(`Range: ${startDate} até ${endDate}`);
+        console.log("Testing Daily Report Logic locally...");
 
-    const rawReceivables = await prisma.accountReceivable.findMany({
-        where: { category: 'SUBSCRIPTION' },
-        include: { subscription: true }
-    });
+        const appointments = await prisma.appointment.findMany({
+            where: {
+                date: {
+                    gte: startDate,
+                    lte: endDate,
+                },
+                status: "COMPLETED",
+            },
+            include: {
+                client: { select: { name: true } },
+                barber: { select: { name: true } },
+                services: {
+                    select: {
+                        serviceId: true,
+                        price: true,
+                        service: {
+                            select: { name: true }
+                        }
+                    }
+                },
+                products: {
+                    include: {
+                        product: { select: { name: true } }
+                    }
+                }
+            },
+            orderBy: {
+                date: 'desc'
+            }
+        });
 
-    const exclusiveSubs = await prisma.subscription.findMany({
-        where: { isExclusive: true }
-    });
+        console.log(`Found ${appointments.length} appointments.`);
 
-    console.log(`Assinaturas Exclusivas: ${exclusiveSubs.length}`);
+        appointments.forEach(app => {
+            console.log(`App ID: ${app.id}, Total: ${app.totalAmount}`);
+            const totalServicePrices = app.services.reduce((sum, s) => sum + s.price, 0);
+            console.log(`  - Services Sum: ${totalServicePrices}`);
+            app.services.forEach(s => {
+                console.log(`    - Service: ${s.service.name}, Price: ${s.price}`);
+            });
+        });
 
-    const subscriberList = exclusiveSubs.map(sub => {
-        const paidReceivable = rawReceivables.find(r =>
-            r.clientId === sub.clientId &&
-            r.status === 'PAID' &&
-            r.paymentDate &&
-            isWithinInterval(r.paymentDate, { start: startDate, end: endDate })
-        );
+        console.log("Logic execution successful.");
 
-        return {
-            name: sub.planName,
-            amount: sub.amount,
-            isPaid: !!paidReceivable
-        };
-    });
-
-    console.log('Resultado da Lista:');
-    subscriberList.forEach(s => console.log(` - ${s.name}: ${s.amount}, Pago: ${s.isPaid}`));
-
-    const receivedAmount = subscriberList
-        .filter(s => s.isPaid)
-        .reduce((sum, s) => sum + s.amount, 0);
-
-    console.log(`Total Recebido Calculado: R$ ${receivedAmount}`);
+    } catch (error) {
+        console.error("Logic execution FAILED:", error);
+    }
 }
 
-checkReport()
+testDailyReportLogic()
     .catch(console.error)
     .finally(() => prisma.$disconnect());
