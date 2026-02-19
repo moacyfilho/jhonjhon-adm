@@ -190,3 +190,42 @@ export async function sendBookingNotifications(
     barberNotification: results[2], // Será undefined se não tiver barberPhone
   };
 }
+
+/**
+ * Envia lembrete de agendamento para o cliente (1h antes)
+ */
+export async function sendAppointmentReminder(
+  data: BookingNotificationData
+): Promise<{ success: boolean; error?: string }> {
+
+  const formattedDateTime = formatManausDateTime(data.scheduledDate);
+
+  // Robust split for various date formats
+  let timeStr = formattedDateTime;
+  if (formattedDateTime.includes(' às ')) {
+    timeStr = formattedDateTime.split(' às ')[1];
+  } else if (formattedDateTime.includes(', ')) {
+    // Ex: Qua, 19/02/2026, 14:00
+    const parts = formattedDateTime.split(', ');
+    timeStr = parts[parts.length - 1]; // Pega a última parte que deve ser a hora
+  } else {
+    // Fallback: assume last part is time (e.g. "dd/mm/yyyy HH:mm")
+    const parts = formattedDateTime.trim().split(' ');
+    if (parts.length > 1) {
+      timeStr = parts.pop() || '';
+    }
+  }
+
+  const barberInfo = data.barberName || 'Barbearia Jhon Jhon';
+
+  const message = `⏰ *LEMBRETE DE AGENDAMENTO*\n\n` +
+    `Olá *${data.clientName}*! Passando para lembrar do seu horário hoje.\n\n` +
+    `🕒 *Horário:* ${timeStr}\n` +
+    `💈 *Serviço:* ${data.serviceName}\n` +
+    `✂️ *Profissional:* ${barberInfo}\n\n` +
+    `📍 _Chegue com 5 minutinhos de antecedência._\n` +
+    `Caso não possa comparecer, avise-nos!`;
+
+  console.log(`📱 Enviando lembrete para: ${data.clientPhone}`);
+  return sendToUzapi(data.clientPhone, message);
+}
