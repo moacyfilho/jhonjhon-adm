@@ -27,49 +27,60 @@ export async function GET(request: NextRequest) {
         const monthStart = startOfMonth(today);
         const monthEnd = endOfMonth(today);
 
+
         // Fetch all completed appointment services within the widest range (Month)
-        // We filter in memory or do aggregations. GroupBy is efficient but doing 3 groupBys might be cleaner.
-
-        // Let's do 3 aggregate queries for simplicity and clarity
-
-        // 1. Daily Stats
-        const dailyStats = await prisma.appointmentService.groupBy({
-            by: ['serviceId'],
-            where: {
-                appointment: {
-                    date: { gte: dayStart, lte: dayEnd },
-                    status: 'COMPLETED'
-                }
-            },
-            _count: { serviceId: true },
-            _sum: { price: true }
-        });
-
-        // 2. Weekly Stats
-        const weeklyStats = await prisma.appointmentService.groupBy({
-            by: ['serviceId'],
-            where: {
-                appointment: {
-                    date: { gte: weekStart, lte: weekEnd },
-                    status: 'COMPLETED'
-                }
-            },
-            _count: { serviceId: true },
-            _sum: { price: true }
-        });
-
-        // 3. Monthly Stats
-        const monthlyStats = await prisma.appointmentService.groupBy({
-            by: ['serviceId'],
+        // Using findMany + in-memory aggregation because Prisma groupBy doesn't support filtering by relation fields yet.
+        const allItems = await prisma.appointmentService.findMany({
             where: {
                 appointment: {
                     date: { gte: monthStart, lte: monthEnd },
                     status: 'COMPLETED'
                 }
             },
-            _count: { serviceId: true },
-            _sum: { price: true }
+            select: {
+                serviceId: true,
+                price: true,
+                appointment: {
+                    select: {
+                        date: true
+                    }
+                }
+            }
         });
+
+        // Helper maps
+        const dailyMap = new Map<string, { count: number, revenue: number }>();
+        const weeklyMap = new Map<string, { count: number, revenue: number }>();
+        const monthlyMap = new Map<string, { count: number, revenue: number }>();
+
+        for (const item of allItems) {
+            const date = new Date(item.appointment.date);
+            const serviceId = item.serviceId;
+            const price = item.price || 0;
+
+            // Monthly (all items match query)
+            if (!monthlyMap.has(serviceId)) monthlyMap.set(serviceId, { count: 0, revenue: 0 });
+            const m = monthlyMap.get(serviceId)!;
+            m.count++;
+            m.revenue += price;
+
+            // Weekly
+            if (date >= weekStart && date <= weekEnd) {
+                if (!weeklyMap.has(serviceId)) weeklyMap.set(serviceId, { count: 0, revenue: 0 });
+                const w = weeklyMap.get(serviceId)!;
+                w.count++;
+                w.revenue += price;
+            }
+
+            // Daily
+            if (date >= dayStart && date <= dayEnd) {
+                if (!dailyMap.has(serviceId)) dailyMap.set(serviceId, { count: 0, revenue: 0 });
+                const d = dailyMap.get(serviceId)!;
+                d.count++;
+                d.revenue += price;
+            }
+        }
+
 
         // Get all service names
         const services = await prisma.service.findMany({
@@ -77,28 +88,31 @@ export async function GET(request: NextRequest) {
         });
 
         // Combine data
+
+        // Combine data
         const reportData = services.map(service => {
-            const dayStat = dailyStats.find(s => s.serviceId === service.id);
-            const weekStat = weeklyStats.find(s => s.serviceId === service.id);
-            const monthStat = monthlyStats.find(s => s.serviceId === service.id);
+            const dayStat = dailyMap.get(service.id);
+            const weekStat = weeklyMap.get(service.id);
+            const monthStat = monthlyMap.get(service.id);
 
             return {
                 id: service.id,
                 name: service.name,
                 daily: {
-                    count: dayStat?._count.serviceId || 0,
-                    revenue: dayStat?._sum.price || 0
+                    count: dayStat?.count || 0,
+                    revenue: dayStat?.revenue || 0
                 },
                 weekly: {
-                    count: weekStat?._count.serviceId || 0,
-                    revenue: weekStat?._sum.price || 0
+                    count: weekStat?.count || 0,
+                    revenue: weekStat?.revenue || 0
                 },
                 monthly: {
-                    count: monthStat?._count.serviceId || 0,
-                    revenue: monthStat?._sum.price || 0
+                    count: monthStat?.count || 0,
+                    revenue: monthStat?.revenue || 0
                 }
             };
         });
+
 
         // Sort by monthly count descending
         reportData.sort((a, b) => b.monthly.count - a.monthly.count);
