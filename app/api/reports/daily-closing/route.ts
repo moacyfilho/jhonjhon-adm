@@ -12,23 +12,32 @@ export async function GET(request: NextRequest) {
         }
 
         const { searchParams } = new URL(request.url);
-        const dateParam = searchParams.get("date");
+        const dateParam = searchParams.get("date"); // "YYYY-MM-DD" e.g. "2026-02-18"
 
-        // Default to today if no date provided
-        const date = dateParam ? new Date(dateParam) : new Date();
+        let start: Date;
+        let end: Date;
 
-        // Get start and end of the specified day (in UTC or adjust for timezone if needed, 
-        // but assuming date string implies local day start)
-        // Using simple ISO strings for Prisma filter
-        const startDate = startOfDay(date);
-        const endDate = endOfDay(date);
+        if (dateParam) {
+            // Force UTC range directly from YYYY-MM-DD string
+            // "2026-02-18" -> Start: 2026-02-18T00:00:00.000Z, End: 2026-02-18T23:59:59.999Z
+            start = new Date(`${dateParam}T00:00:00.000Z`);
+            end = new Date(`${dateParam}T23:59:59.999Z`);
+        } else {
+            // Default to today UTC
+            const today = new Date();
+            const yyyy = today.getUTCFullYear();
+            const mm = String(today.getUTCMonth() + 1).padStart(2, '0');
+            const dd = String(today.getUTCDate()).padStart(2, '0');
+            start = new Date(`${yyyy}-${mm}-${dd}T00:00:00.000Z`);
+            end = new Date(`${yyyy}-${mm}-${dd}T23:59:59.999Z`);
+        }
 
         // 1. Fetch Completed Appointments for the day
         const appointments = await prisma.appointment.findMany({
             where: {
                 date: {
-                    gte: startDate,
-                    lte: endDate,
+                    gte: start,
+                    lte: end,
                 },
                 status: "COMPLETED",
             },
@@ -55,8 +64,8 @@ export async function GET(request: NextRequest) {
         const productSales = await prisma.productSale.findMany({
             where: {
                 soldAt: {
-                    gte: startDate,
-                    lte: endDate,
+                    gte: start,
+                    lte: end,
                 },
             },
             include: {
@@ -170,7 +179,7 @@ export async function GET(request: NextRequest) {
         productsList.sort((a, b) => new Date(a.time).getTime() - new Date(b.time).getTime());
 
         return NextResponse.json({
-            date: date.toISOString(),
+            date: dateParam || start.toISOString(),
             summary: {
                 totalServices,
                 totalProducts,
