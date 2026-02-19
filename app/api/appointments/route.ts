@@ -3,7 +3,7 @@ import { getServerSession } from "next-auth";
 import { authOptions } from "@/lib/auth/auth-options";
 import { prisma } from "@/lib/db";
 import { createManausDate, getManausStartOfDay, getManausEndOfDay } from "@/lib/timezone";
-import { sendBookingConfirmationToClient, sendBookingNotificationToBarber } from "@/lib/whatsapp";
+import { sendBookingConfirmationToClient, sendBookingNotificationToBarber, sendBookingNotificationToBarbershop } from "@/lib/whatsapp";
 
 export const dynamic = 'force-dynamic';
 
@@ -424,9 +424,21 @@ export async function POST(request: NextRequest) {
             barberName: appointment.barber.name,
             barberPhone: appointment.barber.phone,
             scheduledDate: appointment.date,
+            scheduledDate: appointment.date,
             bookingId: appointment.id,
           });
         }
+
+        // Notificar Barbearia (Administração)
+        await sendBookingNotificationToBarbershop({
+          clientName: appointment.client.name,
+          clientPhone: appointment.client.phone,
+          serviceName: serviceNames || 'Serviços Diversos',
+          servicePrice: appointment.totalAmount,
+          barberName: appointment.barber.name,
+          scheduledDate: appointment.date,
+          bookingId: appointment.id,
+        });
       } catch (err) {
         console.error('Erro ao enviar notificações de agendamento manual:', err);
       }
