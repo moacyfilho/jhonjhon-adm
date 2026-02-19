@@ -1,6 +1,8 @@
 'use client';
 
 import { useState, useEffect } from 'react';
+import Link from 'next/link';
+import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import {
   Select,
@@ -25,7 +27,7 @@ import {
   Legend,
   ResponsiveContainer,
 } from 'recharts';
-import { DollarSign, TrendingUp, TrendingDown, Calendar } from 'lucide-react';
+import { DollarSign, TrendingUp, TrendingDown, Calendar, BarChart2 } from 'lucide-react';
 import { toast } from 'sonner';
 
 interface FinancialReport {
@@ -162,19 +164,28 @@ export default function RelatoriosPage() {
           </p>
         </div>
 
-        <div className="w-48">
-          <Label>Período</Label>
-          <Select value={period} onValueChange={setPeriod}>
-            <SelectTrigger>
-              <SelectValue />
-            </SelectTrigger>
-            <SelectContent>
-              <SelectItem value="7">Últimos 7 dias</SelectItem>
-              <SelectItem value="30">Últimos 30 dias</SelectItem>
-              <SelectItem value="60">Últimos 60 dias</SelectItem>
-              <SelectItem value="90">Últimos 90 dias</SelectItem>
-            </SelectContent>
-          </Select>
+        <div className="flex items-center gap-4">
+          <Button asChild variant="outline">
+            <Link href="/relatorios/servicos">
+              <BarChart2 className="w-4 h-4 mr-2" />
+              Desempenho de Serviços
+            </Link>
+          </Button>
+
+          <div className="w-48">
+            <Label>Período</Label>
+            <Select value={period} onValueChange={setPeriod}>
+              <SelectTrigger>
+                <SelectValue />
+              </SelectTrigger>
+              <SelectContent>
+                <SelectItem value="7">Últimos 7 dias</SelectItem>
+                <SelectItem value="30">Últimos 30 dias</SelectItem>
+                <SelectItem value="60">Últimos 60 dias</SelectItem>
+                <SelectItem value="90">Últimos 90 dias</SelectItem>
+              </SelectContent>
+            </Select>
+          </div>
         </div>
       </div>
 
@@ -217,9 +228,8 @@ export default function RelatoriosPage() {
           </CardHeader>
           <CardContent>
             <div
-              className={`text-2xl font-bold ${
-                report.summary.balance >= 0 ? 'text-green-500' : 'text-red-500'
-              }`}
+              className={`text-2xl font-bold ${report.summary.balance >= 0 ? 'text-green-500' : 'text-red-500'
+                }`}
             >
               R$ {report.summary.balance.toFixed(2)}
             </div>
@@ -236,9 +246,8 @@ export default function RelatoriosPage() {
           </CardHeader>
           <CardContent>
             <div
-              className={`text-2xl font-bold ${
-                report.summary.projectedBalance >= 0 ? 'text-green-500' : 'text-red-500'
-              }`}
+              className={`text-2xl font-bold ${report.summary.projectedBalance >= 0 ? 'text-green-500' : 'text-red-500'
+                }`}
             >
               R$ {report.summary.projectedBalance.toFixed(2)}
             </div>
