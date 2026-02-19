@@ -1,5 +1,3 @@
-"use client";
-
 import { useState, useEffect } from "react";
 import {
   Plus,
@@ -12,6 +10,7 @@ import {
   Loader2,
   Calendar,
   History,
+  FileText,
 } from "lucide-react";
 import { ClientHistoryModal } from "@/components/clients/client-history-modal";
 import {
@@ -23,6 +22,11 @@ import {
   DialogBody,
   DialogFooter,
 } from "@/components/ui/dialog";
+import { toast } from "sonner";
+import jsPDF from "jspdf";
+import autoTable from "jspdf-autotable";
+import { format } from "date-fns";
+import { ptBR } from "date-fns/locale";
 
 interface Client {
   id: string;
@@ -35,10 +39,21 @@ interface Client {
   };
 }
 
+interface ClientReportData {
+  id: string;
+  name: string;
+  phone: string;
+  email: string;
+  totalServices: number;
+  totalProducts: number;
+  totalGeneral: number;
+}
+
 export default function ClientsPage() {
   const [clients, setClients] = useState<Client[]>([]);
   const [search, setSearch] = useState("");
   const [loading, setLoading] = useState(true);
+  const [generatingReport, setGeneratingReport] = useState(false);
   const [isDialogOpen, setIsDialogOpen] = useState(false);
   const [isDeleteDialogOpen, setIsDeleteDialogOpen] = useState(false);
   const [selectedClient, setSelectedClient] = useState<Client | null>(null);
@@ -75,6 +90,81 @@ export default function ClientsPage() {
 
     return () => clearTimeout(timer);
   }, [search]);
+
+  // Generate PDF Report
+  const handleGenerateReport = async () => {
+    try {
+      setGeneratingReport(true);
+      const response = await fetch(`/api/reports/all-clients?search=${search}`);
+
+      if (!response.ok) {
+        throw new Error("Erro ao buscar dados do relatório");
+      }
+
+      const reportData: ClientReportData[] = await response.json();
+
+      if (reportData.length === 0) {
+        toast.info("Nenhum cliente encontrado para gerar relatório.");
+        return;
+      }
+
+      const doc = new jsPDF();
+
+      // Title
+      doc.setFontSize(18);
+      doc.setTextColor(184, 134, 11); // Gold
+      doc.text("Relatório Geral de Clientes", 14, 20);
+
+      doc.setFontSize(10);
+      doc.setTextColor(100);
+      doc.text(`Gerado em: ${format(new Date(), "dd/MM/yyyy HH:mm", { locale: ptBR })}`, 14, 28);
+      if (search) {
+        doc.text(`Filtro: "${search}"`, 14, 34);
+      }
+
+      // Calculate totals
+      const totalServices = reportData.reduce((acc, c) => acc + c.totalServices, 0);
+      const totalProducts = reportData.reduce((acc, c) => acc + c.totalProducts, 0);
+      const totalGeneral = reportData.reduce((acc, c) => acc + c.totalGeneral, 0);
+
+      // Table
+      autoTable(doc, {
+        startY: 40,
+        head: [["Cliente", "Telefone", "Total Serviços", "Total Produtos", "Total Geral"]],
+        body: reportData.map((client) => [
+          client.name,
+          client.phone,
+          `R$ ${client.totalServices.toFixed(2)}`,
+          `R$ ${client.totalProducts.toFixed(2)}`,
+          `R$ ${client.totalGeneral.toFixed(2)}`,
+        ]),
+        foot: [[
+          "TOTAL GERAL",
+          "",
+          `R$ ${totalServices.toFixed(2)}`,
+          `R$ ${totalProducts.toFixed(2)}`,
+          `R$ ${totalGeneral.toFixed(2)}`
+        ]],
+        styles: { fontSize: 9 },
+        headStyles: { fillColor: [184, 134, 11] }, // Gold
+        footStyles: { fillColor: [60, 60, 60], fontStyle: "bold" },
+        columnStyles: {
+          2: { halign: "right" },
+          3: { halign: "right" },
+          4: { halign: "right", fontStyle: "bold" },
+        },
+      });
+
+      doc.save("relatorio_clientes_financeiro.pdf");
+      toast.success("Relatório gerado com sucesso!");
+
+    } catch (error) {
+      console.error("Erro ao gerar relatório:", error);
+      toast.error("Erro ao gerar relatório PDF");
+    } finally {
+      setGeneratingReport(false);
+    }
+  };
 
   // Open create dialog
   const handleCreate = () => {
@@ -126,9 +216,11 @@ export default function ClientsPage() {
       if (response.ok) {
         setIsDialogOpen(false);
         fetchClients();
+        toast.success(selectedClient ? "Cliente atualizado!" : "Cliente criado!");
       }
     } catch (error) {
       console.error("Error saving client:", error);
+      toast.error("Erro ao salvar cliente");
     } finally {
       setSubmitting(false);
     }
@@ -147,9 +239,11 @@ export default function ClientsPage() {
       if (response.ok) {
         setIsDeleteDialogOpen(false);
         fetchClients();
+        toast.success("Cliente removido com sucesso!");
       }
     } catch (error) {
       console.error("Error deleting client:", error);
+      toast.error("Erro ao excluir cliente");
     } finally {
       setSubmitting(false);
     }
@@ -167,13 +261,27 @@ export default function ClientsPage() {
             Gerencie o cadastro de clientes
           </p>
         </div>
-        <button
-          onClick={handleCreate}
-          className="inline-flex items-center gap-2 bg-primary hover:bg-primary/90 text-primary-foreground font-semibold px-6 py-3 rounded-lg transition-colors"
-        >
-          <Plus className="w-5 h-5" />
-          Novo Cliente
-        </button>
+        <div className="flex gap-2">
+          <button
+            onClick={handleGenerateReport}
+            disabled={generatingReport}
+            className="inline-flex items-center gap-2 bg-secondary hover:bg-secondary/80 text-foreground font-semibold px-4 py-3 rounded-lg transition-colors border border-border"
+          >
+            {generatingReport ? (
+              <Loader2 className="w-5 h-5 animate-spin" />
+            ) : (
+              <FileText className="w-5 h-5" />
+            )}
+            Relatório Geral
+          </button>
+          <button
+            onClick={handleCreate}
+            className="inline-flex items-center gap-2 bg-primary hover:bg-primary/90 text-primary-foreground font-semibold px-6 py-3 rounded-lg transition-colors"
+          >
+            <Plus className="w-5 h-5" />
+            Novo Cliente
+          </button>
+        </div>
       </div>
 
       {/* Search */}
@@ -376,7 +484,7 @@ export default function ClientsPage() {
               disabled={submitting}
             >
               {submitting && <Loader2 className="w-4 h-4 animate-spin" />}
-              Excluir
+              {selectedClient ? (<>Excluir</>) : (<>Excluir</>)}
             </button>
           </DialogFooter>
         </DialogContent>
