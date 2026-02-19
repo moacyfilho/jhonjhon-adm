@@ -162,9 +162,10 @@ function CompletionDialog({
   const isSub = (appointment.isSubscriptionAppointment || appointment.client.isSubscriber) &&
     appointment.services.some(s => s.service.name.toLowerCase().includes('corte'));
 
-  const servicesTotal = isSub
-    ? appointment.services.reduce((sum, s) => s.service.name.toLowerCase().includes('corte') ? sum : sum + s.service.price, 0)
-    : appointment.totalAmount;
+  // Calcular total de serviços baseando-se no total salvo menos produtos
+  // Isso preserva descontos manuais dados anteriormente
+  const originalProductsTotal = appointment.products?.reduce((sum, p) => sum + (p.totalPrice || 0), 0) || 0;
+  const servicesTotal = Math.max(0, (appointment.totalAmount || 0) - originalProductsTotal);
 
   const productsTotal = selectedProducts.reduce((sum, p) => sum + (p.unitPrice * p.quantity), 0);
   const grandTotal = servicesTotal + productsTotal;
@@ -814,6 +815,30 @@ export default function AgendaPage() {
     setCompletionNotes(appointment.observations || '');
   };
 
+  const handleReopenAppointment = async (id: string) => {
+    try {
+      if (id.startsWith('online-')) {
+        toast.error('Agendamentos online devem ser gerenciados pelo painel administrativo após conversão.');
+        return;
+      }
+
+      const res = await fetch(`/api/appointments/${id}`, {
+        method: 'PATCH',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ status: 'SCHEDULED' }),
+      });
+
+      if (!res.ok) throw new Error('Erro ao reabrir agendamento');
+
+      toast.success('Agendamento reaberto! Agora você pode editá-lo e finalizá-lo novamente.');
+      setDetailsDialog(null);
+      fetchData();
+    } catch (error) {
+      console.error('Erro ao reabrir:', error);
+      toast.error('Erro ao reabrir agendamento.');
+    }
+  };
+
   const handleCompleteAppointment = async (manualGrandTotal?: number) => {
     if (!completionDialog) return;
 
@@ -1226,6 +1251,7 @@ export default function AgendaPage() {
             onUpdate={() => {
               fetchData();
             }}
+            onReopen={handleReopenAppointment}
           />
         )}
 
@@ -1649,12 +1675,14 @@ function AppointmentDetailsDialog({
   onMarkCompleted,
   onDelete,
   onUpdate,
+  onReopen,
 }: {
   appointment: Appointment;
   onClose: () => void;
   onMarkCompleted: (id: string) => void;
   onDelete: (id: string) => void;
   onUpdate: () => void;
+  onReopen?: (id: string) => void;
 }) {
   const [isEditingServices, setIsEditingServices] = useState(false);
   const [isEditingPayment, setIsEditingPayment] = useState(false);
@@ -1888,11 +1916,12 @@ function AppointmentDetailsDialog({
           <div className="bg-secondary/50 p-4 rounded-lg">
             <div className="flex items-center justify-between mb-3">
               <span className="text-sm font-semibold">Serviços</span>
-              {!isCompleted && !isEditingServices && (
+              {(!isCompleted || onReopen) && !isEditingServices && (
                 <Button
                   variant="outline"
                   size="sm"
                   onClick={() => setIsEditingServices(true)}
+                  disabled={isCompleted && !onReopen} // Se estiver completo e não puder reabrir (ou se a intenção for editar direto, mas melhor reabrir primeiro)
                 >
                   <Edit className="w-3 h-3 mr-1" />
                   Editar
@@ -2133,7 +2162,7 @@ function AppointmentDetailsDialog({
             <div className="bg-secondary/50 p-4 rounded-lg">
               <div className="flex items-center justify-between mb-2">
                 <span className="text-sm font-semibold">Pagamento</span>
-                {!isCompleted && !isOnline && !isEditingPayment && (
+                {(!isCompleted || onReopen) && !isOnline && !isEditingPayment && (
                   <Button
                     variant="outline"
                     size="sm"
@@ -2218,6 +2247,16 @@ function AppointmentDetailsDialog({
             <Button variant="outline" onClick={onClose}>
               Fechar
             </Button>
+            {isCompleted && onReopen && (
+              <Button
+                variant="outline"
+                onClick={() => onReopen(appointment.id)}
+                className="border-amber-500 text-amber-600 hover:bg-amber-50"
+              >
+                <Edit className="w-4 h-4 mr-2" />
+                Reabrir / Corrigir
+              </Button>
+            )}
             {!isCompleted && (
               <>
                 <Button
