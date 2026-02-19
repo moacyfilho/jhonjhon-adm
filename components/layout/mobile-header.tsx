@@ -43,6 +43,8 @@ const menuItems = [
   { title: "Contas a Pagar", icon: TrendingDown, href: "/contas-pagar" },
   { title: "Contas a Receber", icon: TrendingUp, href: "/contas-receber" },
   { title: "Relatórios", icon: BarChart3, href: "/relatorios" },
+  { title: "Relatório Serviços", icon: BarChart3, href: "/relatorios/servicos" },
+  { title: "Fechamento Diário", icon: Calendar, href: "/relatorios/fechamento-dia" },
   { title: "Fechamento Mensal", icon: Scale, href: "/relatorios/fechamento" },
 ];
 
