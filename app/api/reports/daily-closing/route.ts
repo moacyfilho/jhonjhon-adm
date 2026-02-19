@@ -45,9 +45,13 @@ export async function GET(request: NextRequest) {
                 client: { select: { name: true } },
                 barber: { select: { name: true } },
                 services: {
-                    include: {
-                        service: { select: { name: true } },
-                    },
+                    select: {
+                        serviceId: true,
+                        price: true,
+                        service: {
+                            select: { name: true }
+                        }
+                    }
                 },
                 products: {
                     include: {
@@ -116,14 +120,42 @@ export async function GET(request: NextRequest) {
 
             totalGeneral += app.totalAmount;
 
-            // Add services to list
+            // Add services to list individually
+            const totalServicePrices = app.services.reduce((sum, s) => sum + s.price, 0);
+
             if (app.services.length > 0) {
+                app.services.forEach(s => {
+                    let serviceAmount = s.price;
+
+                    // Adjust service amount if there's a discount/surcharge on the appointment
+                    // finalAppServices is the portion of totalAmount allocated to services
+                    if (totalServicePrices > 0 && finalAppServices !== totalServicePrices) {
+                        const ratio = finalAppServices / totalServicePrices;
+                        serviceAmount = s.price * ratio;
+                    } else if (totalServicePrices === 0 && finalAppServices > 0) {
+                        // Edge case: services priced at 0 but total > 0 (e.g. tip or manual override)
+                        serviceAmount = finalAppServices / app.services.length;
+                    }
+
+                    servicesList.push({
+                        id: `${app.id}-${s.serviceId}`, // Unique ID for key
+                        time: app.date,
+                        client: app.client.name,
+                        barber: app.barber.name,
+                        items: s.service.name, // Individual service name
+                        amount: serviceAmount,
+                        paymentMethod: app.paymentMethod,
+                        type: 'Agendamento'
+                    });
+                });
+            } else if (finalAppServices > 0) {
+                // Case: valid amount but no services recorded (e.g. manual charge)
                 servicesList.push({
                     id: app.id,
                     time: app.date,
                     client: app.client.name,
                     barber: app.barber.name,
-                    items: app.services.map(s => s.service.name).join(", "),
+                    items: 'Serviço Avulso',
                     amount: finalAppServices,
                     paymentMethod: app.paymentMethod,
                     type: 'Agendamento'
