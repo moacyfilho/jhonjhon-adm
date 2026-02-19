@@ -9,6 +9,7 @@ export interface BookingNotificationData {
   barberName?: string;
   scheduledDate: Date;
   bookingId: string;
+  barberPhone?: string;
 }
 
 // Helper to call UZAPI directly (Server-to-Server)
@@ -139,22 +140,53 @@ export async function sendBookingNotificationToBarbershop(
 }
 
 /**
- * Envia ambas as notificações
+ * Envia mensagem WhatsApp para o barbeiro notificando novo agendamento
+ */
+export async function sendBookingNotificationToBarber(
+  data: BookingNotificationData
+): Promise<{ success: boolean; error?: string }> {
+  if (!data.barberPhone) return { success: false, error: 'No barber phone provided' };
+
+  const formattedDateTime = formatManausDateTime(data.scheduledDate);
+
+  const message = `🔔 *NOVO AGENDAMENTO*\n\n` +
+    `Olá ${data.barberName}, você tem um novo cliente agendado!\n\n` +
+    `👤 *Cliente:* ${data.clientName}\n` +
+    `📱 *Telefone:* ${data.clientPhone}\n` +
+    `📅 *Data/Hora:* ${formattedDateTime}\n` +
+    `💈 *Serviço:* ${data.serviceName}\n` +
+    `💰 *Valor:* R$ ${data.servicePrice.toFixed(2)}`;
+
+  console.log(`📱 Notificando barbeiro: ${data.barberPhone}`);
+  return sendToUzapi(data.barberPhone, message);
+}
+
+/**
+ * Envia todas as notificações
  */
 export async function sendBookingNotifications(
   data: BookingNotificationData
 ): Promise<{
   clientNotification: { success: boolean; error?: string };
   barbershopNotification: { success: boolean; error?: string };
+  barberNotification?: { success: boolean; error?: string };
 }> {
-  // Envia em paralelo
-  const [clientResult, barbershopResult] = await Promise.all([
+  // Array de promises fixas
+  const promises: Promise<{ success: boolean; error?: string }>[] = [
     sendBookingConfirmationToClient(data),
     sendBookingNotificationToBarbershop(data),
-  ]);
+  ];
+
+  // Adiciona notificação do barbeiro se houver telefone
+  if (data.barberPhone) {
+    promises.push(sendBookingNotificationToBarber(data));
+  }
+
+  const results = await Promise.all(promises);
 
   return {
-    clientNotification: clientResult,
-    barbershopNotification: barbershopResult,
+    clientNotification: results[0],
+    barbershopNotification: results[1],
+    barberNotification: results[2], // Será undefined se não tiver barberPhone
   };
 }

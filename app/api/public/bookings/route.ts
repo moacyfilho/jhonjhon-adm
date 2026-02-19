@@ -332,6 +332,7 @@ export async function POST(request: NextRequest) {
         serviceName: serviceNames,
         servicePrice: totalPrice,
         barberName: booking.barber?.name,
+        barberPhone: booking.barber?.phone,
         scheduledDate: booking.scheduledDate,
         bookingId: booking.id,
       }).catch(err => console.error('Erro notificacao:', err));
