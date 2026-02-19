@@ -180,7 +180,7 @@ export async function PATCH(
       // Final total amount
       if (manualTotalAmount !== undefined && manualTotalAmount !== null) {
         updateData.totalAmount = manualTotalAmount;
-      } else {
+      } else if (areServicesChanging || areProductsChanging) {
         if (isSubscriber) {
           // Buscar a assinatura ativa para ver o que está incluso
           const activeSubscription = await prisma.subscription.findFirst({
@@ -245,12 +245,10 @@ export async function PATCH(
         if (isSubscriber) {
           commissionAmount = (workedHours * barber.hourlyRate);
         } else {
-          // Se houve valor manual, a base é (Total Manual - Total Produtos)
-          // Se não, usa o Total de Serviços de tabela
-          const commissionBase = (manualTotalAmount !== undefined && manualTotalAmount !== null)
-            ? Math.max(0, manualTotalAmount - productsTotal)
-            : servicesTotal;
-
+          const finalTotalAmount = updateData.totalAmount !== undefined
+            ? updateData.totalAmount
+            : currentAppointment.totalAmount;
+          const commissionBase = Math.max(0, finalTotalAmount - productsTotal);
           commissionAmount = (commissionBase * barber.commissionRate) / 100;
         }
       }

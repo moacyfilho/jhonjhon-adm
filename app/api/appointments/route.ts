@@ -320,8 +320,9 @@ export async function POST(request: NextRequest) {
       if (isSubscriptionAppointment) {
         commissionAmount = workedHours * barber.hourlyRate;
       } else {
-        // Comissão baseada no total de serviços (usando preços customizados)
-        commissionAmount = (servicesTotal * barber.commissionRate) / 100;
+        // Comissão baseada no valor líquido (Total Final - Produtos)
+        const commissionBase = Math.max(0, finalTotalAmount - productsTotal);
+        commissionAmount = (commissionBase * barber.commissionRate) / 100;
       }
     }
 
