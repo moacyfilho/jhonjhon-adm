@@ -60,7 +60,15 @@ export async function GET(request: NextRequest) {
     const appointments = await prisma.appointment.findMany({
       where,
       include: {
-        client: true,
+        client: {
+          include: {
+            subscriptions: {
+              where: { status: 'ACTIVE' },
+              take: 1,
+              orderBy: { createdAt: 'desc' },
+            }
+          }
+        },
         barber: true,
         services: {
           include: {
@@ -424,7 +432,6 @@ export async function POST(request: NextRequest) {
             servicePrice: appointment.totalAmount,
             barberName: appointment.barber.name,
             barberPhone: appointment.barber.phone,
-            scheduledDate: appointment.date,
             scheduledDate: appointment.date,
             bookingId: appointment.id,
           });

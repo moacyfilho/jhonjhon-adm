@@ -28,11 +28,19 @@ interface Barber {
   hourlyRate: number;
 }
 
+interface ClientSubscription {
+  id: string;
+  planName: string;
+  servicesIncluded: string | null; // JSON: {"services":["Corte","Barba"]} ou string CSV
+  status: string;
+}
+
 interface Client {
   id: string;
   name: string;
   phone: string;
   isSubscriber?: boolean;
+  subscriptions?: ClientSubscription[];
 }
 
 interface Service {
@@ -129,6 +137,41 @@ const formatCurrency = (value: number) => {
   }).format(value);
 };
 
+/**
+ * Parseia o campo servicesIncluded da assinatura e retorna lista normalizada de serviços.
+ * Suporta dois formatos:
+ *   - JSON: {"services":["Corte","Barba"]}
+ *   - CSV legado: "Corte, Barba, pezinho"
+ * Retorna array em minúsculas para comparação case-insensitive.
+ */
+function getSubscriptionIncludedServices(client: Client): string[] {
+  const sub = client.subscriptions?.[0];
+  if (!sub?.servicesIncluded) return [];
+
+  const raw = sub.servicesIncluded.trim();
+  try {
+    // Tenta parsear como JSON: {"services":["Corte","Barba"]}
+    const parsed = JSON.parse(raw);
+    if (parsed.services && Array.isArray(parsed.services)) {
+      return parsed.services.map((s: string) => s.trim().toLowerCase());
+    }
+  } catch {
+    // Fallback: CSV "Corte, Barba, pezinho"
+    return raw.split(',').map(s => s.trim().toLowerCase()).filter(Boolean);
+  }
+  return [];
+}
+
+/**
+ * Verifica se um serviço específico está incluído na assinatura do cliente.
+ * Compara o nome do serviço com os serviços incluídos na assinatura.
+ */
+function isServiceIncludedInSubscription(serviceName: string, includedServices: string[]): boolean {
+  if (includedServices.length === 0) return false;
+  const lower = serviceName.toLowerCase();
+  return includedServices.some(inc => lower.includes(inc) || inc.includes(lower));
+}
+
 // Componente: Dialog de Finalização de Atendimento com Venda de Produtos
 function CompletionDialog({
   appointment,
@@ -160,13 +203,25 @@ function CompletionDialog({
   const [manualTotal, setManualTotal] = useState<number | null>(null);
   const [isEditingTotal, setIsEditingTotal] = useState(false);
 
-  const isSub = (appointment.isSubscriptionAppointment || appointment.client.isSubscriber) &&
-    appointment.services.some(s => s.service.name.toLowerCase().includes('corte'));
+  const isSubscriber = appointment.isSubscriptionAppointment || appointment.client.isSubscriber;
 
-  // Calcular total de serviços baseando-se no total salvo menos produtos
-  // Isso preserva descontos manuais dados anteriormente
+  // Serviços incluídos na assinatura do cliente (ex: ["corte", "barba"])
+  const includedServices = isSubscriber ? getSubscriptionIncludedServices(appointment.client) : [];
+
+  // isSub = true se assinante E tem algum serviço coberto pela assinatura
+  const isSub = isSubscriber &&
+    appointment.services.some(s => isServiceIncludedInSubscription(s.service.name, includedServices));
+
+  // Calcular total de serviços:
+  // - Para assinantes: somente serviços que NÃO estão incluídos na assinatura
+  // - Para não-assinantes: totalAmount salvo menos produtos anteriores
   const originalProductsTotal = appointment.products?.reduce((sum, p) => sum + (p.totalPrice || 0), 0) || 0;
-  const servicesTotal = Math.max(0, (appointment.totalAmount || 0) - originalProductsTotal);
+  const servicesTotal = isSubscriber
+    ? appointment.services.reduce((sum, s) => {
+      const isIncluded = isServiceIncludedInSubscription(s.service.name, includedServices);
+      return sum + (isIncluded ? 0 : (s.service.price || 0));
+    }, 0)
+    : Math.max(0, (appointment.totalAmount || 0) - originalProductsTotal);
 
   const productsTotal = selectedProducts.reduce((sum, p) => sum + (p.unitPrice * p.quantity), 0);
   const grandTotal = servicesTotal + productsTotal;
@@ -174,16 +229,13 @@ function CompletionDialog({
   // Final total display (with potential override)
   const finalTotalToPay = manualTotal !== null ? manualTotal : grandTotal;
 
-  // Robust commission calculation
-  const isSubForComission = appointment.isSubscriptionAppointment || appointment.client.isSubscriber;
-
   // Base de cálculo para comissão (Apenas Serviços)
   // Se houver valor manual, tentamos isolar a parte dos serviços subtraindo os produtos
   const commissionBase = manualTotal !== null
     ? Math.max(0, manualTotal - productsTotal)
     : servicesTotal;
 
-  const commissionAmount = isSubForComission
+  const commissionAmount = isSubscriber
     ? (() => {
       // Para assinantes: mantém lógica de valor por hora apenas sobre o tempo de serviço
       const totalMinutes = appointment.services.reduce((sum, s) => sum + (s.service.duration || 0), 0);
@@ -235,7 +287,7 @@ function CompletionDialog({
                 <span className="text-muted-foreground">Serviços:</span>
                 <ul className="mt-1">
                   {appointment.services.map((s) => {
-                    const isExempt = isSub && s.service.name.toLowerCase().includes('corte');
+                    const isExempt = isSubscriber && isServiceIncludedInSubscription(s.service.name, includedServices);
                     return (
                       <li key={s.service.id} className="flex justify-between">
                         <div className="flex flex-col">
@@ -433,9 +485,9 @@ function CompletionDialog({
               <div className="flex justify-between pt-2 border-t border-border mt-2">
                 <div className="flex flex-col">
                   <span className="text-muted-foreground text-[11px]">
-                    {isSubForComission ? 'Comissão (Valor Fixo por Hora)' : `Comissão (${appointment.barber.commissionRate}%)`}
+                    {isSubscriber ? 'Comissão (Valor Fixo por Hora)' : `Comissão (${appointment.barber.commissionRate}%)`}
                   </span>
-                  {isSubForComission && (
+                  {isSubscriber && (
                     <span className="text-[9px] text-muted-foreground leading-none">
                       Ref: {appointment.barber.hourlyRate || 0}/hora
                     </span>
@@ -813,7 +865,7 @@ export default function AgendaPage() {
     }
 
     setPaymentMethod(appointment.paymentMethod || 'CASH');
-    setCompletionNotes(appointment.observations || '');
+    setCompletionNotes(appointment.notes || '');
   };
 
   const handleReopenAppointment = async (id: string) => {
@@ -844,7 +896,16 @@ export default function AgendaPage() {
     if (!completionDialog) return;
 
     // Calcular totais ANTES de salvar
-    const servicesTotal = completionDialog.totalAmount;
+    // Para assinantes: zerar serviços incluídos na assinatura (corte, barba, ou ambos)
+    const isSub = completionDialog.isSubscriptionAppointment || completionDialog.client.isSubscriber;
+    const includedInSub = isSub ? getSubscriptionIncludedServices(completionDialog.client) : [];
+    const servicesTotal = isSub
+      ? completionDialog.services.reduce((sum, s) => {
+        const isIncluded = isServiceIncludedInSubscription(s.service.name, includedInSub);
+        return sum + (isIncluded ? 0 : (s.service.price || 0));
+      }, 0)
+      : completionDialog.totalAmount;
+
     const productsTotal = selectedProducts.reduce((sum, p) => sum + (p.unitPrice * p.quantity), 0);
     const grandTotalCalculation = servicesTotal + productsTotal;
     const finalTotalToSave = manualGrandTotal !== undefined ? manualGrandTotal : grandTotalCalculation;
@@ -934,7 +995,6 @@ export default function AgendaPage() {
 
       // 5. Comissão já é calculada e salva automaticamente pelo endpoint PATCH /api/appointments
       // mantemos o cálculo aqui apenas para exibir no toast
-      const isSub = completionDialog.isSubscriptionAppointment || completionDialog.client.isSubscriber;
 
       const commissionAmount = isSub
         ? (() => {
