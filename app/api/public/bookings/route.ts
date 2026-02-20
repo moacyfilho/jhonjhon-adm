@@ -60,6 +60,7 @@ export async function POST(request: NextRequest) {
     }
 
     // Se barbeiro foi especificado, verificar se existe e está ativo
+    // Se não foi especificado, atribuir o barbeiro principal (Jhon Jhon) para aparecer na agenda
     if (barberId) {
       const barber = await prisma.barber.findUnique({
         where: { id: barberId },
@@ -70,6 +71,15 @@ export async function POST(request: NextRequest) {
           { error: 'Barbeiro não encontrado ou inativo' },
           { status: 404 }
         );
+      }
+    } else {
+      // Atribuir o primeiro barbeiro ativo como padrão para garantir exibição na agenda
+      const defaultBarber = await prisma.barber.findFirst({
+        where: { isActive: true },
+        orderBy: { name: 'asc' },
+      });
+      if (defaultBarber) {
+        barberId = defaultBarber.id;
       }
     }
 

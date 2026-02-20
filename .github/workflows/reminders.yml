@@ -1,0 +1,24 @@
+name: Enviar Lembretes WhatsApp (1h antes)
+
+on:
+  schedule:
+    # Roda a cada hora, nos minutos :00 (UTC)
+    # Manaus é UTC-4, então 14:00 UTC = 10:00 Manaus
+    - cron: '0 * * * *'
+  workflow_dispatch: # Permite disparo manual para teste
+
+jobs:
+  send-reminders:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Chamar endpoint de lembretes
+        run: |
+          echo "Chamando endpoint de lembretes..."
+          RESPONSE=$(curl -s -o /dev/null -w "%{http_code}" \
+            "https://jhonjhonbarbearia.com.br/api/cron/reminders?secret=${{ secrets.CRON_SECRET }}")
+          echo "HTTP Status: $RESPONSE"
+          if [ "$RESPONSE" != "200" ]; then
+            echo "Erro: endpoint retornou $RESPONSE"
+            exit 1
+          fi
+          echo "Lembretes enviados com sucesso!"
