@@ -208,9 +208,16 @@ function CompletionDialog({
   // Serviços incluídos na assinatura do cliente (ex: ["corte", "barba"])
   const includedServices = isSubscriber ? getSubscriptionIncludedServices(appointment.client) : [];
 
+  // Helper: verifica se serviço está incluso, com fallback legado quando sem dados de assinatura
+  const isServiceExempt = (serviceName: string) => {
+    if (!isSubscriber) return false;
+    if (includedServices.length > 0) return isServiceIncludedInSubscription(serviceName, includedServices);
+    return serviceName.toLowerCase().includes('corte'); // fallback legado
+  };
+
   // isSub = true se assinante E tem algum serviço coberto pela assinatura
   const isSub = isSubscriber &&
-    appointment.services.some(s => isServiceIncludedInSubscription(s.service.name, includedServices));
+    appointment.services.some(s => isServiceExempt(s.service.name));
 
   // Calcular total de serviços:
   // - Para assinantes: somente serviços que NÃO estão incluídos na assinatura
@@ -218,8 +225,7 @@ function CompletionDialog({
   const originalProductsTotal = appointment.products?.reduce((sum, p) => sum + (p.totalPrice || 0), 0) || 0;
   const servicesTotal = isSubscriber
     ? appointment.services.reduce((sum, s) => {
-      const isIncluded = isServiceIncludedInSubscription(s.service.name, includedServices);
-      return sum + (isIncluded ? 0 : (s.service.price || 0));
+      return sum + (isServiceExempt(s.service.name) ? 0 : (s.service.price || 0));
     }, 0)
     : Math.max(0, (appointment.totalAmount || 0) - originalProductsTotal);
 
@@ -287,7 +293,7 @@ function CompletionDialog({
                 <span className="text-muted-foreground">Serviços:</span>
                 <ul className="mt-1">
                   {appointment.services.map((s) => {
-                    const isExempt = isSubscriber && isServiceIncludedInSubscription(s.service.name, includedServices);
+                    const isExempt = isServiceExempt(s.service.name);
                     return (
                       <li key={s.service.id} className="flex justify-between">
                         <div className="flex flex-col">
@@ -908,10 +914,14 @@ export default function AgendaPage() {
     // Para assinantes: zerar serviços incluídos na assinatura (corte, barba, ou ambos)
     const isSub = completionDialog.isSubscriptionAppointment || completionDialog.client.isSubscriber;
     const includedInSub = isSub ? getSubscriptionIncludedServices(completionDialog.client) : [];
+    const isSubServiceExempt = (name: string) => {
+      if (!isSub) return false;
+      if (includedInSub.length > 0) return isServiceIncludedInSubscription(name, includedInSub);
+      return name.toLowerCase().includes('corte'); // fallback legado
+    };
     const servicesTotal = isSub
       ? completionDialog.services.reduce((sum, s) => {
-        const isIncluded = isServiceIncludedInSubscription(s.service.name, includedInSub);
-        return sum + (isIncluded ? 0 : (s.service.price || 0));
+        return sum + (isSubServiceExempt(s.service.name) ? 0 : (s.service.price || 0));
       }, 0)
       : completionDialog.totalAmount;
 
