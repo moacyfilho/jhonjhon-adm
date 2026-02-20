@@ -1278,10 +1278,12 @@ export default function AgendaPage() {
                 weekDays={getWeekDays()}
                 barbers={barbers}
                 appointments={filteredAppointments}
+                scheduleBlocks={scheduleBlocks}
                 timeSlots={TIME_SLOTS}
                 getBarberColor={getBarberColor}
                 renderAppointmentCard={renderAppointmentCard}
                 setEditDialog={setEditDialog}
+                handleDeleteBlock={handleDeleteBlock}
               />
             )}
           </Card>
@@ -1553,10 +1555,12 @@ function WeekGridView({
   weekDays,
   barbers,
   appointments,
+  scheduleBlocks,
   timeSlots,
   getBarberColor,
   renderAppointmentCard,
   setEditDialog,
+  handleDeleteBlock,
 }: any) {
   return (
     <div className="min-w-[1200px]">
@@ -1593,7 +1597,7 @@ function WeekGridView({
             {weekDays.map((day: Date) => {
               const dateStr = format(day, 'yyyy-MM-dd');
 
-              // Agrupar agendamentos deste horário/dia por barbeiro
+              // Agendamentos deste horário/dia
               const dayTimeAppointments = appointments.filter((a: Appointment) => {
                 const aDate = new Date(a.date);
                 try {
@@ -1605,8 +1609,41 @@ function WeekGridView({
                 }
               });
 
+              // Bloqueios deste horário/dia
+              const dayTimeBlocks = (scheduleBlocks || []).filter((b: ScheduleBlock) => {
+                const blockDate = format(new Date(b.date), 'yyyy-MM-dd');
+                return blockDate === dateStr && time >= b.startTime && time < b.endTime;
+              });
+
               return (
                 <div key={`${dateStr}-${time}`} className="border border-border rounded p-1 min-h-[60px] space-y-1">
+                  {dayTimeBlocks.map((block: ScheduleBlock) => (
+                    <div key={block.id} className="relative p-1 rounded border-l-4 border-red-500 bg-red-50 text-xs group">
+                      <div className="flex items-center gap-1">
+                        <Ban className="w-3 h-3 text-red-600 flex-shrink-0" />
+                        <span className="text-[10px] font-bold text-red-700 truncate">
+                          {block.barber?.name || 'Bloqueado'}
+                        </span>
+                      </div>
+                      {block.reason && (
+                        <div className="text-[10px] text-gray-600 truncate" title={block.reason}>
+                          {block.reason}
+                        </div>
+                      )}
+                      <button
+                        onClick={(e) => {
+                          e.stopPropagation();
+                          if (window.confirm('Remover este bloqueio?')) {
+                            handleDeleteBlock(block.id);
+                          }
+                        }}
+                        className="absolute top-1 right-1 opacity-0 group-hover:opacity-100 transition-opacity bg-red-500 hover:bg-red-600 text-white rounded-full p-0.5"
+                        title="Remover bloqueio"
+                      >
+                        <XCircle className="w-3 h-3" />
+                      </button>
+                    </div>
+                  ))}
                   {dayTimeAppointments.map((appointment: Appointment) => (
                     <div key={appointment.id}>
                       {renderAppointmentCard(appointment)}
