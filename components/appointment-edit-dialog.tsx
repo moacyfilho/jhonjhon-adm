@@ -18,6 +18,32 @@ interface Client {
   name: string;
   phone: string;
   isSubscriber?: boolean;
+  servicesIncluded?: string | null;
+}
+
+// Retorna lista de nomes de serviços incluídos na assinatura (lowercase)
+function getSubscriptionIncludedServices(client: Client): string[] {
+  const raw = client.servicesIncluded;
+  if (!raw) return [];
+  try {
+    const parsed = JSON.parse(raw);
+    if (parsed && parsed.services && Array.isArray(parsed.services)) {
+      return parsed.services.map((s: string) => s.trim().toLowerCase());
+    }
+  } catch {
+    return raw.split(/[,+]/).map((s: string) => s.trim().toLowerCase()).filter(Boolean);
+  }
+  return [];
+}
+
+// Verifica se um serviço está incluído na assinatura
+function isServiceIncludedInSubscription(serviceName: string, includedServices: string[]): boolean {
+  if (includedServices.length === 0) {
+    // Sem lista definida: padrão legado — só 'corte' é isento
+    return serviceName.toLowerCase().includes('corte');
+  }
+  const svcName = serviceName.toLowerCase();
+  return includedServices.some(inc => svcName.includes(inc) || inc.includes(svcName));
 }
 
 interface Barber {
@@ -153,13 +179,15 @@ export function AppointmentEditDialog({
             const subRes = await fetch(`/api/subscriptions?clientId=${client.id}`);
             if (subRes.ok) {
               const subs = await subRes.json();
-              const hasActiveSubscription = subs.some((s: any) => s.status === 'ACTIVE');
-              return { ...client, isSubscriber: hasActiveSubscription };
+              const activeSub = subs.find((s: any) => s.status === 'ACTIVE');
+              if (activeSub) {
+                return { ...client, isSubscriber: true, servicesIncluded: activeSub.servicesIncluded ?? null };
+              }
             }
           } catch (e) {
             console.error('Error checking subscription:', e);
           }
-          return { ...client, isSubscriber: false };
+          return { ...client, isSubscriber: false, servicesIncluded: null };
         })
       );
 
@@ -259,15 +287,16 @@ export function AppointmentEditDialog({
     0
   );
 
-  // Para assinantes, sugerir o cálculo com Corte isento
+  // Para assinantes, sugerir o cálculo com serviços cobertos isentos
   const client = getClient();
   const isSubscriber = client?.isSubscriber || false;
 
   let suggestedGrandTotal = servicesTotal + productsTotal;
-  if (isSubscriber) {
+  if (isSubscriber && client) {
+    const includedServices = getSubscriptionIncludedServices(client);
     const nonSubscriptionServicesTotal = selectedServices.reduce((sum, item) => {
       const service = getService(item.serviceId);
-      const isIncluded = service?.name?.toLowerCase().includes('corte');
+      const isIncluded = isServiceIncludedInSubscription(service?.name || '', includedServices);
       return isIncluded ? sum : sum + item.price;
     }, 0);
     suggestedGrandTotal = nonSubscriptionServicesTotal + productsTotal;
