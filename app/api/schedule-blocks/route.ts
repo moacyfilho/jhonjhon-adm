@@ -94,22 +94,48 @@ export async function POST(request: NextRequest) {
       );
     }
 
-    // Verificar conflitos com agendamentos existentes
+    // Verificar conflitos com agendamentos existentes no intervalo de horário
     const existingAppointments = await prisma.appointment.findMany({
       where: {
         barberId,
+        status: { not: 'CANCELLED' },
         date: {
           gte: new Date(date + 'T00:00:00'),
           lt: new Date(date + 'T23:59:59'),
         },
       },
+      include: {
+        services: { include: { service: true } },
+      },
     });
 
-    if (existingAppointments.length > 0) {
+    const getMinutes = (t: string) => {
+      const [h, m] = t.split(':').map(Number);
+      return h * 60 + m;
+    };
+    const blockStart = getMinutes(startTime);
+    const blockEnd = getMinutes(endTime);
+
+    const conflicting = existingAppointments.filter(appt => {
+      const apptTimeStr = new Intl.DateTimeFormat('en-CA', {
+        timeZone: 'America/Manaus',
+        hour: '2-digit',
+        minute: '2-digit',
+        hour12: false,
+      }).format(new Date(appt.date));
+      const duration = appt.services.reduce(
+        (sum: number, s: any) => sum + (s.service?.duration || 30), 0
+      );
+      const apptStart = getMinutes(apptTimeStr);
+      const apptEnd = apptStart + duration;
+      return apptStart < blockEnd && apptEnd > blockStart;
+    });
+
+    if (conflicting.length > 0) {
       return NextResponse.json(
         {
-          error: 'Não é possível bloquear este horário pois existem agendamentos confirmados',
-          conflicts: existingAppointments.length,
+          error: 'Não é possível bloquear este horário pois existem agendamentos no período',
+          conflicts: conflicting.length,
         },
         { status: 409 }
       );
