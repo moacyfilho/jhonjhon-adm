@@ -1120,7 +1120,11 @@ export default function AgendaPage() {
         <div className="text-[10px] font-medium mt-1">
           {formatCurrency(
             (isSubscriber && appointment.status !== 'COMPLETED')
-              ? appointment.services.reduce((sum, s) => s.service.name.toLowerCase().includes('corte') ? sum : sum + s.service.price, 0)
+              ? (() => {
+                  const inc = getSubscriptionIncludedServices(appointment.client);
+                  return appointment.services.reduce((sum, s) =>
+                    isServiceIncludedInSubscription(s.service.name, inc) ? sum : sum + s.service.price, 0);
+                })()
               : appointment.totalAmount
           )}
         </div>
