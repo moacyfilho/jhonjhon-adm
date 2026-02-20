@@ -174,21 +174,35 @@ export async function PATCH(
         productsTotal = currentAppointment.products.reduce((sum, p) => sum + p.totalPrice, 0);
       }
 
-      // Verificar assinatura
-      const isSubscriber = currentAppointment.isSubscriptionAppointment;
+      // Verificar assinatura: checa o flag do agendamento E a assinatura ativa do cliente
+      let isSubscriber = currentAppointment.isSubscriptionAppointment;
+      let activeSubscription = null;
+
+      if (areServicesChanging || areProductsChanging) {
+        activeSubscription = await prisma.subscription.findFirst({
+          where: { clientId: currentAppointment.clientId, status: 'ACTIVE' },
+        });
+        // Se o cliente tem assinatura ativa, corrige o flag mesmo que estivesse errado
+        if (activeSubscription && !isSubscriber) {
+          isSubscriber = true;
+          updateData.isSubscriptionAppointment = true;
+        }
+      }
 
       // Final total amount
       if (manualTotalAmount !== undefined && manualTotalAmount !== null) {
         updateData.totalAmount = manualTotalAmount;
       } else if (areServicesChanging || areProductsChanging) {
         if (isSubscriber) {
-          // Buscar a assinatura ativa para ver o que está incluso
-          const activeSubscription = await prisma.subscription.findFirst({
-            where: {
-              clientId: currentAppointment.clientId,
-              status: 'ACTIVE',
-            },
-          });
+          // Usar a assinatura ativa já buscada acima (evita query duplicada)
+          if (!activeSubscription) {
+            activeSubscription = await prisma.subscription.findFirst({
+              where: {
+                clientId: currentAppointment.clientId,
+                status: 'ACTIVE',
+              },
+            });
+          }
 
           const servicesIncludedStr = activeSubscription?.servicesIncluded || "";
 
