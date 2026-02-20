@@ -1315,6 +1315,10 @@ export default function AgendaPage() {
               fetchData();
             }}
             onReopen={handleReopenAppointment}
+            onEdit={(appt) => {
+              setDetailsDialog(null);
+              setEditDialog({ appointment: appt as any, isNew: false });
+            }}
           />
         )}
 
@@ -1774,6 +1778,7 @@ function AppointmentDetailsDialog({
   onDelete,
   onUpdate,
   onReopen,
+  onEdit,
 }: {
   appointment: Appointment;
   onClose: () => void;
@@ -1781,6 +1786,7 @@ function AppointmentDetailsDialog({
   onDelete: (id: string) => void;
   onUpdate: () => void;
   onReopen?: (id: string) => void;
+  onEdit?: (appointment: Appointment) => void;
 }) {
   const [isEditingServices, setIsEditingServices] = useState(false);
   const [isEditingPayment, setIsEditingPayment] = useState(false);
@@ -2345,6 +2351,19 @@ function AppointmentDetailsDialog({
             <Button variant="outline" onClick={onClose}>
               Fechar
             </Button>
+            {onEdit && (
+              <Button
+                variant="outline"
+                onClick={() => {
+                  onEdit(appointment);
+                  onClose();
+                }}
+                className="border-teal-500 text-teal-600 hover:bg-teal-50"
+              >
+                <Edit2 className="w-4 h-4 mr-2" />
+                Editar Atendimento
+              </Button>
+            )}
             {isCompleted && onReopen && (
               <Button
                 variant="outline"

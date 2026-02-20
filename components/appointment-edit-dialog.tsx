@@ -1,7 +1,7 @@
 'use client';
 
 import { useState, useEffect } from 'react';
-import { User, Phone, Award, Plus, Minus, Edit2, Trash2, CheckCircle, Search } from 'lucide-react';
+import { User, Phone, Award, Plus, Minus, Edit2, Trash2, CheckCircle, Search, Tag } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter } from '@/components/ui/dialog';
 import { Input } from '@/components/ui/input';
@@ -122,8 +122,8 @@ export function AppointmentEditDialog({
   // UI States
   const [activeTab, setActiveTab] = useState<'services' | 'products'>('services');
   const [clientSearch, setClientSearch] = useState('');
-  const [manualTotal, setManualTotal] = useState<number | null>(appointment?.totalAmount || null);
-  const [isEditingTotal, setIsEditingTotal] = useState(false);
+  const [discountType, setDiscountType] = useState<'percent' | 'amount'>('percent');
+  const [discountValue, setDiscountValue] = useState<number>(0);
 
   useEffect(() => {
     fetchData();
@@ -274,6 +274,12 @@ export function AppointmentEditDialog({
   }
 
   const grandTotal = suggestedGrandTotal;
+  const discountAmount = discountValue > 0
+    ? (discountType === 'percent'
+      ? Math.min(grandTotal * discountValue / 100, grandTotal)
+      : Math.min(discountValue, grandTotal))
+    : 0;
+  const finalTotal = Math.max(0, grandTotal - discountAmount);
 
   const barber = getBarber();
   const commissionAmount = barber ? (servicesTotal * barber.commissionRate) / 100 : 0;
@@ -315,8 +321,8 @@ export function AppointmentEditDialog({
           quantity: p.quantity,
           unitPrice: p.unitPrice,
         })),
-        totalAmount: manualTotal !== null ? manualTotal : undefined,
-        paymentMethod: isSubscriber && (manualTotal === null || manualTotal === 0) ? 'PIX' : paymentMethod,
+        totalAmount: discountValue > 0 ? finalTotal : undefined,
+        paymentMethod: isSubscriber && finalTotal === 0 ? 'PIX' : paymentMethod,
         notes: observations || null,
         onlineBookingId: appointment?.onlineBookingId || null,
       };
@@ -713,58 +719,51 @@ export function AppointmentEditDialog({
                   </div>
                 )}
 
+                {/* Desconto */}
+                <div className="flex items-center gap-2 pt-1">
+                  <Tag className="w-4 h-4 text-teal-600 shrink-0" />
+                  <span className="text-sm flex-1">Desconto:</span>
+                  <Select value={discountType} onValueChange={(v) => setDiscountType(v as 'percent' | 'amount')}>
+                    <SelectTrigger className="w-20 h-8 text-xs bg-white">
+                      <SelectValue />
+                    </SelectTrigger>
+                    <SelectContent>
+                      <SelectItem value="percent">%</SelectItem>
+                      <SelectItem value="amount">R$</SelectItem>
+                    </SelectContent>
+                  </Select>
+                  <Input
+                    type="number"
+                    value={discountValue || ''}
+                    onChange={(e) => setDiscountValue(parseFloat(e.target.value) || 0)}
+                    className="w-24 h-8 text-sm text-right bg-white"
+                    placeholder="0"
+                    step="0.01"
+                    min="0"
+                    max={discountType === 'percent' ? 100 : grandTotal}
+                  />
+                </div>
+                {discountAmount > 0 && (
+                  <div className="flex justify-between text-sm text-green-700 font-medium">
+                    <span>Desconto{discountType === 'percent' ? ` (${discountValue}%)` : ''}:</span>
+                    <span>- {formatCurrency(discountAmount)}</span>
+                  </div>
+                )}
+
                 <Separator />
 
                 <div className="flex justify-between items-center py-1">
                   <div className="flex flex-col">
                     <span className="font-semibold">Valor a Pagar</span>
-                    <span className="text-[10px] text-muted-foreground">Original: {formatCurrency(grandTotal)}</span>
-                  </div>
-                  <div className="flex items-center gap-2">
-                    {manualTotal === null ? (
-                      <div className="flex items-center gap-2">
-                        <span className="font-bold text-lg text-teal-700">{formatCurrency(grandTotal)}</span>
-                        <Button
-                          variant="ghost"
-                          size="icon"
-                          className="h-8 w-8 text-teal-600"
-                          onClick={() => {
-                            setManualTotal(grandTotal);
-                            setIsEditingTotal(true);
-                          }}
-                        >
-                          <Edit2 className="w-4 h-4" />
-                        </Button>
-                      </div>
-                    ) : (
-                      <div className="flex items-center gap-2">
-                        <div className="relative group">
-                          <Input
-                            type="number"
-                            value={manualTotal}
-                            onChange={(e) => setManualTotal(parseFloat(e.target.value) || 0)}
-                            className="w-32 h-9 text-right font-bold pr-8 border-teal-300 focus-visible:ring-teal-500"
-                            step="0.01"
-                            autoFocus
-                          />
-                          <span className="absolute left-2 top-2 text-xs text-muted-foreground">R$</span>
-                        </div>
-                        <Button
-                          variant="ghost"
-                          size="icon"
-                          className="h-8 w-8 text-red-500 hover:text-red-700 hover:bg-red-50"
-                          onClick={() => setManualTotal(null)}
-                          title="Restaurar valor original"
-                        >
-                          <Trash2 className="w-4 h-4" />
-                        </Button>
-                      </div>
+                    {discountAmount > 0 && (
+                      <span className="text-[10px] text-muted-foreground line-through">{formatCurrency(grandTotal)}</span>
                     )}
                   </div>
+                  <span className="font-bold text-lg text-teal-700">{formatCurrency(finalTotal)}</span>
                 </div>
               </div>
 
-              {client?.isSubscriber && manualTotal === null && grandTotal === 0 && (
+              {client?.isSubscriber && grandTotal === 0 && (
                 <div className="bg-yellow-50 border border-yellow-300 rounded p-3">
                   <p className="text-sm text-yellow-700 flex items-center gap-2">
                     <Award className="w-4 h-4" />
@@ -774,7 +773,7 @@ export function AppointmentEditDialog({
               )}
 
               {/* Forma de Pagamento - Mostrar se valor > 0 ou se o usuário editou o valor */}
-              {(grandTotal > 0 || (manualTotal !== null && manualTotal > 0)) && (
+              {finalTotal > 0 && (
                 <div className="space-y-2">
                   <Label htmlFor="paymentMethod" className="text-sm">Forma de pagamento</Label>
                   <Select value={paymentMethod} onValueChange={setPaymentMethod}>
