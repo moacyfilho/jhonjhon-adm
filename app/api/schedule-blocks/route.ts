@@ -101,8 +101,8 @@ export async function POST(request: NextRequest) {
         barberId,
         status: { not: 'CANCELLED' },
         date: {
-          gte: new Date(date + 'T00:00:00'),
-          lt: new Date(date + 'T23:59:59'),
+          gte: getManausStartOfDay(date),
+          lte: getManausEndOfDay(date),
         },
       },
       include: {
@@ -145,7 +145,7 @@ export async function POST(request: NextRequest) {
     const block = await prisma.scheduleBlock.create({
       data: {
         barberId,
-        date: new Date(date),
+        date: getManausStartOfDay(date),
         startTime,
         endTime,
         reason,
