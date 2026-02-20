@@ -2,6 +2,7 @@ import { NextRequest, NextResponse } from 'next/server';
 import { getServerSession } from 'next-auth';
 import { authOptions } from '@/lib/auth/auth-options';
 import { prisma } from '@/lib/db';
+import { getManausStartOfDay, getManausEndOfDay } from '@/lib/timezone';
 
 export const dynamic = 'force-dynamic';
 
@@ -26,8 +27,8 @@ export async function GET(request: NextRequest) {
 
     if (startDate && endDate) {
       whereClause.date = {
-        gte: new Date(startDate),
-        lte: new Date(endDate),
+        gte: getManausStartOfDay(startDate),
+        lte: getManausEndOfDay(endDate),
       };
     }
 

@@ -1520,9 +1520,9 @@ function DayGridView({
                 });
               }
 
-              // Verificar se há bloqueio neste horário
+              // Verificar se há bloqueio neste horário (usando fuso de Manaus para comparar a data)
               const block = scheduleBlocks.find((b: ScheduleBlock) => {
-                const blockDate = format(new Date(b.date), 'yyyy-MM-dd');
+                const blockDate = new Intl.DateTimeFormat('en-CA', { timeZone: 'America/Manaus' }).format(new Date(b.date));
                 return blockDate === dateStr && b.barberId === barber.id && time >= b.startTime && time < b.endTime;
               });
 
@@ -1609,9 +1609,9 @@ function WeekGridView({
                 }
               });
 
-              // Bloqueios deste horário/dia
+              // Bloqueios deste horário/dia (usando fuso de Manaus para comparar a data)
               const dayTimeBlocks = (scheduleBlocks || []).filter((b: ScheduleBlock) => {
-                const blockDate = format(new Date(b.date), 'yyyy-MM-dd');
+                const blockDate = new Intl.DateTimeFormat('en-CA', { timeZone: 'America/Manaus' }).format(new Date(b.date));
                 return blockDate === dateStr && time >= b.startTime && time < b.endTime;
               });
 
