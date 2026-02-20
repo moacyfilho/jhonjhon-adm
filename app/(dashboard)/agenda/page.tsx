@@ -152,12 +152,12 @@ function getSubscriptionIncludedServices(client: Client): string[] {
   try {
     // Tenta parsear como JSON: {"services":["Corte","Barba"]}
     const parsed = JSON.parse(raw);
-    if (parsed.services && Array.isArray(parsed.services)) {
+    if (parsed && parsed.services && Array.isArray(parsed.services)) {
       return parsed.services.map((s: string) => s.trim().toLowerCase());
     }
   } catch {
-    // Fallback: CSV "Corte, Barba, pezinho"
-    return raw.split(',').map(s => s.trim().toLowerCase()).filter(Boolean);
+    // Fallback: CSV/+ separado "Corte de cabelo + Barba" ou "Corte, Barba"
+    return raw.split(/[,+]/).map(s => s.trim().toLowerCase()).filter(Boolean);
   }
   return [];
 }
@@ -2154,13 +2154,13 @@ function AppointmentDetailsDialog({
               <div className="space-y-2">
                 {(() => {
                   const isSubscriber = appointment.isSubscriptionAppointment || appointment.client.isSubscriber;
+                  const includedServices = isSubscriber ? getSubscriptionIncludedServices(appointment.client) : [];
                   let calculatedServicesTotal = 0;
 
                   return (
                     <>
                       {appointment.services.map((s) => {
-                        const sName = (s.service?.name || '').toLowerCase().trim();
-                        const isIncluded = isSubscriber && (sName.includes('corte') || sName === 'corte');
+                        const isIncluded = isSubscriber && isServiceIncludedInSubscription(s.service?.name || '', includedServices);
                         const price = Number(s.service?.price) || 0;
                         const displayPrice = isIncluded ? 0 : price;
                         calculatedServicesTotal += displayPrice;
@@ -2209,9 +2209,9 @@ function AppointmentDetailsDialog({
 
                     if (!isSubscriber) return Number(appointment.totalAmount) || 0;
 
+                    const subIncluded = getSubscriptionIncludedServices(appointment.client);
                     const servicesTotal = appointment.services.reduce((sum, s) => {
-                      const sName = (s.service?.name || '').toLowerCase().trim();
-                      const isIncluded = sName.includes('corte') || sName === 'corte';
+                      const isIncluded = isServiceIncludedInSubscription(s.service?.name || '', subIncluded);
                       return isIncluded ? sum : sum + (Number(s.service?.price) || 0);
                     }, 0);
                     const productsTotal = appointment.products?.reduce((sum, p) => sum + (Number(p.totalPrice) || 0), 0) || 0;
