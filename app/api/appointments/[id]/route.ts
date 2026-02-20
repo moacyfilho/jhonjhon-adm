@@ -211,12 +211,13 @@ export async function PATCH(
           if (servicesIncludedStr) {
             try {
               const parsed = JSON.parse(servicesIncludedStr);
-              if (parsed.services && Array.isArray(parsed.services)) {
+              // JSON.parse("null") retorna null — verificar antes de acessar .services
+              if (parsed && parsed.services && Array.isArray(parsed.services)) {
                 includedServices = parsed.services.map((s: string) => s.trim().toLowerCase());
               }
             } catch {
               // Legado: lista separada por vírgula ou '+'
-              includedServices = servicesIncludedStr.split(/[,+]/).map(s => s.trim().toLowerCase()).filter(s => s.length > 0);
+              includedServices = servicesIncludedStr.split(/[,+]/).map(s => s.trim().toLowerCase()).filter(s => s.length > 0 && s !== 'null');
             }
           }
 
@@ -235,8 +236,10 @@ export async function PATCH(
             let nonSubscriptionServicesTotal = 0;
             for (const item of servicesToCreate) {
               const dbService = dbServices.find(s => s.id === item.serviceId);
+              const svcName = dbService?.name.toLowerCase() || '';
               const isIncluded = includedServices.some(inc =>
-                dbService?.name.toLowerCase().includes(inc) || inc === dbService?.id
+                // Bidirecional: 'corte de cabelo'.includes('corte') OU 'corte'.includes('corte de cabelo')
+                svcName.includes(inc) || inc.includes(svcName) || inc === dbService?.id
               );
               if (!isIncluded) {
                 nonSubscriptionServicesTotal += item.price;
