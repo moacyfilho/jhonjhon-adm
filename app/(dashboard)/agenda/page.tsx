@@ -629,11 +629,25 @@ export default function AgendaPage() {
             : (booking.service?.price || 0);
 
           let billingTotal = totalAmount;
+          const bookingClient = {
+            id: booking.clientId || 'temp',
+            name: booking.clientName,
+            phone: booking.clientPhone,
+            isSubscriber: booking.isSubscriber,
+            subscriptions: booking.client?.subscriptions || [],
+          };
           if (booking.isSubscriber) {
-            const subServices = bookingServices.filter((s: any) =>
-              !(s.service?.name?.toLowerCase().trim().includes('corte'))
-            );
-            billingTotal = subServices.reduce((sum: number, s: any) => sum + (Number(s.service?.price) || 0), 0);
+            const inc = getSubscriptionIncludedServices(bookingClient);
+            if (inc.length > 0) {
+              billingTotal = bookingServices.reduce((sum: number, s: any) =>
+                isServiceIncludedInSubscription(s.service?.name || '', inc) ? sum : sum + (Number(s.service?.price) || 0), 0);
+            } else {
+              // Fallback legado: isenta apenas serviços com 'corte' no nome
+              const subServices = bookingServices.filter((s: any) =>
+                !(s.service?.name?.toLowerCase().trim().includes('corte'))
+              );
+              billingTotal = subServices.reduce((sum: number, s: any) => sum + (Number(s.service?.price) || 0), 0);
+            }
           }
 
           return {
@@ -646,12 +660,7 @@ export default function AgendaPage() {
             paymentMethod: 'A definir',
             notes: booking.observations,
             status: booking.status === 'CONFIRMED' ? 'SCHEDULED' : booking.status,
-            client: {
-              id: booking.clientId || 'temp',
-              name: booking.clientName,
-              phone: booking.clientPhone,
-              isSubscriber: booking.isSubscriber,
-            },
+            client: bookingClient,
             barber: booking.barber,
             services: bookingServices,
             isOnlineBooking: true,
@@ -1122,6 +1131,7 @@ export default function AgendaPage() {
             (isSubscriber && appointment.status !== 'COMPLETED')
               ? (() => {
                   const inc = getSubscriptionIncludedServices(appointment.client);
+                  if (inc.length === 0) return appointment.totalAmount;
                   return appointment.services.reduce((sum, s) =>
                     isServiceIncludedInSubscription(s.service.name, inc) ? sum : sum + s.service.price, 0);
                 })()

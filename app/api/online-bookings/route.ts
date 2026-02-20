@@ -52,7 +52,15 @@ export async function GET(request: NextRequest) {
           }
         },
         barber: true,
-        client: true,
+        client: {
+          include: {
+            subscriptions: {
+              where: { status: 'ACTIVE' },
+              take: 1,
+              orderBy: { createdAt: 'desc' },
+            }
+          }
+        },
       },
       orderBy: { scheduledDate: 'asc' },
     });
