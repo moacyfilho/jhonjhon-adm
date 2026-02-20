@@ -191,9 +191,20 @@ export async function PATCH(
           });
 
           const servicesIncludedStr = activeSubscription?.servicesIncluded || "";
-          const includedServices = servicesIncludedStr
-            ? servicesIncludedStr.split(',').map(s => s.trim().toLowerCase())
-            : [];
+
+          // Suporta formato JSON: {"services":["Corte","Barba"]} ou legado CSV: "Corte,Barba"
+          let includedServices: string[] = [];
+          if (servicesIncludedStr) {
+            try {
+              const parsed = JSON.parse(servicesIncludedStr);
+              if (parsed.services && Array.isArray(parsed.services)) {
+                includedServices = parsed.services.map((s: string) => s.trim().toLowerCase());
+              }
+            } catch {
+              // Legado: lista separada por vírgula ou '+'
+              includedServices = servicesIncludedStr.split(/[,+]/).map(s => s.trim().toLowerCase()).filter(s => s.length > 0);
+            }
+          }
 
           if (includedServices.length === 0) {
             // Padrão: Corte é isento

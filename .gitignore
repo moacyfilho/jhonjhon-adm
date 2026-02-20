@@ -56,3 +56,6 @@ uploads/
 Thumbs.db
 Desktop.ini
 .env.new
+
+# Local Netlify folder
+.netlify

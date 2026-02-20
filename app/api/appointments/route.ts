@@ -281,9 +281,20 @@ export async function POST(request: NextRequest) {
         // Se for assinante, verificar quais serviços estão cobertos
         // Se servicesIncluded for nulo ou vazio, tratamos como se cobrisse tudo (legado)
         const servicesIncludedStr = activeSubscription.servicesIncluded || "";
-        const includedServices = servicesIncludedStr
-          ? servicesIncludedStr.split(',').map(s => s.trim().toLowerCase())
-          : [];
+
+        // Suporta formato JSON: {"services":["Corte","Barba"]} ou legado CSV: "Corte,Barba"
+        let includedServices: string[] = [];
+        if (servicesIncludedStr) {
+          try {
+            const parsed = JSON.parse(servicesIncludedStr);
+            if (parsed.services && Array.isArray(parsed.services)) {
+              includedServices = parsed.services.map((s: string) => s.trim().toLowerCase());
+            }
+          } catch {
+            // Legado: lista separada por vírgula ou '+'
+            includedServices = servicesIncludedStr.split(/[,+]/).map(s => s.trim().toLowerCase()).filter(s => s.length > 0);
+          }
+        }
 
         if (includedServices.length === 0) {
           // Se não houver serviços listados, assume o padrão: Corte (ou 'corte') é isento
