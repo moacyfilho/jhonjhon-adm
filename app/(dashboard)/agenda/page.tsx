@@ -2169,12 +2169,18 @@ function AppointmentDetailsDialog({
                 {(() => {
                   const isSubscriber = appointment.isSubscriptionAppointment || appointment.client.isSubscriber;
                   const includedServices = isSubscriber ? getSubscriptionIncludedServices(appointment.client) : [];
+                  // Fallback legado quando não há dados de assinatura carregados (ex: online bookings sem clientId)
+                  const noSubData = isSubscriber && includedServices.length === 0;
                   let calculatedServicesTotal = 0;
 
                   return (
                     <>
                       {appointment.services.map((s) => {
-                        const isIncluded = isSubscriber && isServiceIncludedInSubscription(s.service?.name || '', includedServices);
+                        const isIncluded = isSubscriber && (
+                          includedServices.length > 0
+                            ? isServiceIncludedInSubscription(s.service?.name || '', includedServices)
+                            : (s.service?.name || '').toLowerCase().includes('corte')
+                        );
                         const price = Number(s.service?.price) || 0;
                         const displayPrice = isIncluded ? 0 : price;
                         calculatedServicesTotal += displayPrice;
@@ -2224,6 +2230,9 @@ function AppointmentDetailsDialog({
                     if (!isSubscriber) return Number(appointment.totalAmount) || 0;
 
                     const subIncluded = getSubscriptionIncludedServices(appointment.client);
+                    // Sem dados de assinatura: usar totalAmount pré-calculado (ex: online bookings sem clientId)
+                    if (subIncluded.length === 0) return Number(appointment.totalAmount) || 0;
+
                     const servicesTotal = appointment.services.reduce((sum, s) => {
                       const isIncluded = isServiceIncludedInSubscription(s.service?.name || '', subIncluded);
                       return isIncluded ? sum : sum + (Number(s.service?.price) || 0);
