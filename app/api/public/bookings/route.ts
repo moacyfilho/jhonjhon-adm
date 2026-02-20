@@ -25,11 +25,12 @@ export async function POST(request: NextRequest) {
       clientEmail,
       serviceIds, // Agora aceita array de IDs
       serviceId, // Mantido para compatibilidade (se vier apenas um)
-      barberId,
+      barberId: barberIdFromBody,
       scheduledDate,
       isSubscriber: clientDeclaredSubscriber, // Cliente pode declarar se é assinante
       observations,
     } = body;
+    let barberId = barberIdFromBody;
 
     // Normaliza para array de IDs
     const targetServiceIds: string[] = Array.isArray(serviceIds)
