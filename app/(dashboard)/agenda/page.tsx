@@ -208,11 +208,11 @@ function CompletionDialog({
   // Serviços incluídos na assinatura do cliente (ex: ["corte", "barba"])
   const includedServices = isSubscriber ? getSubscriptionIncludedServices(appointment.client) : [];
 
-  // Helper: verifica se serviço está incluso, com fallback legado quando sem dados de assinatura
+  // Helper: verifica se serviço está incluso, com fallback quando sem dados de assinatura
   const isServiceExempt = (serviceName: string) => {
     if (!isSubscriber) return false;
     if (includedServices.length > 0) return isServiceIncludedInSubscription(serviceName, includedServices);
-    return serviceName.toLowerCase().includes('corte'); // fallback legado
+    return true; // sem dados de assinatura (booking online sem clientId): todos os serviços incluídos
   };
 
   // isSub = true se assinante E tem algum serviço coberto pela assinatura
@@ -917,7 +917,7 @@ export default function AgendaPage() {
     const isSubServiceExempt = (name: string) => {
       if (!isSub) return false;
       if (includedInSub.length > 0) return isServiceIncludedInSubscription(name, includedInSub);
-      return name.toLowerCase().includes('corte'); // fallback legado
+      return true; // sem dados de assinatura: todos os serviços incluídos
     };
     const servicesTotal = isSub
       ? completionDialog.services.reduce((sum, s) => {
@@ -2189,7 +2189,7 @@ function AppointmentDetailsDialog({
                         const isIncluded = isSubscriber && (
                           includedServices.length > 0
                             ? isServiceIncludedInSubscription(s.service?.name || '', includedServices)
-                            : (s.service?.name || '').toLowerCase().includes('corte')
+                            : true // sem dados de assinatura: todos os serviços incluídos
                         );
                         const price = Number(s.service?.price) || 0;
                         const displayPrice = isIncluded ? 0 : price;

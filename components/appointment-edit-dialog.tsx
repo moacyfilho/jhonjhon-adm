@@ -39,8 +39,8 @@ function getSubscriptionIncludedServices(client: Client): string[] {
 // Verifica se um serviço está incluído na assinatura
 function isServiceIncludedInSubscription(serviceName: string, includedServices: string[]): boolean {
   if (includedServices.length === 0) {
-    // Sem lista definida: padrão legado — só 'corte' é isento
-    return serviceName.toLowerCase().includes('corte');
+    // Sem dados de assinatura (ex: online booking sem clientId): todos os serviços incluídos
+    return true;
   }
   const svcName = serviceName.toLowerCase();
   return includedServices.some(inc => svcName.includes(inc) || inc.includes(svcName));
