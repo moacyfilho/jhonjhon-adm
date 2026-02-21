@@ -418,8 +418,12 @@ export async function POST(request: NextRequest) {
       return newAppointment;
     });
 
-    // Enviar notificações assíncronas (fora da transação para não bloquear)
-    // Se falhar, apenas loga erro, não falha a criação
+    // Enviar notificações assíncronas apenas para agendamentos MANUAIS novos.
+    // Se vier onlineBookingId, é conversão de agendamento público (cliente já recebeu confirmação).
+    if (onlineBookingId) {
+      return NextResponse.json(appointment);
+    }
+
     (async () => {
       try {
         if (!appointment.client || !appointment.barber) return;
