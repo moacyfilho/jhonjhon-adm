@@ -42,8 +42,15 @@ function isServiceIncludedInSubscription(serviceName: string, includedServices: 
     // Sem dados de assinatura (ex: online booking sem clientId): todos os serviços incluídos
     return true;
   }
-  const svcName = serviceName.toLowerCase();
-  return includedServices.some(inc => svcName.includes(inc) || inc.includes(svcName));
+  const svcName = serviceName.toLowerCase().trim();
+  // Compara por prefixo de palavra: "barba" inclui "BARBA" e "BARBA COMPLETA",
+  // mas NÃO "HIDRATAÇÃO DE BARBA" (que começa com "hidratação")
+  const matchWord = (text: string, pattern: string) =>
+    text === pattern || (text.startsWith(pattern) && text[pattern.length] === ' ');
+  return includedServices.some(inc => {
+    const incLower = inc.trim();
+    return matchWord(svcName, incLower) || matchWord(incLower, svcName);
+  });
 }
 
 interface Barber {

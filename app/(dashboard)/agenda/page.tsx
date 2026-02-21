@@ -168,8 +168,15 @@ function getSubscriptionIncludedServices(client: Client): string[] {
  */
 function isServiceIncludedInSubscription(serviceName: string, includedServices: string[]): boolean {
   if (includedServices.length === 0) return false;
-  const lower = serviceName.toLowerCase();
-  return includedServices.some(inc => lower.includes(inc) || inc.includes(lower));
+  const lower = serviceName.toLowerCase().trim();
+  // Compara por prefixo de palavra: "barba" inclui "BARBA" e "BARBA COMPLETA",
+  // mas NÃO "HIDRATAÇÃO DE BARBA" (que começa com "hidratação")
+  const matchWord = (text: string, pattern: string) =>
+    text === pattern || (text.startsWith(pattern) && text[pattern.length] === ' ');
+  return includedServices.some(inc => {
+    const incLower = inc.trim();
+    return matchWord(lower, incLower) || matchWord(incLower, lower);
+  });
 }
 
 // Componente: Dialog de Finalização de Atendimento com Venda de Produtos
