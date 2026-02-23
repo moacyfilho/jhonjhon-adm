@@ -282,10 +282,8 @@ export async function POST(request: NextRequest) {
     let clientId = null;
     let isSubscriber = false;
 
-    if (clientDeclaredSubscriber === true) {
-      isSubscriber = true;
-    }
-
+    // IMPORTANTE: Não confiar na autodeclaração do cliente.
+    // isSubscriber só é verdadeiro se houver assinatura ATIVA no banco de dados.
     if (client) {
       clientId = client.id;
       const activeSubscription = await prisma.subscription.findFirst({
@@ -297,6 +295,12 @@ export async function POST(request: NextRequest) {
       if (activeSubscription) {
         isSubscriber = true;
       }
+    }
+
+    // clientDeclaredSubscriber é ignorado intencionalmente por segurança:
+    // clientes sem assinatura ativa no sistema não devem receber desconto de assinante.
+    if (!isSubscriber && clientDeclaredSubscriber === true) {
+      console.warn(`[bookings] Cliente "${clientName}" (${clientPhone}) se autodeclarou assinante, mas não tem assinatura ativa no banco. Ignorando.`);
     }
 
     // Criar agendamento online

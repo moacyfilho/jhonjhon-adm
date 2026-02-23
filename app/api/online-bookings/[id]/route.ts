@@ -55,7 +55,7 @@ export async function PATCH(
 
     const { id } = await params;
     const body = await request.json();
-    const { status, observations, barberId, serviceIds, scheduledDate } = body;
+    const { status, observations, barberId, serviceIds, scheduledDate, isSubscriber } = body;
 
     const booking = await prisma.onlineBooking.findUnique({
       where: { id },
@@ -74,6 +74,7 @@ export async function PATCH(
     if (observations !== undefined) updateData.observations = observations;
     if (barberId !== undefined) updateData.barberId = barberId;
     if (scheduledDate !== undefined) updateData.scheduledDate = new Date(scheduledDate);
+    if (isSubscriber !== undefined) updateData.isSubscriber = isSubscriber;
 
     // Se houver alteração de serviços, atualizar a tabela associativa
     if (serviceIds && Array.isArray(serviceIds)) {

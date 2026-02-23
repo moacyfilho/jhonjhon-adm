@@ -1147,11 +1147,11 @@ export default function AgendaPage() {
           {formatCurrency(
             (isSubscriber && appointment.status !== 'COMPLETED')
               ? (() => {
-                  const inc = getSubscriptionIncludedServices(appointment.client);
-                  if (inc.length === 0) return appointment.totalAmount;
-                  return appointment.services.reduce((sum, s) =>
-                    isServiceIncludedInSubscription(s.service.name, inc) ? sum : sum + s.service.price, 0);
-                })()
+                const inc = getSubscriptionIncludedServices(appointment.client);
+                if (inc.length === 0) return appointment.totalAmount;
+                return appointment.services.reduce((sum, s) =>
+                  isServiceIncludedInSubscription(s.service.name, inc) ? sum : sum + s.service.price, 0);
+              })()
               : appointment.totalAmount
           )}
         </div>
@@ -2021,10 +2021,43 @@ function AppointmentDetailsDialog({
             <div className="flex items-center justify-between">
               <p className="text-foreground font-medium">{appointment.client.name}</p>
               {(appointment.isSubscriptionAppointment || appointment.client.isSubscriber) && (
-                <Badge variant="outline" className="bg-amber-100 text-amber-700 border-amber-200 text-[10px] px-1 py-0 h-4 uppercase font-bold shrink-0">
-                  <Award className="w-3 h-3 mr-1" />
-                  ASSINANTE
-                </Badge>
+                <div className="flex items-center gap-1">
+                  <Badge variant="outline" className="bg-amber-100 text-amber-700 border-amber-200 text-[10px] px-1 py-0 h-4 uppercase font-bold shrink-0">
+                    <Award className="w-3 h-3 mr-1" />
+                    ASSINANTE
+                  </Badge>
+                  {/* Botão para remover status de assinante (apenas em agendamentos online) */}
+                  {appointment.isOnlineBooking && (
+                    <Button
+                      variant="ghost"
+                      size="sm"
+                      className="h-5 px-1 text-[9px] text-red-500 hover:text-red-700 hover:bg-red-50"
+                      title="Remover status de assinante (cliente se autodeclarou incorretamente)"
+                      onClick={async () => {
+                        const realId = appointment.id.replace('online-', '');
+                        try {
+                          const res = await fetch(`/api/online-bookings/${realId}`, {
+                            method: 'PATCH',
+                            headers: { 'Content-Type': 'application/json' },
+                            body: JSON.stringify({ isSubscriber: false }),
+                          });
+                          if (res.ok) {
+                            toast.success('Status de assinante removido com sucesso!');
+                            onUpdate();
+                            onClose();
+                          } else {
+                            toast.error('Erro ao remover status de assinante');
+                          }
+                        } catch {
+                          toast.error('Erro ao remover status de assinante');
+                        }
+                      }}
+                    >
+                      <XCircle className="w-3 h-3 mr-0.5" />
+                      Remover
+                    </Button>
+                  )}
+                </div>
               )}
             </div>
             <div className="flex items-center gap-1 mt-1">
