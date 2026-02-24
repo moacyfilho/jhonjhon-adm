@@ -282,19 +282,26 @@ export async function POST(request: NextRequest) {
     let clientId = null;
     let isSubscriber = false;
 
-    // IMPORTANTE: Não confiar na autodeclaração do cliente.
-    // isSubscriber só é verdadeiro se houver assinatura ATIVA no banco de dados.
     if (client) {
+      // Cliente já cadastrado: verificar assinatura ativa
       clientId = client.id;
       const activeSubscription = await prisma.subscription.findFirst({
-        where: {
-          clientId: client.id,
-          status: 'ACTIVE',
-        },
+        where: { clientId: client.id, status: 'ACTIVE' },
       });
       if (activeSubscription) {
         isSubscriber = true;
       }
+    } else {
+      // Primeiro agendamento: cadastrar cliente automaticamente
+      client = await prisma.client.create({
+        data: {
+          name: clientName.trim(),
+          phone: clientPhone.trim(),
+          email: clientEmail?.trim() || null,
+        },
+      });
+      clientId = client.id;
+      console.log(`[bookings] Novo cliente cadastrado automaticamente: ${clientName} (${clientPhone})`);
     }
 
     // clientDeclaredSubscriber é ignorado intencionalmente por segurança:
