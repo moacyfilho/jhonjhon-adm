@@ -22,17 +22,27 @@ export async function GET(request: NextRequest) {
 
     const barberId = searchParams.get("barberId");
 
-    // Define o período
+    // Define o período usando fuso horário de Manaus (UTC-4)
     const now = new Date();
+
+    // Obtém a data atual no fuso de Manaus (ex: "2026-02-23")
+    const manausDateStr = new Intl.DateTimeFormat('en-CA', {
+      timeZone: 'America/Manaus',
+      year: 'numeric', month: '2-digit', day: '2-digit',
+    }).format(now);
+    const [manausYear, manausMonth, manausDay] = manausDateStr.split('-').map(Number);
+
     let startDate: Date;
 
     if (period === "today") {
-      startDate = new Date(now.getFullYear(), now.getMonth(), now.getDate());
+      // Meia-noite de Manaus = 04:00 UTC
+      startDate = new Date(`${manausDateStr}T04:00:00.000Z`);
     } else if (period === "week") {
       startDate = new Date(now.getTime() - 7 * 24 * 60 * 60 * 1000);
     } else {
-      // month
-      startDate = new Date(now.getFullYear(), now.getMonth(), 1);
+      // month: 1º do mês de Manaus às 04:00 UTC
+      const firstOfMonth = `${manausYear}-${String(manausMonth).padStart(2, '0')}-01`;
+      startDate = new Date(`${firstOfMonth}T04:00:00.000Z`);
     }
 
     const baseWhere: any = {
@@ -91,40 +101,38 @@ export async function GET(request: NextRequest) {
       };
     }
 
-    // Faturamento por dia (últimos 7 dias)
+    // Faturamento por dia (últimos 7 dias) — usando fuso de Manaus
+    // Meia-noite de Manaus = 04:00 UTC; cada dia vai de T04:00Z até T04:00Z do próximo
     const last7Days = Array.from({ length: 7 }, (_, i) => {
-      const date = new Date(now);
-      date.setDate(date.getDate() - (6 - i));
-      date.setHours(0, 0, 0, 0);
-      return date;
+      const d = new Date(now);
+      d.setUTCDate(d.getUTCDate() - (6 - i));
+      // Data no fuso de Manaus
+      const manausDay = new Intl.DateTimeFormat('en-CA', {
+        timeZone: 'America/Manaus',
+        year: 'numeric', month: '2-digit', day: '2-digit',
+      }).format(d);
+      return manausDay; // "yyyy-MM-dd"
     });
 
     const revenueByDay = await Promise.all(
-      last7Days.map(async (date) => {
-        const nextDate = new Date(date);
-        nextDate.setDate(nextDate.getDate() + 1);
+      last7Days.map(async (dayStr) => {
+        const startOfDay = new Date(`${dayStr}T04:00:00.000Z`); // meia-noite Manaus
+        const endOfDay = new Date(startOfDay.getTime() + 24 * 60 * 60 * 1000);
 
         const dayWhere = {
-          date: {
-            gte: date,
-            lt: nextDate,
-          },
+          date: { gte: startOfDay, lt: endOfDay },
           status: "COMPLETED",
           ...(barberId && barberId !== 'all' ? { barberId } : {})
         };
 
         const dayRevenue = await prisma.appointment.aggregate({
           where: dayWhere,
-          _sum: {
-            totalAmount: true,
-          },
+          _sum: { totalAmount: true },
         });
 
+        const [y, m, day] = dayStr.split('-');
         return {
-          date: date.toLocaleDateString("pt-BR", {
-            day: "2-digit",
-            month: "2-digit",
-          }),
+          date: `${day}/${m}`,
           revenue: dayRevenue._sum?.totalAmount || 0,
         };
       })
