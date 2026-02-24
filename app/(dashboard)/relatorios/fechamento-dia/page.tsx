@@ -54,7 +54,10 @@ interface DailyReport {
 export default function FechamentoDiarioPage() {
     const [report, setReport] = useState<DailyReport | null>(null);
     const [loading, setLoading] = useState(true);
-    const [selectedDate, setSelectedDate] = useState(new Date().toISOString().split('T')[0]);
+    // Data padrão no fuso de Manaus (UTC-4), não em UTC
+    const [selectedDate, setSelectedDate] = useState(
+        new Intl.DateTimeFormat('en-CA', { timeZone: 'America/Manaus', year: 'numeric', month: '2-digit', day: '2-digit' }).format(new Date())
+    );
 
     useEffect(() => {
         fetchData();

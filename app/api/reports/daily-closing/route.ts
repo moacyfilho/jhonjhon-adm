@@ -17,19 +17,19 @@ export async function GET(request: NextRequest) {
         let start: Date;
         let end: Date;
 
+        // Manaus é UTC-4: meia-noite de Manaus = 04:00 UTC, fim do dia = próximo dia 03:59:59.999 UTC
+        const manausDateOf = (d: Date) =>
+            new Intl.DateTimeFormat('en-CA', { timeZone: 'America/Manaus', year: 'numeric', month: '2-digit', day: '2-digit' }).format(d);
+
         if (dateParam) {
-            // Force UTC range directly from YYYY-MM-DD string
-            // "2026-02-18" -> Start: 2026-02-18T00:00:00.000Z, End: 2026-02-18T23:59:59.999Z
-            start = new Date(`${dateParam}T00:00:00.000Z`);
-            end = new Date(`${dateParam}T23:59:59.999Z`);
+            // dateParam vem no formato "yyyy-MM-dd" no horário de Manaus
+            start = new Date(`${dateParam}T04:00:00.000Z`);
+            end = new Date(start.getTime() + 24 * 60 * 60 * 1000 - 1); // +24h -1ms
         } else {
-            // Default to today UTC
-            const today = new Date();
-            const yyyy = today.getUTCFullYear();
-            const mm = String(today.getUTCMonth() + 1).padStart(2, '0');
-            const dd = String(today.getUTCDate()).padStart(2, '0');
-            start = new Date(`${yyyy}-${mm}-${dd}T00:00:00.000Z`);
-            end = new Date(`${yyyy}-${mm}-${dd}T23:59:59.999Z`);
+            // Padrão: hoje no fuso de Manaus
+            const todayManaus = manausDateOf(new Date());
+            start = new Date(`${todayManaus}T04:00:00.000Z`);
+            end = new Date(start.getTime() + 24 * 60 * 60 * 1000 - 1);
         }
 
         // 1. Fetch Completed Appointments for the day

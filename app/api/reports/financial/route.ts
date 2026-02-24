@@ -17,14 +17,17 @@ export async function GET(request: NextRequest) {
     const { searchParams } = new URL(request.url);
     const period = searchParams.get('period') || '30'; // dias
 
-    const startDate = new Date();
-    startDate.setDate(startDate.getDate() - parseInt(period));
-    startDate.setHours(0, 0, 0, 0);
+    // Manaus é UTC-4: meia-noite Manaus = 04:00 UTC
+    const manausDateOf = (d: Date) =>
+      new Intl.DateTimeFormat('en-CA', { timeZone: 'America/Manaus', year: 'numeric', month: '2-digit', day: '2-digit' }).format(d);
+
+    const nowMs = Date.now();
+    const startRaw = new Date(nowMs - parseInt(period) * 24 * 60 * 60 * 1000);
+    const startDate = new Date(`${manausDateOf(startRaw)}T04:00:00.000Z`);
 
     // Incluir contas futuras até +30 dias para capturar pendências
-    const endDate = new Date();
-    endDate.setDate(endDate.getDate() + 30);
-    endDate.setHours(23, 59, 59, 999);
+    const endRaw = new Date(nowMs + 30 * 24 * 60 * 60 * 1000);
+    const endDate = new Date(new Date(`${manausDateOf(endRaw)}T04:00:00.000Z`).getTime() + 24 * 60 * 60 * 1000 - 1);
 
     // Buscar contas a pagar
     const accountsPayable = await prisma.accountPayable.findMany({

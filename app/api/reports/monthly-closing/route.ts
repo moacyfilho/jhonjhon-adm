@@ -19,14 +19,28 @@ export async function GET(request: NextRequest) {
         let startDate: Date;
         let endDate: Date;
 
+        // Manaus é UTC-4: meia-noite de Manaus = 04:00 UTC
+        const manausDateOf = (d: Date) =>
+            new Intl.DateTimeFormat('en-CA', { timeZone: 'America/Manaus', year: 'numeric', month: '2-digit', day: '2-digit' }).format(d);
+
         if (month) {
-            const date = parseISO(`${month}-01`);
-            startDate = startOfMonth(date);
-            endDate = endOfMonth(date);
+            // month = "yyyy-MM" → 1º do mês às 04:00 UTC (meia-noite Manaus)
+            startDate = new Date(`${month}-01T04:00:00.000Z`);
+            // Último dia do mês: 1º do próximo mês às 04:00 UTC - 1ms
+            const [y, m] = month.split('-').map(Number);
+            const nextMonthStr = m === 12
+                ? `${y + 1}-01-01`
+                : `${y}-${String(m + 1).padStart(2, '0')}-01`;
+            endDate = new Date(new Date(`${nextMonthStr}T04:00:00.000Z`).getTime() - 1);
         } else {
             const now = new Date();
-            startDate = startOfMonth(now);
-            endDate = endOfMonth(now);
+            const manausNow = manausDateOf(now);
+            const [y, m] = manausNow.split('-').map(Number);
+            startDate = new Date(`${y}-${String(m).padStart(2, '0')}-01T04:00:00.000Z`);
+            const nextMonthStr = m === 12
+                ? `${y + 1}-01-01`
+                : `${y}-${String(m + 1).padStart(2, '0')}-01`;
+            endDate = new Date(new Date(`${nextMonthStr}T04:00:00.000Z`).getTime() - 1);
         }
 
         // 1. Total Services

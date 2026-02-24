@@ -17,15 +17,26 @@ export async function GET(request: NextRequest) {
 
         const today = new Date();
 
-        // Define ranges
-        const dayStart = startOfDay(today);
-        const dayEnd = endOfDay(today);
+        // Manaus é UTC-4: meia-noite de Manaus = 04:00 UTC
+        const manausDateOf = (d: Date) =>
+            new Intl.DateTimeFormat('en-CA', { timeZone: 'America/Manaus', year: 'numeric', month: '2-digit', day: '2-digit' }).format(d);
 
-        const weekStart = startOfWeek(today, { weekStartsOn: 0 }); // Sunday start
-        const weekEnd = endOfWeek(today, { weekStartsOn: 0 });
+        const todayManaus = manausDateOf(today);
+        const [y, m, d] = todayManaus.split('-').map(Number);
 
-        const monthStart = startOfMonth(today);
-        const monthEnd = endOfMonth(today);
+        // Hoje em Manaus
+        const dayStart = new Date(`${todayManaus}T04:00:00.000Z`);
+        const dayEnd = new Date(dayStart.getTime() + 24 * 60 * 60 * 1000 - 1);
+
+        // Semana (domingo a sábado) em Manaus
+        const dayOfWeek = new Date(today.toLocaleString('en-US', { timeZone: 'America/Manaus' })).getDay();
+        const weekStart = new Date(dayStart.getTime() - dayOfWeek * 24 * 60 * 60 * 1000);
+        const weekEnd = new Date(weekStart.getTime() + 7 * 24 * 60 * 60 * 1000 - 1);
+
+        // Mês em Manaus
+        const monthStart = new Date(`${y}-${String(m).padStart(2, '0')}-01T04:00:00.000Z`);
+        const nextMonthStr = m === 12 ? `${y + 1}-01-01` : `${y}-${String(m + 1).padStart(2, '0')}-01`;
+        const monthEnd = new Date(new Date(`${nextMonthStr}T04:00:00.000Z`).getTime() - 1);
 
 
         // Fetch all completed appointment services within the widest range (Month)
