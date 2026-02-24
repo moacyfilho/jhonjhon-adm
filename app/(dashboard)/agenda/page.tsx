@@ -642,24 +642,24 @@ export default function AgendaPage() {
             : (booking.service?.price || 0);
 
           let billingTotal = totalAmount;
+          // isSubscriber: considera o flag do booking OU se o cliente tem assinatura ativa no banco
+          const hasActiveSubscription = (booking.client?.subscriptions?.length ?? 0) > 0;
+          const effectiveIsSubscriber = booking.isSubscriber || hasActiveSubscription;
           const bookingClient = {
             id: booking.clientId || 'temp',
             name: booking.clientName,
             phone: booking.clientPhone,
-            isSubscriber: booking.isSubscriber,
+            isSubscriber: effectiveIsSubscriber,
             subscriptions: booking.client?.subscriptions || [],
           };
-          if (booking.isSubscriber) {
+          if (effectiveIsSubscriber) {
             const inc = getSubscriptionIncludedServices(bookingClient);
             if (inc.length > 0) {
               billingTotal = bookingServices.reduce((sum: number, s: any) =>
                 isServiceIncludedInSubscription(s.service?.name || '', inc) ? sum : sum + (Number(s.service?.price) || 0), 0);
             } else {
-              // Fallback legado: isenta apenas serviços com 'corte' no nome
-              const subServices = bookingServices.filter((s: any) =>
-                !(s.service?.name?.toLowerCase().trim().includes('corte'))
-              );
-              billingTotal = subServices.reduce((sum: number, s: any) => sum + (Number(s.service?.price) || 0), 0);
+              // Sem dados de assinatura: todos os serviços estão incluídos
+              billingTotal = 0;
             }
           }
 
