@@ -14,11 +14,14 @@ jobs:
       - name: Chamar endpoint de lembretes
         run: |
           echo "Chamando endpoint de lembretes..."
-          RESPONSE=$(curl -s -o /dev/null -w "%{http_code}" \
+          HTTP_STATUS=$(curl -s -w "%{http_code}" \
+            -o /tmp/response.txt \
             "https://jhonjhonbarbearia.com.br/api/cron/reminders?secret=${{ secrets.CRON_SECRET }}")
-          echo "HTTP Status: $RESPONSE"
-          if [ "$RESPONSE" != "200" ]; then
-            echo "Erro: endpoint retornou $RESPONSE"
+          BODY=$(cat /tmp/response.txt)
+          echo "HTTP Status: $HTTP_STATUS"
+          echo "Response: $BODY"
+          if [ "$HTTP_STATUS" != "200" ]; then
+            echo "Erro: endpoint retornou $HTTP_STATUS"
             exit 1
           fi
           echo "Lembretes enviados com sucesso!"
