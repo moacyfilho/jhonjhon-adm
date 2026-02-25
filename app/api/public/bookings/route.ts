@@ -268,16 +268,33 @@ export async function POST(request: NextRequest) {
     // Normalizar telefone para busca (apenas números)
     const normalizedPhone = clientPhone.replace(/\D/g, '');
 
-    // Verificar se já existe um cliente com este telefone ou nome
+    // Verificar se já existe um cliente com este telefone
+    // 1) Busca por telefone exato ou versão sem formatação
     let client = await prisma.client.findFirst({
       where: {
         OR: [
           { phone: clientPhone },
-          { phone: { contains: normalizedPhone } },
-          { name: { equals: clientName, mode: 'insensitive' } },
+          { phone: normalizedPhone },
         ]
       },
     });
+
+    // 2) Fallback: comparar últimos 8 dígitos (cobre diferenças de formatação como "92 98477-2081" vs "92984772081")
+    if (!client && normalizedPhone.length >= 8) {
+      const lastDigits = normalizedPhone.slice(-8);
+      const candidates = await prisma.client.findMany({
+        where: { phone: { contains: lastDigits } },
+        take: 10,
+      });
+      client = candidates.find(c => c.phone.replace(/\D/g, '') === normalizedPhone) || null;
+    }
+
+    // 3) Fallback final: buscar por nome (caso número ainda não cadastrado)
+    if (!client) {
+      client = await prisma.client.findFirst({
+        where: { name: { equals: clientName, mode: 'insensitive' } },
+      });
+    }
 
     let clientId = null;
     let isSubscriber = false;

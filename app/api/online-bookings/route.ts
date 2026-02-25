@@ -65,7 +65,57 @@ export async function GET(request: NextRequest) {
       orderBy: { scheduledDate: 'asc' },
     });
 
-    return NextResponse.json(bookings);
+    // Para bookings sem clientId, tentar encontrar o cliente pelo telefone
+    // (cobre casos onde o booking foi criado antes do cadastro automático ou com formatação diferente)
+    const bookingsWithoutClient = bookings.filter(b => !b.clientId && b.clientPhone);
+
+    let clientByNormalizedPhone: Map<string, any> = new Map();
+
+    if (bookingsWithoutClient.length > 0) {
+      const rawPhones = bookingsWithoutClient.map(b => b.clientPhone);
+      const normalizedPhones = rawPhones.map(p => p.replace(/\D/g, ''));
+
+      // Busca exata por telefone (com e sem formatação)
+      const exactMatches = await prisma.client.findMany({
+        where: { phone: { in: [...rawPhones, ...normalizedPhones] } },
+        include: {
+          subscriptions: { where: { status: 'ACTIVE' }, take: 1, orderBy: { createdAt: 'desc' } }
+        },
+      });
+      for (const c of exactMatches) {
+        clientByNormalizedPhone.set(c.phone.replace(/\D/g, ''), c);
+      }
+
+      // Para os que ainda não foram encontrados, buscar pelos últimos 8 dígitos
+      const missing = normalizedPhones.filter(p => !clientByNormalizedPhone.has(p));
+      for (const phone of missing) {
+        if (phone.length < 8) continue;
+        const lastDigits = phone.slice(-8);
+        const candidates = await prisma.client.findMany({
+          where: { phone: { contains: lastDigits } },
+          take: 5,
+          include: {
+            subscriptions: { where: { status: 'ACTIVE' }, take: 1, orderBy: { createdAt: 'desc' } }
+          },
+        });
+        const match = candidates.find(c => c.phone.replace(/\D/g, '') === phone);
+        if (match) clientByNormalizedPhone.set(phone, match);
+      }
+    }
+
+    // Injetar cliente encontrado por telefone nos bookings sem clientId
+    const result = bookings.map(booking => {
+      if (!booking.clientId && booking.clientPhone) {
+        const normalizedPhone = booking.clientPhone.replace(/\D/g, '');
+        const foundClient = clientByNormalizedPhone.get(normalizedPhone);
+        if (foundClient) {
+          return { ...booking, client: foundClient };
+        }
+      }
+      return booking;
+    });
+
+    return NextResponse.json(result);
   } catch (error) {
     console.error('Erro ao buscar agendamentos:', error);
     return NextResponse.json(
