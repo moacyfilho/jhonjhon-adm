@@ -87,7 +87,7 @@ export async function PUT(
       where: { id },
       data: {
         name,
-        phone,
+        phone: phone.replace(/\D/g, ''), // salva apenas dígitos
         email: email || null,
       },
     });

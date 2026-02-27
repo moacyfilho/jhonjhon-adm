@@ -313,7 +313,7 @@ export async function POST(request: NextRequest) {
       client = await prisma.client.create({
         data: {
           name: clientName.trim(),
-          phone: clientPhone.trim(),
+          phone: clientPhone.replace(/\D/g, ''), // salva apenas dígitos
           email: clientEmail?.trim() || null,
         },
       });

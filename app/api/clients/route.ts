@@ -67,7 +67,7 @@ export async function POST(request: NextRequest) {
     const client = await prisma.client.create({
       data: {
         name,
-        phone,
+        phone: phone.replace(/\D/g, ''), // salva apenas dígitos
         email: email || null,
       },
     });
