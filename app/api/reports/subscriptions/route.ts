@@ -89,7 +89,6 @@ export async function GET(request: NextRequest) {
                         service: true
                     }
                 },
-                commission: true,
             },
         });
 
@@ -217,7 +216,6 @@ export async function GET(request: NextRequest) {
                     name: barberName,
                     commissionRate,
                     totalMinutes: 0,
-                    commissionTotal: 0,
                     services: {}
                 };
             }
@@ -239,16 +237,14 @@ export async function GET(request: NextRequest) {
                 barberStats[barberId].totalMinutes += appService.service.duration;
             });
 
-            // Acumular comissão real do banco (Commission record vinculado ao atendimento)
-            const realCommission = (app as any).commission?.amount || 0;
-            barberStats[barberId].commissionTotal += realCommission;
         });
 
         // Format for response
         const barbers = Object.values(barberStats).map(b => {
             const totalHours = b.totalMinutes / 60;
             const totalValue = totalHours * hourlyRate;
-            const commission = b.commissionTotal; // Valor real registrado no banco (Commission records)
+            // Comissão proporcional: participação do barbeiro na receita de assinaturas recebidas
+            const commission = (totalValue * b.commissionRate) / 100;
 
             return {
                 name: b.name,
