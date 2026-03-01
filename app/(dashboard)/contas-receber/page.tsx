@@ -122,8 +122,8 @@ export default function ContasReceberPage() {
   const [deleteDialogOpen, setDeleteDialogOpen] = useState(false);
   const [selectedAccount, setSelectedAccount] = useState<AccountReceivable | null>(null);
 
-  // Filtros
-  const [filterMonth, setFilterMonth] = useState(format(new Date(), 'yyyy-MM'));
+  // Filtros — usar mês UTC para ser consistente com as datas armazenadas (T12:00Z)
+  const [filterMonth, setFilterMonth] = useState(new Date().toISOString().slice(0, 7));
   const [searchTerm, setSearchTerm] = useState('');
   const [filterStatus, setFilterStatus] = useState('all');
   const [filterCategory, setFilterCategory] = useState('all');
@@ -190,14 +190,15 @@ export default function ContasReceberPage() {
     const [y, m] = filterMonth.split('-').map(Number);
     setFilterMonth(format(new Date(y, m, 1), 'yyyy-MM'));
   };
-  const isCurrentMonth = filterMonth === format(new Date(), 'yyyy-MM');
+  const isCurrentMonth = filterMonth === new Date().toISOString().slice(0, 7);
   const monthLabel = format(new Date(filterMonth + '-15'), 'MMMM yyyy', { locale: ptBR });
 
   // Contas filtradas
   const filteredAccounts = useMemo(() => {
     return accounts.filter((acc) => {
       if (filterMonth) {
-        const m = format(new Date(acc.dueDate), 'yyyy-MM');
+        // Comparar mês em UTC (datas armazenadas como T12:00Z — seguro para qualquer fuso do Brasil)
+        const m = (acc.dueDate as string).slice(0, 7);
         if (m !== filterMonth) return false;
       }
       if (searchTerm) {
