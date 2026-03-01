@@ -132,9 +132,10 @@ export async function GET(request: NextRequest) {
         });
 
         const subscriberList = allSubscriptions.map(sub => {
-            // Ver se tem conta paga este mês (usa filteredReceivables para separar standard/exclusiva)
-            const paidReceivable = filteredReceivables.find(r =>
-                r.clientId === sub.clientId &&
+            // Busca por subscriptionId (preciso) ou clientId (fallback para registros antigos)
+            // Usar rawReceivables: allSubscriptions já garante o tipo correto (standard/exclusiva)
+            const paidReceivable = rawReceivables.find(r =>
+                (r.subscriptionId === sub.id || r.clientId === sub.clientId) &&
                 r.status === 'PAID' &&
                 r.paymentDate &&
                 isWithinInterval(r.paymentDate, { start: startDate, end: endDate })
