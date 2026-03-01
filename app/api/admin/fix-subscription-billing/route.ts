@@ -34,6 +34,8 @@ export async function POST(request: NextRequest) {
       },
       products: true,
       client: true,
+      barber: true,
+      commission: true,
     },
   });
 
@@ -122,6 +124,15 @@ export async function POST(request: NextRequest) {
         where: { id: appt.id },
         data: { totalAmount: correctTotal },
       });
+
+      // Recalcular e atualizar comissão armazenada (workedHoursSubscription × hourlyRate do barbeiro)
+      if (appt.commission && appt.barber && appt.workedHoursSubscription > 0) {
+        const correctCommission = appt.workedHoursSubscription * (appt.barber as any).hourlyRate;
+        await prisma.commission.update({
+          where: { appointmentId: appt.id },
+          data: { amount: correctCommission },
+        });
+      }
     }
 
     results.push({

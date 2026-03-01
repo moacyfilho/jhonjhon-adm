@@ -89,6 +89,7 @@ export async function GET(request: NextRequest) {
                         service: true
                     }
                 },
+                commission: true,
             },
         });
 
@@ -131,8 +132,8 @@ export async function GET(request: NextRequest) {
         });
 
         const subscriberList = allSubscriptions.map(sub => {
-            // Ver se tem conta paga este mês (Strict check using loaded list)
-            const paidReceivable = rawReceivables.find(r =>
+            // Ver se tem conta paga este mês (usa filteredReceivables para separar standard/exclusiva)
+            const paidReceivable = filteredReceivables.find(r =>
                 r.clientId === sub.clientId &&
                 r.status === 'PAID' &&
                 r.paymentDate &&
@@ -215,6 +216,7 @@ export async function GET(request: NextRequest) {
                     name: barberName,
                     commissionRate,
                     totalMinutes: 0,
+                    commissionTotal: 0,
                     services: {}
                 };
             }
@@ -235,13 +237,17 @@ export async function GET(request: NextRequest) {
                 barberStats[barberId].services[serviceName].minutes += appService.service.duration;
                 barberStats[barberId].totalMinutes += appService.service.duration;
             });
+
+            // Acumular comissão real do banco (Commission record vinculado ao atendimento)
+            const realCommission = (app as any).commission?.amount || 0;
+            barberStats[barberId].commissionTotal += realCommission;
         });
 
         // Format for response
         const barbers = Object.values(barberStats).map(b => {
             const totalHours = b.totalMinutes / 60;
             const totalValue = totalHours * hourlyRate;
-            const commission = (totalValue * b.commissionRate) / 100;
+            const commission = b.commissionTotal; // Valor real registrado no banco (Commission records)
 
             return {
                 name: b.name,
