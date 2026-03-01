@@ -63,13 +63,21 @@ export async function PUT(
 
         if (subscription && subscription.status === 'ACTIVE') {
           // Calcular próxima data de vencimento (próximo mês, mesmo dia)
+          // Usar métodos UTC para evitar desvio de fuso horário (Brasil UTC-3/UTC-4)
           const currentDueDate = new Date(existingAccount.dueDate);
-          const nextDueDate = new Date(currentDueDate);
-          nextDueDate.setMonth(nextDueDate.getMonth() + 1);
+          const billingDay = currentDueDate.getUTCDate();
+          const nextDueDate = new Date(Date.UTC(
+            currentDueDate.getUTCFullYear(),
+            currentDueDate.getUTCMonth() + 1,
+            billingDay,
+            12, 0, 0, 0  // Meio-dia UTC: garante exibição correta em qualquer fuso do Brasil
+          ));
 
-          // Ajustar se o dia não existir no próximo mês (ex: 31 de fevereiro -> 28/29 de fevereiro)
-          if (nextDueDate.getDate() !== currentDueDate.getDate()) {
-            nextDueDate.setDate(0); // Vai para o último dia do mês anterior
+          // Ajustar se o dia não existir no próximo mês (ex: 31 em fevereiro -> último dia do mês)
+          if (nextDueDate.getUTCDate() !== billingDay) {
+            // Overflow: definir para o último dia do mês alvo
+            nextDueDate.setUTCDate(0);
+            nextDueDate.setUTCHours(12, 0, 0, 0);
           }
 
           // Criar nova conta a receber para o próximo mês
