@@ -107,7 +107,7 @@ export async function POST(request: NextRequest) {
         isIncluded = serviceName.includes('corte');
       } else {
         isIncluded = includedServices.some(
-          (inc) => serviceName.includes(inc) || inc === apptService.serviceId
+          (inc) => serviceName.includes(inc) || inc.includes(serviceName) || inc === apptService.serviceId
         );
       }
 
