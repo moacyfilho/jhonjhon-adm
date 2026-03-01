@@ -132,8 +132,8 @@ export async function GET(request: NextRequest) {
 
         const subscriberList = allSubscriptions.map(sub => {
             // Busca por subscriptionId (preciso) ou clientId (fallback para registros antigos)
-            // Usar rawReceivables: allSubscriptions já garante o tipo correto (standard/exclusiva)
-            const paidReceivable = rawReceivables.find(r =>
+            // Usar filteredReceivables para garantir que o AR encontrado é do mesmo tipo (standard/exclusiva)
+            const paidReceivable = filteredReceivables.find(r =>
                 (r.subscriptionId === sub.id || r.clientId === sub.clientId) &&
                 r.status === 'PAID' &&
                 r.paymentDate &&
