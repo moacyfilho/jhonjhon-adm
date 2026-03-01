@@ -50,20 +50,17 @@ export async function GET(request: NextRequest) {
           },
         });
 
-        // Buscar comissões no período
-        const commissions = await prisma.commission.findMany({
-          where: {
-            barberId: barber.id,
-            createdAt: {
-              gte: start,
-              lte: end,
-            },
-          },
-        });
+        // Buscar comissões vinculadas aos atendimentos do período (não por createdAt)
+        const appointmentIds = appointments.map((apt) => apt.id);
+        const commissions = appointmentIds.length > 0
+          ? await prisma.commission.findMany({
+              where: { appointmentId: { in: appointmentIds } },
+            })
+          : [];
 
-        // Calcular totais
+        // Calcular totais — soma workedHours + workedHoursSubscription
         const totalHours = appointments.reduce(
-          (sum, apt) => sum + (apt.workedHours || 0),
+          (sum, apt) => sum + (apt.workedHours || 0) + (apt.workedHoursSubscription || 0),
           0
         );
         const totalAppointments = appointments.length;
@@ -90,7 +87,7 @@ export async function GET(request: NextRequest) {
             date: apt.date,
             clientName: apt.client.name,
             services: apt.services.map((s) => s.service.name).join(", "),
-            workedHours: apt.workedHours || 0,
+            workedHours: (apt.workedHours || 0) + (apt.workedHoursSubscription || 0),
             totalAmount: apt.totalAmount,
           })),
         };
