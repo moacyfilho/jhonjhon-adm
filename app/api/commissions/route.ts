@@ -38,7 +38,9 @@ export async function GET(request: NextRequest) {
 
     if (startDate && endDate) {
       const start = new Date(startDate);
+      // Garantir que o fim do dia seja incluído (endDate vem como YYYY-MM-DD = meia-noite UTC)
       const end = new Date(endDate);
+      end.setUTCHours(23, 59, 59, 999);
 
       if (!isNaN(start.getTime()) && !isNaN(end.getTime())) {
         where.appointment = {

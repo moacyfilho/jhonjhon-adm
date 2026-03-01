@@ -19,7 +19,9 @@ export async function GET(request: NextRequest) {
 
     // Default: current month
     const start = startDate ? new Date(startDate) : startOfMonth(new Date());
-    const end = endDate ? new Date(endDate) : endOfMonth(new Date());
+    const endRaw = endDate ? new Date(endDate) : endOfMonth(new Date());
+    // Garantir fim do dia quando data passada como YYYY-MM-DD (= meia-noite UTC)
+    const end = endDate ? new Date(endRaw.setUTCHours(23, 59, 59, 999)) : endRaw;
 
     // Buscar todos os barbeiros ativos
     const barbers = await prisma.barber.findMany({
