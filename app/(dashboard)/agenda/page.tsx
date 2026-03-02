@@ -233,7 +233,7 @@ function CompletionDialog({
   const originalProductsTotal = appointment.products?.reduce((sum, p) => sum + (p.totalPrice || 0), 0) || 0;
   const servicesTotal = isSubscriber
     ? appointment.services.reduce((sum, s) => {
-      return sum + (isServiceExempt(s.service.name) ? 0 : (s.price ?? s.service.price || 0));
+      return sum + (isServiceExempt(s.service.name) ? 0 : ((s.price ?? s.service.price) || 0));
     }, 0)
     : Math.max(0, (appointment.totalAmount || 0) - originalProductsTotal);
 
@@ -931,7 +931,7 @@ export default function AgendaPage() {
     };
     const servicesTotal = isSub
       ? completionDialog.services.reduce((sum, s) => {
-        return sum + (isSubServiceExempt(s.service.name) ? 0 : (s.price ?? s.service.price || 0));
+        return sum + (isSubServiceExempt(s.service.name) ? 0 : ((s.price ?? s.service.price) || 0));
       }, 0)
       : completionDialog.totalAmount;
 
