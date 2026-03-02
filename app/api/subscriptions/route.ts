@@ -152,31 +152,21 @@ export async function POST(request: NextRequest) {
       );
     }
 
-    // Calcular próxima data de vencimento baseada no billingDay
-    const calculateNextDueDate = (billingDay: number): Date => {
+    // Ao criar assinatura, o AR deve ser sempre do mês atual (o próximo mês será
+    // criado automaticamente quando este for pago via recorrência).
+    const calculateCurrentMonthDueDate = (billingDay: number): Date => {
       const now = new Date();
-      const currentDay = now.getDate();
-      const currentMonth = now.getMonth();
-      const currentYear = now.getFullYear();
+      const currentMonth = now.getUTCMonth();
+      const currentYear = now.getUTCFullYear();
 
-      // Se o billingDay já passou neste mês, usar próximo mês
-      let targetMonth = currentDay >= billingDay ? currentMonth + 1 : currentMonth;
-      let targetYear = currentYear;
-
-      // Ajustar ano se passar de dezembro
-      if (targetMonth > 11) {
-        targetMonth = 0;
-        targetYear++;
-      }
-
-      // Ajustar dia para meses com menos dias
-      const lastDayOfMonth = new Date(targetYear, targetMonth + 1, 0).getDate();
+      // Ajustar dia para meses com menos dias (ex: billingDay=31 em fevereiro → 28)
+      const lastDayOfMonth = new Date(Date.UTC(currentYear, currentMonth + 1, 0)).getUTCDate();
       const adjustedDay = Math.min(billingDay, lastDayOfMonth);
 
-      return new Date(targetYear, targetMonth, adjustedDay);
+      return new Date(Date.UTC(currentYear, currentMonth, adjustedDay, 12, 0, 0));
     };
 
-    const nextDueDate = calculateNextDueDate(billingDay);
+    const nextDueDate = calculateCurrentMonthDueDate(billingDay);
 
     console.log('[CREATE SUBSCRIPTION] Final isExclusive value:', isExclusiveValue);
 
@@ -201,10 +191,14 @@ export async function POST(request: NextRequest) {
         },
       });
 
-      // Criar conta a receber automaticamente
+      // Criar conta a receber automaticamente (mês atual)
+      const monthNames = ['janeiro','fevereiro','março','abril','maio','junho','julho','agosto','setembro','outubro','novembro','dezembro'];
+      const arMonth = monthNames[nextDueDate.getUTCMonth()];
+      const arYear = nextDueDate.getUTCFullYear();
+
       const accountReceivable = await tx.accountReceivable.create({
         data: {
-          description: `Assinatura - ${planName}`,
+          description: `Assinatura - ${planName} - ${arMonth} de ${arYear}`,
           category: 'SUBSCRIPTION',
           payer: client.name,
           clientId: clientId,
