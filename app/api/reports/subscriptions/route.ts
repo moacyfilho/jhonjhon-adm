@@ -106,17 +106,43 @@ export async function GET(request: NextRequest) {
             isWithinInterval(app.date, { start: startDate, end: endDate })
         );
 
+        // Helper: parse servicesIncluded JSON/CSV → array of lowercase strings
+        const parseIncludedServices = (raw: string | null | undefined): string[] => {
+            if (!raw) return [];
+            try {
+                const parsed = JSON.parse(raw);
+                if (parsed?.services && Array.isArray(parsed.services)) {
+                    return parsed.services.map((s: string) => s.trim().toLowerCase());
+                }
+            } catch {
+                return raw.split(/[,+]/).map(s => s.trim().toLowerCase()).filter(Boolean);
+            }
+            return [];
+        };
+
+        const isServiceIncluded = (serviceName: string, included: string[]): boolean => {
+            if (included.length === 0) return true; // sem dados: todos incluídos
+            const name = serviceName.toLowerCase().trim();
+            return included.some(inc => name.includes(inc) || inc.includes(name));
+        };
+
         // 4. Calculate Global Metrics
-        // Calculate total hours from appointments (using workedHoursSubscription)
+        // Contar apenas minutos dos serviços incluídos na assinatura (excluir extras pagos)
         let totalServiceMinutes = 0;
 
         const processedAppointments = appointments.map(app => {
-            // Se workedHoursSubscription estiver zerado (legado), calcular pela duração dos serviços
-            let durationMinutes = app.workedHoursSubscription * 60;
-            if (durationMinutes === 0) {
-                const services = (app as any).services || [];
-                durationMinutes = services.reduce((acc: any, s: any) => acc + s.service.duration, 0);
+            const clientSub = (app as any).client?.subscriptions?.[0];
+            const includedServices = parseIncludedServices(clientSub?.servicesIncluded);
+
+            // Somar só duração dos serviços da assinatura
+            const services = (app as any).services || [];
+            let durationMinutes = 0;
+            for (const s of services) {
+                if (isServiceIncluded(s.service.name, includedServices)) {
+                    durationMinutes += s.service.duration;
+                }
             }
+
             totalServiceMinutes += durationMinutes;
 
             return {
@@ -208,26 +234,6 @@ export async function GET(request: NextRequest) {
         const averageFrequency = subscriptionsCount > 0
             ? totalUsageCount / subscriptionsCount
             : 0;
-
-        // Helper: parse servicesIncluded JSON/CSV → array of lowercase strings
-        const parseIncludedServices = (raw: string | null | undefined): string[] => {
-            if (!raw) return [];
-            try {
-                const parsed = JSON.parse(raw);
-                if (parsed?.services && Array.isArray(parsed.services)) {
-                    return parsed.services.map((s: string) => s.trim().toLowerCase());
-                }
-            } catch {
-                return raw.split(/[,+]/).map(s => s.trim().toLowerCase()).filter(Boolean);
-            }
-            return [];
-        };
-
-        const isServiceIncluded = (serviceName: string, included: string[]): boolean => {
-            if (included.length === 0) return true; // sem dados: todos incluídos
-            const name = serviceName.toLowerCase().trim();
-            return included.some(inc => name.includes(inc) || inc.includes(name));
-        };
 
         // 6. Build Barber Table Data
         const barberStats: Record<string, any> = {};
