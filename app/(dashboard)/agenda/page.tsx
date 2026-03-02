@@ -1151,7 +1151,7 @@ export default function AgendaPage() {
                 const inc = getSubscriptionIncludedServices(appointment.client);
                 if (inc.length === 0) return appointment.totalAmount;
                 return appointment.services.reduce((sum, s) =>
-                  isServiceIncludedInSubscription(s.service.name, inc) ? sum : sum + s.service.price, 0);
+                  isServiceIncludedInSubscription(s.service.name, inc) ? sum : sum + (s.price ?? s.service.price), 0);
               })()
               : appointment.totalAmount
           )}
@@ -2286,7 +2286,7 @@ function AppointmentDetailsDialog({
 
                     const servicesTotal = appointment.services.reduce((sum, s) => {
                       const isIncluded = isServiceIncludedInSubscription(s.service?.name || '', subIncluded);
-                      return isIncluded ? sum : sum + (Number(s.service?.price) || 0);
+                      return isIncluded ? sum : sum + (Number(s.price ?? s.service?.price) || 0);
                     }, 0);
                     const productsTotal = appointment.products?.reduce((sum, p) => sum + (Number(p.totalPrice) || 0), 0) || 0;
                     return servicesTotal + productsTotal;
