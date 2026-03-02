@@ -89,6 +89,15 @@ export async function GET(request: NextRequest) {
                         service: true
                     }
                 },
+                client: {
+                    include: {
+                        subscriptions: {
+                            where: { status: 'ACTIVE' },
+                            take: 1,
+                            orderBy: { createdAt: 'desc' }
+                        }
+                    }
+                }
             },
         });
 
@@ -200,6 +209,26 @@ export async function GET(request: NextRequest) {
             ? totalUsageCount / subscriptionsCount
             : 0;
 
+        // Helper: parse servicesIncluded JSON/CSV → array of lowercase strings
+        const parseIncludedServices = (raw: string | null | undefined): string[] => {
+            if (!raw) return [];
+            try {
+                const parsed = JSON.parse(raw);
+                if (parsed?.services && Array.isArray(parsed.services)) {
+                    return parsed.services.map((s: string) => s.trim().toLowerCase());
+                }
+            } catch {
+                return raw.split(/[,+]/).map(s => s.trim().toLowerCase()).filter(Boolean);
+            }
+            return [];
+        };
+
+        const isServiceIncluded = (serviceName: string, included: string[]): boolean => {
+            if (included.length === 0) return true; // sem dados: todos incluídos
+            const name = serviceName.toLowerCase().trim();
+            return included.some(inc => name.includes(inc) || inc.includes(name));
+        };
+
         // 6. Build Barber Table Data
         const barberStats: Record<string, any> = {};
         const serviceNames = new Set<string>();
@@ -209,42 +238,58 @@ export async function GET(request: NextRequest) {
             const barberId = app.barberId;
             const barberName = barber.name;
             const commissionRate = barber.commissionRate;
+            const hourlyRateBarber = barber.hourlyRate || 0;
+
+            // Serviços incluídos na assinatura do cliente
+            const clientSub = (app as any).client?.subscriptions?.[0];
+            const includedServices = parseIncludedServices(clientSub?.servicesIncluded);
 
             if (!barberStats[barberId]) {
                 barberStats[barberId] = {
                     id: barberId,
                     name: barberName,
                     commissionRate,
-                    totalMinutes: 0,
-                    services: {}
+                    hourlyRate: hourlyRateBarber,
+                    totalMinutes: 0,      // só serviços da assinatura
+                    extraCommission: 0,   // comissão % sobre serviços extras
+                    services: {}          // só serviços da assinatura
                 };
             }
 
             const services = (app as any).services || [];
             services.forEach((appService: any) => {
                 const serviceName = appService.service.name;
-                serviceNames.add(serviceName);
+                const isSubscriptionService = isServiceIncluded(serviceName, includedServices);
 
-                if (!barberStats[barberId].services[serviceName]) {
-                    barberStats[barberId].services[serviceName] = {
-                        count: 0,
-                        minutes: 0
-                    };
+                if (isSubscriptionService) {
+                    // Serviço da assinatura → aparece na tabela e nas horas
+                    serviceNames.add(serviceName);
+
+                    if (!barberStats[barberId].services[serviceName]) {
+                        barberStats[barberId].services[serviceName] = { count: 0, minutes: 0 };
+                    }
+
+                    barberStats[barberId].services[serviceName].count += 1;
+                    barberStats[barberId].services[serviceName].minutes += appService.service.duration;
+                    barberStats[barberId].totalMinutes += appService.service.duration;
+                } else {
+                    // Serviço extra (pago) → só computa comissão %, não entra nas horas da assinatura
+                    const extraPrice = appService.price ?? appService.service.price ?? 0;
+                    barberStats[barberId].extraCommission += (Number(extraPrice) * commissionRate) / 100;
                 }
-
-                barberStats[barberId].services[serviceName].count += 1;
-                barberStats[barberId].services[serviceName].minutes += appService.service.duration;
-                barberStats[barberId].totalMinutes += appService.service.duration;
             });
-
         });
 
         // Format for response
         const barbers = Object.values(barberStats).map(b => {
             const totalHours = b.totalMinutes / 60;
             const totalValue = totalHours * hourlyRate;
-            // Comissão proporcional: participação do barbeiro na receita de assinaturas recebidas
-            const commission = (totalValue * b.commissionRate) / 100;
+            // Comissão proporcional sobre receita de assinaturas
+            const subscriptionCommission = (totalValue * b.commissionRate) / 100;
+            // Comissão total = assinatura + extras pagos
+            const commission = subscriptionCommission + b.extraCommission;
+            // Casa recebe a parte proporcional da assinatura menos a comissão de assinatura
+            const house = totalValue - subscriptionCommission;
 
             return {
                 name: b.name,
@@ -252,7 +297,7 @@ export async function GET(request: NextRequest) {
                 totalHours,
                 totalValue,
                 commission,
-                house: totalValue - commission
+                house
             };
         });
 
