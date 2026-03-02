@@ -40,6 +40,7 @@ export async function GET(request: NextRequest) {
     const accounts = await prisma.accountReceivable.findMany({
       where,
       orderBy: { dueDate: 'asc' },
+      include: { client: { select: { name: true } } },
     });
 
     // Atualizar status de contas vencidas
@@ -60,11 +61,22 @@ export async function GET(request: NextRequest) {
       const updatedAccounts = await prisma.accountReceivable.findMany({
         where,
         orderBy: { dueDate: 'asc' },
+        include: { client: { select: { name: true } } },
       });
-      return NextResponse.json(updatedAccounts);
+      // Garantir que payer seja sempre preenchido com o nome do cliente como fallback
+      const mapped = updatedAccounts.map(acc => ({
+        ...acc,
+        payer: acc.payer || (acc as any).client?.name || null,
+      }));
+      return NextResponse.json(mapped);
     }
 
-    return NextResponse.json(accounts);
+    // Garantir que payer seja sempre preenchido com o nome do cliente como fallback
+    const mapped = accounts.map(acc => ({
+      ...acc,
+      payer: acc.payer || (acc as any).client?.name || null,
+    }));
+    return NextResponse.json(mapped);
   } catch (error) {
     console.error('Erro ao buscar contas a receber:', error);
     return NextResponse.json({ error: 'Erro ao buscar contas a receber' }, { status: 500 });
