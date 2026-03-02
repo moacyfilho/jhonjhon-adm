@@ -64,6 +64,7 @@ interface Appointment {
   barber: Barber;
   services: Array<{
     service: Service;
+    price?: number;
   }>;
   isOnlineBooking?: boolean;
   isSubscriptionAppointment?: boolean;

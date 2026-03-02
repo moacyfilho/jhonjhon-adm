@@ -93,7 +93,7 @@ interface AppointmentData {
   totalAmount?: number;
   client?: Client;
   barber?: Barber;
-  services?: Array<{ service: Service }>;
+  services?: Array<{ service: Service; price?: number }>;
   products?: Array<{ product: Product; quantity: number; unitPrice: number }>;
   paymentMethod?: string;
   observations?: string;
@@ -140,7 +140,7 @@ export function AppointmentEditDialog({
   const [clientId, setClientId] = useState(appointment?.clientId || appointment?.client?.id || '');
   const [barberId, setBarberId] = useState(appointment?.barberId || appointment?.barber?.id || '');
   const [selectedServices, setSelectedServices] = useState<ServiceItem[]>(
-    appointment?.services?.map(s => ({ serviceId: s.service.id, price: s.service.price })) || []
+    appointment?.services?.map(s => ({ serviceId: s.service.id, price: s.price ?? s.service.price })) || []
   );
   const [selectedProducts, setSelectedProducts] = useState<ProductItem[]>(
     appointment?.products?.map(p => ({
