@@ -40,7 +40,7 @@ export async function GET(request: NextRequest) {
     const accounts = await prisma.accountReceivable.findMany({
       where,
       orderBy: { dueDate: 'asc' },
-      include: { client: { select: { name: true } } },
+      include: { client: { select: { name: true, phone: true } } },
     });
 
     // Atualizar status de contas vencidas
@@ -61,7 +61,7 @@ export async function GET(request: NextRequest) {
       const updatedAccounts = await prisma.accountReceivable.findMany({
         where,
         orderBy: { dueDate: 'asc' },
-        include: { client: { select: { name: true } } },
+        include: { client: { select: { name: true, phone: true } } },
       });
       // Garantir que payer seja sempre preenchido com o nome do cliente como fallback
       const mapped = updatedAccounts.map(acc => ({
@@ -75,6 +75,7 @@ export async function GET(request: NextRequest) {
     const mapped = accounts.map(acc => ({
       ...acc,
       payer: acc.payer || (acc as any).client?.name || null,
+      phone: acc.phone || (acc as any).client?.phone || null,
     }));
     return NextResponse.json(mapped);
   } catch (error) {
