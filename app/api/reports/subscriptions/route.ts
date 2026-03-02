@@ -256,9 +256,8 @@ export async function GET(request: NextRequest) {
                     name: barberName,
                     commissionRate,
                     hourlyRate: hourlyRateBarber,
-                    totalMinutes: 0,      // só serviços da assinatura
-                    extraCommission: 0,   // comissão % sobre serviços extras
-                    services: {}          // só serviços da assinatura
+                    totalMinutes: 0,  // só serviços da assinatura
+                    services: {}      // só serviços da assinatura
                 };
             }
 
@@ -278,11 +277,8 @@ export async function GET(request: NextRequest) {
                     barberStats[barberId].services[serviceName].count += 1;
                     barberStats[barberId].services[serviceName].minutes += appService.service.duration;
                     barberStats[barberId].totalMinutes += appService.service.duration;
-                } else {
-                    // Serviço extra (pago) → só computa comissão %, não entra nas horas da assinatura
-                    const extraPrice = appService.price ?? appService.service.price ?? 0;
-                    barberStats[barberId].extraCommission += (Number(extraPrice) * commissionRate) / 100;
                 }
+                // Serviços extras não entram no relatório de assinatura
             });
         });
 
@@ -290,12 +286,9 @@ export async function GET(request: NextRequest) {
         const barbers = Object.values(barberStats).map(b => {
             const totalHours = b.totalMinutes / 60;
             const totalValue = totalHours * hourlyRate;
-            // Comissão proporcional sobre receita de assinaturas
-            const subscriptionCommission = (totalValue * b.commissionRate) / 100;
-            // Comissão total = assinatura + extras pagos
-            const commission = subscriptionCommission + b.extraCommission;
-            // Casa recebe a parte proporcional da assinatura menos a comissão de assinatura
-            const house = totalValue - subscriptionCommission;
+            // Comissão proporcional sobre receita de assinaturas (somente serviços da assinatura)
+            const commission = (totalValue * b.commissionRate) / 100;
+            const house = totalValue - commission;
 
             return {
                 name: b.name,
