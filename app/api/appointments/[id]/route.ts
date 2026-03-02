@@ -143,6 +143,7 @@ export async function PATCH(
         totalMinutes = currentAppointment.services.reduce((sum, s) => sum + (s.service?.duration || 0), 0);
       }
 
+
       // Prepare products data
       let productsToCreate: any[] = [];
       let productsTotal = 0;
@@ -271,7 +272,38 @@ export async function PATCH(
       if (barber) {
         // Comissão APENAS sobre serviços (produtos excluídos da base de comissão)
         if (isSubscriber) {
-          commissionAmount = (workedHours * barber.hourlyRate);
+          // Comissão por hora nos serviços de assinatura
+          const hourlyCommission = workedHours * barber.hourlyRate;
+
+          // Comissão % nos serviços extras (não incluídos na assinatura)
+          const subForCommission = activeSubscription || await prisma.subscription.findFirst({
+            where: { clientId: currentAppointment.clientId, status: 'ACTIVE' }
+          });
+          let extraServicesTotal = 0;
+          if (subForCommission) {
+            const servicesIncludedStr = subForCommission.servicesIncluded || '';
+            let includedServices: string[] = [];
+            if (servicesIncludedStr) {
+              try {
+                const parsed = JSON.parse(servicesIncludedStr);
+                if (parsed?.services && Array.isArray(parsed.services)) {
+                  includedServices = parsed.services.map((s: string) => s.trim().toLowerCase());
+                }
+              } catch {
+                includedServices = servicesIncludedStr.split(/[,+]/).map((s: string) => s.trim().toLowerCase()).filter(Boolean);
+              }
+            }
+            for (const item of servicesToCreate) {
+              const dbService = dbServices.find(s => s.id === item.serviceId);
+              const svcName = dbService?.name.toLowerCase() || '';
+              const isIncluded = includedServices.length === 0 || includedServices.some((inc: string) =>
+                svcName.includes(inc) || inc.includes(svcName) || inc === dbService?.id
+              );
+              if (!isIncluded) extraServicesTotal += item.price;
+            }
+          }
+          const extraCommission = (extraServicesTotal * barber.commissionRate) / 100;
+          commissionAmount = hourlyCommission + extraCommission;
         } else {
           const finalTotalAmount = updateData.totalAmount !== undefined
             ? updateData.totalAmount

@@ -2308,15 +2308,25 @@ function AppointmentDetailsDialog({
                 {formatCurrency(
                   (() => {
                     const isSub = (appointment.isSubscriptionAppointment || appointment.client.isSubscriber);
-                    const amount = appointment.commission?.amount ?? appointment.commissionAmount;
-                    if (amount !== undefined && amount !== null && !isNaN(Number(amount))) return Number(amount);
-
+                    // Para atendimentos concluídos, usar comissão já registrada
+                    if (appointment.status === 'COMPLETED') {
+                      const amount = appointment.commission?.amount ?? appointment.commissionAmount;
+                      if (amount !== undefined && amount !== null && !isNaN(Number(amount))) return Number(amount);
+                    }
                     if (isSub) {
+                      // Comissão por hora nos serviços da assinatura
                       const totalMinutes = appointment.services?.reduce((sum, s) => sum + (Number(s.service?.duration) || 0), 0) || 0;
-                      const rate = Number(appointment.barber?.hourlyRate) || 0;
-                      return (totalMinutes / 60) * rate;
+                      const hourlyCommission = (totalMinutes / 60) * (Number(appointment.barber?.hourlyRate) || 0);
+                      // Comissão % nos serviços extras (não incluídos na assinatura)
+                      const subIncluded = getSubscriptionIncludedServices(appointment.client);
+                      const extraTotal = appointment.services?.reduce((sum, s) => {
+                        const isIncluded = subIncluded.length > 0 && isServiceIncludedInSubscription(s.service?.name || '', subIncluded);
+                        return isIncluded ? sum : sum + (Number(s.price ?? s.service?.price) || 0);
+                      }, 0) || 0;
+                      const extraCommission = (extraTotal * (Number(appointment.barber?.commissionRate) || 0)) / 100;
+                      return hourlyCommission + extraCommission;
                     } else {
-                      const sTotal = appointment.services?.reduce((sum, s) => sum + (Number(s.service?.price) || 0), 0) || 0;
+                      const sTotal = appointment.services?.reduce((sum, s) => sum + (Number(s.price ?? s.service?.price) || 0), 0) || 0;
                       const rate = Number(appointment.barber?.commissionRate) || 0;
                       return (sTotal * rate) / 100;
                     }
