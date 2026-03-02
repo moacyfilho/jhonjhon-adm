@@ -50,13 +50,13 @@ export async function GET(request: NextRequest) {
             // Criteria for Exclusivity:
             // 1. Linked to a subscription known to be exclusive
             // 2. Linked to a client known to have an exclusive subscription
-            // 3. Subscription plan name contains "Exclusiva" or "Jhon"
-            // 4. Record description contains "Exclusiva" or "Jhon"
+            // 3. Subscription plan name contains "Exclusiva" (NOT "Jhon" — "Jhonjhon" is the standard plan name)
+            // 4. Record description contains "Exclusiva"
             const isExclusive =
                 (r.subscriptionId && exclusiveSubIds.has(r.subscriptionId)) ||
                 (r.clientId && exclusiveClientIds.has(r.clientId)) ||
-                /Exclusiva|Jhon/i.test(planName) ||
-                /Exclusiva|Jhon/i.test(description) ||
+                /Exclusiva/i.test(planName) ||
+                /Exclusiva/i.test(description) ||
                 sub?.isExclusive === true;
 
             return isExclusiveMode ? isExclusive : !isExclusive;
