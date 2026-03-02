@@ -233,7 +233,7 @@ function CompletionDialog({
   const originalProductsTotal = appointment.products?.reduce((sum, p) => sum + (p.totalPrice || 0), 0) || 0;
   const servicesTotal = isSubscriber
     ? appointment.services.reduce((sum, s) => {
-      return sum + (isServiceExempt(s.service.name) ? 0 : (s.service.price || 0));
+      return sum + (isServiceExempt(s.service.name) ? 0 : (s.price ?? s.service.price || 0));
     }, 0)
     : Math.max(0, (appointment.totalAmount || 0) - originalProductsTotal);
 
@@ -251,10 +251,12 @@ function CompletionDialog({
 
   const commissionAmount = isSubscriber
     ? (() => {
-      // Para assinantes: mantém lógica de valor por hora apenas sobre o tempo de serviço
+      // Comissão por hora nos serviços da assinatura
       const totalMinutes = appointment.services.reduce((sum, s) => sum + (s.service.duration || 0), 0);
       const serviceCommission = (totalMinutes / 60) * (appointment.barber.hourlyRate || 0);
-      return serviceCommission;
+      // Comissão % nos serviços extras (servicesTotal já exclui os isentos)
+      const extraCommission = servicesTotal * (appointment.barber.commissionRate / 100);
+      return serviceCommission + extraCommission;
     })()
     : (commissionBase * (appointment.barber.commissionRate / 100));
 
@@ -309,7 +311,7 @@ function CompletionDialog({
                           {isExempt && <span className="text-[8px] text-amber-600 font-bold uppercase -mt-1">Incluso na Assinatura</span>}
                         </div>
                         <span className={`font-medium ${isExempt ? 'text-amber-600' : ''}`}>
-                          {formatCurrency(isExempt ? 0 : s.service.price)}
+                          {formatCurrency(isExempt ? 0 : (s.price ?? s.service.price))}
                         </span>
                       </li>
                     );
@@ -929,7 +931,7 @@ export default function AgendaPage() {
     };
     const servicesTotal = isSub
       ? completionDialog.services.reduce((sum, s) => {
-        return sum + (isSubServiceExempt(s.service.name) ? 0 : (s.service.price || 0));
+        return sum + (isSubServiceExempt(s.service.name) ? 0 : (s.price ?? s.service.price || 0));
       }, 0)
       : completionDialog.totalAmount;
 
@@ -1027,8 +1029,10 @@ export default function AgendaPage() {
         ? (() => {
           const totalMinutes = completionDialog.services.reduce((sum, s) => sum + (s.service.duration || 0), 0);
           const serviceCommission = (totalMinutes / 60) * (completionDialog.barber.hourlyRate || 0);
+          // servicesTotal já exclui serviços isentos — aplica % sobre extras
+          const extraCommission = (servicesTotal * (completionDialog.barber.commissionRate / 100));
           const productCommission = productsTotal * (completionDialog.barber.commissionRate / 100);
-          return serviceCommission + productCommission;
+          return serviceCommission + extraCommission + productCommission;
         })()
         : (finalTotalToSave * (completionDialog.barber.commissionRate / 100));
 
