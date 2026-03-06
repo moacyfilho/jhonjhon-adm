@@ -940,10 +940,18 @@ export default function AgendaPage() {
     const finalTotalToSave = manualGrandTotal !== undefined ? manualGrandTotal : grandTotalCalculation;
 
     // Preparar itens de produto para envio
+    // Se houver desconto aplicado nos produtos, salvar os preços já com desconto
+    const productsPortionFinal = productsTotal > 0
+      ? Math.max(0, finalTotalToSave - servicesTotal)
+      : 0;
+    const productRatio = productsTotal > 0
+      ? Math.min(1, productsPortionFinal / productsTotal)
+      : 1;
+
     const productItems = selectedProducts.map(p => ({
       productId: p.productId,
       quantity: p.quantity,
-      unitPrice: p.unitPrice
+      unitPrice: parseFloat((p.unitPrice * productRatio).toFixed(2))
     }));
 
     try {
