@@ -1006,22 +1006,6 @@ export default function AgendaPage() {
         if (!updateRes.ok) throw new Error('Erro ao finalizar atendimento');
       }
 
-      // 4. Registrar vendas de produtos (se houver)
-      for (const product of selectedProducts) {
-        await fetch('/api/product-sales', {
-          method: 'POST',
-          headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify({
-            productId: product.productId,
-            quantity: product.quantity,
-            paymentMethod,
-            soldBy: completionDialog.barber.name,
-            observations: `Venda durante atendimento - Cliente: ${completionDialog.client.name}`,
-            skipStockUpdate: true // Evitar dupla baixa de estoque
-          }),
-        });
-      }
-
       // 5. Comissão já é calculada e salva automaticamente pelo endpoint PATCH /api/appointments
       // mantemos o cálculo aqui apenas para exibir no toast
 
