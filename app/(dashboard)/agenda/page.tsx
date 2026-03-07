@@ -553,6 +553,7 @@ export default function AgendaPage() {
   // Dialogs
   const [detailsDialog, setDetailsDialog] = useState<Appointment | null>(null);
   const [deleteDialog, setDeleteDialog] = useState<string | null>(null);
+  const [duplicateWarning, setDuplicateWarning] = useState<{ appointment: Appointment; existing: Appointment } | null>(null);
   const [completionDialog, setCompletionDialog] = useState<Appointment | null>(null);
   const [editDialog, setEditDialog] = useState<{ appointment?: Appointment; isNew?: boolean; date?: string; barberId?: string } | null>(null);
 
@@ -865,6 +866,23 @@ export default function AgendaPage() {
     }
   };
 
+  const openCompletionDialog = (appointment: Appointment) => {
+    if (appointment.products && appointment.products.length > 0) {
+      setSelectedProducts(appointment.products.map((p: any) => ({
+        productId: p.productId,
+        quantity: p.quantity,
+        unitPrice: p.unitPrice || p.product?.price || 0,
+        name: p.product?.name
+      })));
+    } else {
+      setSelectedProducts([]);
+    }
+    setPaymentMethod(appointment.paymentMethod || 'CASH');
+    setCompletionNotes(appointment.notes || '');
+    setCompletionDialog(appointment);
+    setDetailsDialog(null);
+  };
+
   const handleMarkAsCompleted = (appointmentId: string) => {
     // Encontrar o agendamento completo
     const appointment = appointments.find(a => a.id === appointmentId);
@@ -873,24 +891,25 @@ export default function AgendaPage() {
       return;
     }
 
-    // Abrir modal de conclusão
-    setCompletionDialog(appointment);
-    setDetailsDialog(null);
+    // Verificar se o cliente já tem atendimento concluído no mesmo dia
+    const appointmentDate = new Date(appointment.date).toDateString();
+    const existing = appointments.find(a =>
+      a.id !== appointment.id &&
+      a.clientId === appointment.clientId &&
+      a.status === 'COMPLETED' &&
+      new Date(a.date).toDateString() === appointmentDate
+    );
 
-    // Carregar produtos já existentes no agendamento, se houver
-    if (appointment.products && appointment.products.length > 0) {
-      setSelectedProducts(appointment.products.map((p: any) => ({
-        productId: p.productId,
-        quantity: p.quantity,
-        unitPrice: p.unitPrice || p.product?.price || 0,
-        name: p.product?.name // Opcional, para exibição se necessário
-      })));
-    } else {
-      setSelectedProducts([]);
+    if (existing) {
+      setDuplicateWarning({ appointment, existing });
+      setDetailsDialog(null);
+      return;
     }
 
-    setPaymentMethod(appointment.paymentMethod || 'CASH');
-    setCompletionNotes(appointment.notes || '');
+    // Abrir modal de conclusão
+    openCompletionDialog(appointment);
+    setDetailsDialog(null);
+
   };
 
   const handleReopenAppointment = async (id: string) => {
@@ -1405,6 +1424,34 @@ export default function AgendaPage() {
         )}
 
         {/* Dialog de Exclusão */}
+        <AlertDialog open={!!duplicateWarning} onOpenChange={() => setDuplicateWarning(null)}>
+          <AlertDialogContent>
+            <AlertDialogHeader>
+              <AlertDialogTitle>⚠️ Atendimento duplicado</AlertDialogTitle>
+              <AlertDialogDescription>
+                <strong>{duplicateWarning?.appointment.client.name}</strong> já possui um atendimento concluído hoje
+                {duplicateWarning?.existing && (
+                  <> às {new Date(duplicateWarning.existing.date).toLocaleTimeString('pt-BR', { hour: '2-digit', minute: '2-digit' })} (R${duplicateWarning.existing.totalAmount.toFixed(2)} — {duplicateWarning.existing.barber.name})</>
+                )}.
+                <br /><br />
+                Deseja finalizar mesmo assim?
+              </AlertDialogDescription>
+            </AlertDialogHeader>
+            <AlertDialogFooter>
+              <AlertDialogCancel>Cancelar</AlertDialogCancel>
+              <AlertDialogAction
+                className="bg-yellow-600 hover:bg-yellow-700"
+                onClick={() => {
+                  if (duplicateWarning) openCompletionDialog(duplicateWarning.appointment);
+                  setDuplicateWarning(null);
+                }}
+              >
+                Finalizar mesmo assim
+              </AlertDialogAction>
+            </AlertDialogFooter>
+          </AlertDialogContent>
+        </AlertDialog>
+
         <AlertDialog open={!!deleteDialog} onOpenChange={() => setDeleteDialog(null)}>
           <AlertDialogContent>
             <AlertDialogHeader>
