@@ -147,9 +147,10 @@ const formatCurrency = (value: number) => {
  */
 function getSubscriptionIncludedServices(client: Client): string[] {
   const sub = client.subscriptions?.[0];
-  if (!sub?.servicesIncluded) return [];
+  const rawValue = sub?.servicesIncluded || (sub as any)?.plan?.servicesIncluded;
+  if (!rawValue) return [];
 
-  const raw = sub.servicesIncluded.trim();
+  const raw = rawValue.trim();
   try {
     // Tenta parsear como JSON: {"services":["Corte","Barba"]}
     const parsed = JSON.parse(raw);

@@ -66,6 +66,7 @@ export async function GET(request: NextRequest) {
               where: { status: 'ACTIVE' },
               take: 1,
               orderBy: { createdAt: 'desc' },
+              include: { plan: { select: { servicesIncluded: true } } }
             }
           }
         },
