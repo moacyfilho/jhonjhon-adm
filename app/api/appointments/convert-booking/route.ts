@@ -2,6 +2,7 @@ import { NextRequest, NextResponse } from "next/server";
 import { getServerSession } from "next-auth";
 import { authOptions } from "@/lib/auth/auth-options";
 import { prisma } from "@/lib/db";
+import { sendBookingNotificationToBarber } from "@/lib/whatsapp";
 
 /**
  * Converte um OnlineBooking em Appointment
@@ -157,6 +158,21 @@ export async function POST(request: NextRequest) {
 
       return newAppointment;
     });
+
+    // Notificar barbeiro sobre a confirmação do agendamento
+    if (appointment.barber?.phone) {
+      const serviceNames = appointment.services.map((s: any) => s.service.name).join(' + ');
+      sendBookingNotificationToBarber({
+        clientName: appointment.client.name,
+        clientPhone: appointment.client.phone,
+        serviceName: serviceNames || 'Serviços Diversos',
+        servicePrice: appointment.totalAmount,
+        barberName: appointment.barber.name,
+        barberPhone: appointment.barber.phone,
+        scheduledDate: appointment.date,
+        bookingId: appointment.id,
+      }).catch(err => console.error('[convert-booking] Erro ao notificar barbeiro:', err));
+    }
 
     return NextResponse.json({
       appointment,
