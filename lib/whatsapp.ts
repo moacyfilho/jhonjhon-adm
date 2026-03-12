@@ -50,21 +50,23 @@ async function sendToUzapi(phone: string, text: string) {
 
     clearTimeout(timeoutId);
 
+    const responseText = await response.text();
+
     if (!response.ok) {
-      const errText = await response.text();
-      console.error(`[WhatsApp] API Error ${response.status}: ${errText}`);
-      return { success: false, error: `API Error: ${errText}` };
+      // UZapi bug: retorna HTTP 500 com "msg_not_found" + ID quando a mensagem
+      // foi enviada mas o rastreamento interno falhou — tratar como sucesso
+      try {
+        const errJson = JSON.parse(responseText);
+        if (errJson?.error?.code === 'msg_not_found' && errJson?.error?.id) {
+          console.log(`[WhatsApp] Enviado (msg_not_found ignorado, id: ${errJson.error.id})`);
+          return { success: true };
+        }
+      } catch {}
+      console.error(`[WhatsApp] API Error ${response.status}: ${responseText}`);
+      return { success: false, error: `API Error: ${responseText}` };
     }
 
-    // Try to parse JSON strictly
-    try {
-      const data = await response.json();
-      console.log('[WhatsApp] Success:', JSON.stringify(data));
-    } catch (e) {
-      // Ignore JSON parse error if status was OK
-      console.log('[WhatsApp] Sent (Non-JSON response)');
-    }
-
+    console.log('[WhatsApp] Success:', responseText);
     return { success: true };
   } catch (error: any) {
     console.error('[WhatsApp] Fetch Exception:', error.message);
