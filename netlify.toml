@@ -6,7 +6,7 @@
   NEXT_USE_NETLIFY_EDGE = "false"
   NODE_VERSION = "20"
 
-[functions]
+[functions."*"]
   timeout = 26
 
 [[plugins]]
