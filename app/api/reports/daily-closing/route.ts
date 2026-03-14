@@ -155,20 +155,34 @@ export async function GET(request: NextRequest) {
                     }
                 }
 
+                // Pré-calcular quais são os serviços extras (não cobertos) para assinantes
+                // Isso permite distribuir o valor real (finalAppServices) proporcionalmente
+                const isServiceIncluded = (svcName: string) => {
+                    if (includedServicesForDisplay.length === 0) {
+                        return svcName.includes('corte');
+                    }
+                    return includedServicesForDisplay.some(inc =>
+                        svcName.includes(inc) || inc.includes(svcName)
+                    );
+                };
+                const extraServices = app.isSubscriptionAppointment
+                    ? app.services.filter(s => !isServiceIncluded(s.service.name.toLowerCase()))
+                    : [];
+                const extrasCatalogTotal = extraServices.reduce((sum, s) => sum + s.price, 0);
+
                 app.services.forEach(s => {
                     let serviceAmount = s.price;
 
                     if (app.isSubscriptionAppointment) {
-                        // Assinante: zerar serviços cobertos pela assinatura
+                        // Assinante: cobertos = R$0; extras = valor real proporcional ao catálogo
                         const svcName = s.service.name.toLowerCase();
-                        if (includedServicesForDisplay.length === 0) {
-                            // Sem lista específica: padrão é cobrir "corte"
-                            serviceAmount = svcName.includes('corte') ? 0 : s.price;
+                        if (isServiceIncluded(svcName)) {
+                            serviceAmount = 0;
+                        } else if (extrasCatalogTotal > 0) {
+                            // Distribui finalAppServices proporcionalmente entre os extras
+                            serviceAmount = (s.price / extrasCatalogTotal) * finalAppServices;
                         } else {
-                            const isIncluded = includedServicesForDisplay.some(inc =>
-                                svcName.includes(inc) || inc.includes(svcName)
-                            );
-                            serviceAmount = isIncluded ? 0 : s.price;
+                            serviceAmount = extraServices.length > 0 ? finalAppServices / extraServices.length : 0;
                         }
                     } else if (totalServicePrices > 0 && finalAppServices !== totalServicePrices) {
                         // Não-assinante com desconto: aplicar ratio proporcional
