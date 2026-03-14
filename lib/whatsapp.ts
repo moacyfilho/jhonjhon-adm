@@ -186,6 +186,11 @@ export async function sendBookingNotifications(
 
   const results = await Promise.all(promises);
 
+  // Log detalhado para diagnóstico
+  console.log(`[WhatsApp] clientPhone="${data.clientPhone}" → clientNotification:`, JSON.stringify(results[0]));
+  console.log(`[WhatsApp] barbershopNotification:`, JSON.stringify(results[1]));
+  if (results[2]) console.log(`[WhatsApp] barberNotification:`, JSON.stringify(results[2]));
+
   return {
     clientNotification: results[0],
     barbershopNotification: results[1],
