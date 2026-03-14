@@ -949,11 +949,10 @@ export default function AgendaPage() {
       if (includedInSub.length > 0) return isServiceIncludedInSubscription(name, includedInSub);
       return true; // sem dados de assinatura: todos os serviços incluídos
     };
-    const servicesTotal = isSub
-      ? completionDialog.services.reduce((sum, s) => {
-        return sum + (isSubServiceExempt(s.service.name) ? 0 : ((s.price ?? s.service.price) || 0));
-      }, 0)
-      : completionDialog.totalAmount;
+    const servicesTotal = completionDialog.services.reduce((sum, s) => {
+      if (isSub && isSubServiceExempt(s.service.name)) return sum;
+      return sum + ((s.price ?? s.service.price) || 0);
+    }, 0);
 
     const productsTotal = selectedProducts.reduce((sum, p) => sum + (p.unitPrice * p.quantity), 0);
     const grandTotalCalculation = servicesTotal + productsTotal;
