@@ -44,6 +44,7 @@ export async function GET(request: NextRequest) {
             include: {
                 client: { select: { name: true } },
                 barber: { select: { name: true } },
+                // isSubscriptionAppointment incluído automaticamente (campo direto do modelo)
                 services: {
                     select: {
                         serviceId: true,
@@ -127,14 +128,15 @@ export async function GET(request: NextRequest) {
                 app.services.forEach(s => {
                     let serviceAmount = s.price;
 
-                    // Adjust service amount if there's a discount/surcharge on the appointment
-                    // finalAppServices is the portion of totalAmount allocated to services
-                    if (totalServicePrices > 0 && finalAppServices !== totalServicePrices) {
-                        const ratio = finalAppServices / totalServicePrices;
-                        serviceAmount = s.price * ratio;
-                    } else if (totalServicePrices === 0 && finalAppServices > 0) {
-                        // Edge case: services priced at 0 but total > 0 (e.g. tip or manual override)
-                        serviceAmount = finalAppServices / app.services.length;
+                    // Para assinantes: usar preço salvo diretamente (0 para incluídos, real para extras)
+                    // Para não-assinantes: aplicar ratio se houver desconto/ajuste no total
+                    if (!app.isSubscriptionAppointment) {
+                        if (totalServicePrices > 0 && finalAppServices !== totalServicePrices) {
+                            const ratio = finalAppServices / totalServicePrices;
+                            serviceAmount = s.price * ratio;
+                        } else if (totalServicePrices === 0 && finalAppServices > 0) {
+                            serviceAmount = finalAppServices / app.services.length;
+                        }
                     }
 
                     servicesList.push({

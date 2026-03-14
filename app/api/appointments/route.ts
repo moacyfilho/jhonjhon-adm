@@ -301,29 +301,27 @@ export async function POST(request: NextRequest) {
         if (includedServices.length === 0) {
           // Se não houver serviços listados, assume o padrão: Corte (ou 'corte') é isento
           let nonSubscriptionServicesTotal = 0;
-          for (const item of servicesToCreate) {
+          servicesToCreate = servicesToCreate.map(item => {
             const dbService = dbServices.find(s => s.id === item.serviceId);
             const isCorte = dbService?.name.toLowerCase().includes('corte');
-            if (!isCorte) {
-              nonSubscriptionServicesTotal += item.price;
-            }
-          }
+            if (isCorte) return { ...item, price: 0 };
+            nonSubscriptionServicesTotal += item.price;
+            return item;
+          });
           finalTotalAmount = nonSubscriptionServicesTotal + productsTotal;
         } else {
-          // Cobertura parcial baseada na lista: somar apenas o que NÃO está incluído
+          // Cobertura parcial baseada na lista: zerar preços dos serviços incluídos
           let nonSubscriptionServicesTotal = 0;
-          for (const item of servicesToCreate) {
+          servicesToCreate = servicesToCreate.map(item => {
             const dbService = dbServices.find(s => s.id === item.serviceId);
             const svcName = dbService?.name.toLowerCase() || '';
             const isIncluded = includedServices.some(inc =>
-              // Bidirecional: 'corte de cabelo'.includes('corte') OU 'corte'.includes('corte de cabelo')
               svcName.includes(inc) || inc.includes(svcName) || inc === dbService?.id
             );
-
-            if (!isIncluded) {
-              nonSubscriptionServicesTotal += item.price;
-            }
-          }
+            if (isIncluded) return { ...item, price: 0 };
+            nonSubscriptionServicesTotal += item.price;
+            return item;
+          });
           finalTotalAmount = nonSubscriptionServicesTotal + productsTotal;
         }
       } else {
