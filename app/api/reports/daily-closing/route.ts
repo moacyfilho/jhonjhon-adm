@@ -42,7 +42,16 @@ export async function GET(request: NextRequest) {
                 status: "COMPLETED",
             },
             include: {
-                client: { select: { name: true } },
+                client: {
+                    select: {
+                        name: true,
+                        subscriptions: {
+                            where: { status: 'ACTIVE' },
+                            take: 1,
+                            select: { servicesIncluded: true }
+                        }
+                    }
+                },
                 barber: { select: { name: true } },
                 // isSubscriptionAppointment incluído automaticamente (campo direto do modelo)
                 services: {
@@ -125,18 +134,48 @@ export async function GET(request: NextRequest) {
             const totalServicePrices = app.services.reduce((sum, s) => sum + s.price, 0);
 
             if (app.services.length > 0) {
+                // Para assinantes: determinar serviços cobertos pela assinatura em tempo real
+                // Isso garante exibição correta mesmo para atendimentos antigos com preços cheios salvos
+                let includedServicesForDisplay: string[] = [];
+                if (app.isSubscriptionAppointment) {
+                    const activeSub = (app.client as any).subscriptions?.[0];
+                    const servicesIncludedStr = activeSub?.servicesIncluded || '';
+                    if (servicesIncludedStr) {
+                        try {
+                            const parsed = JSON.parse(servicesIncludedStr);
+                            if (parsed?.services && Array.isArray(parsed.services)) {
+                                includedServicesForDisplay = parsed.services.map((s: string) => s.trim().toLowerCase());
+                            }
+                        } catch {
+                            includedServicesForDisplay = servicesIncludedStr
+                                .split(/[,+]/)
+                                .map((s: string) => s.trim().toLowerCase())
+                                .filter((s: string) => s.length > 0 && s !== 'null');
+                        }
+                    }
+                }
+
                 app.services.forEach(s => {
                     let serviceAmount = s.price;
 
-                    // Para assinantes: usar preço salvo diretamente (0 para incluídos, real para extras)
-                    // Para não-assinantes: aplicar ratio se houver desconto/ajuste no total
-                    if (!app.isSubscriptionAppointment) {
-                        if (totalServicePrices > 0 && finalAppServices !== totalServicePrices) {
-                            const ratio = finalAppServices / totalServicePrices;
-                            serviceAmount = s.price * ratio;
-                        } else if (totalServicePrices === 0 && finalAppServices > 0) {
-                            serviceAmount = finalAppServices / app.services.length;
+                    if (app.isSubscriptionAppointment) {
+                        // Assinante: zerar serviços cobertos pela assinatura
+                        const svcName = s.service.name.toLowerCase();
+                        if (includedServicesForDisplay.length === 0) {
+                            // Sem lista específica: padrão é cobrir "corte"
+                            serviceAmount = svcName.includes('corte') ? 0 : s.price;
+                        } else {
+                            const isIncluded = includedServicesForDisplay.some(inc =>
+                                svcName.includes(inc) || inc.includes(svcName)
+                            );
+                            serviceAmount = isIncluded ? 0 : s.price;
                         }
+                    } else if (totalServicePrices > 0 && finalAppServices !== totalServicePrices) {
+                        // Não-assinante com desconto: aplicar ratio proporcional
+                        const ratio = finalAppServices / totalServicePrices;
+                        serviceAmount = s.price * ratio;
+                    } else if (totalServicePrices === 0 && finalAppServices > 0) {
+                        serviceAmount = finalAppServices / app.services.length;
                     }
 
                     servicesList.push({
