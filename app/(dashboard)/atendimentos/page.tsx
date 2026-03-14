@@ -16,7 +16,7 @@ import { toast } from "sonner";
 import { format } from "date-fns";
 import { ptBR } from "date-fns/locale";
 import { cn } from "@/lib/utils";
-import { toManausTime } from "@/lib/timezone";
+import { toManausTime, createManausDate } from "@/lib/timezone";
 
 interface Client {
   id: string;
@@ -156,7 +156,8 @@ export default function AtendimentosPage() {
     }
 
     try {
-      const dateTime = new Date(`${formData.date}T${formData.time}`);
+      const [hours, minutes] = formData.time.split(':').map(Number);
+      const dateTime = createManausDate(formData.date, hours, minutes);
 
       const res = await fetch("/api/appointments", {
         method: "POST",
