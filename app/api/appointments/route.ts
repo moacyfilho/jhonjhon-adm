@@ -3,7 +3,7 @@ import { getServerSession } from "next-auth";
 import { authOptions } from "@/lib/auth/auth-options";
 import { prisma } from "@/lib/db";
 import { createManausDate, getManausStartOfDay, getManausEndOfDay } from "@/lib/timezone";
-import { sendBookingConfirmationToClient, sendBookingNotificationToBarber, sendBookingNotificationToBarbershop } from "@/lib/whatsapp";
+import { sendBookingNotifications } from "@/lib/whatsapp";
 
 export const dynamic = 'force-dynamic';
 
@@ -431,38 +431,14 @@ export async function POST(request: NextRequest) {
 
         const serviceNames = appointment.services.map(s => s.service.name).join(' + ');
 
-        // Notificar Cliente
-        await sendBookingConfirmationToClient({
+        // Enviar todas as notificações em paralelo (evita timeout no Netlify)
+        await sendBookingNotifications({
           clientName: appointment.client.name,
           clientPhone: appointment.client.phone,
           serviceName: serviceNames || 'Serviços Diversos',
           servicePrice: appointment.totalAmount,
           barberName: appointment.barber.name,
-          scheduledDate: appointment.date,
-          bookingId: appointment.id,
-        });
-
-        // Notificar Barbeiro (se tiver telefone)
-        if (appointment.barber.phone) {
-          await sendBookingNotificationToBarber({
-            clientName: appointment.client.name,
-            clientPhone: appointment.client.phone,
-            serviceName: serviceNames || 'Serviços Diversos',
-            servicePrice: appointment.totalAmount,
-            barberName: appointment.barber.name,
-            barberPhone: appointment.barber.phone,
-            scheduledDate: appointment.date,
-            bookingId: appointment.id,
-          });
-        }
-
-        // Notificar Barbearia (Administração)
-        await sendBookingNotificationToBarbershop({
-          clientName: appointment.client.name,
-          clientPhone: appointment.client.phone,
-          serviceName: serviceNames || 'Serviços Diversos',
-          servicePrice: appointment.totalAmount,
-          barberName: appointment.barber.name,
+          barberPhone: appointment.barber.phone,
           scheduledDate: appointment.date,
           bookingId: appointment.id,
         });
