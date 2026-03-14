@@ -30,7 +30,7 @@ async function sendToUzapi(phone: string, text: string) {
   try {
     // Create simple timeout signal
     const controller = new AbortController();
-    const timeoutId = setTimeout(() => controller.abort(), 15000); // 15s timeout for production
+    const timeoutId = setTimeout(() => controller.abort(), 8000); // 8s timeout (Netlify limit ~10s)
 
     console.log(`[WhatsApp] Sending to ${cleanPhone} via ${WHATSAPP_UZAPI_URL}`);
 

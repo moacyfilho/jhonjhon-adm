@@ -362,9 +362,7 @@ export async function POST(request: NextRequest) {
     const serviceNames = services.map(s => s.name).join(' + ');
     const totalPrice = services.reduce((sum, s) => sum + s.price, 0);
 
-    /* Vercel/Serverless: await pode ser arriscado se demorar muito, mas aqui é crítico esperar ou usar background job */
     try {
-      // Executa envio de notificação
       await sendBookingNotifications({
         clientName: booking.clientName,
         clientPhone: booking.clientPhone,
@@ -374,8 +372,7 @@ export async function POST(request: NextRequest) {
         barberPhone: booking.barber?.phone,
         scheduledDate: booking.scheduledDate,
         bookingId: booking.id,
-      }).catch(err => console.error('Erro notificacao:', err));
-
+      });
     } catch (error) {
       console.error(`❌ Erro ao enviar notificações WhatsApp:`, error);
     }
