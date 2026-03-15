@@ -383,8 +383,11 @@ export async function GET(request: NextRequest) {
                     rawReceivables: rawReceivables.length,
                     filteredReceivables: filteredReceivables.length,
                     paidFromList: paidSubscribers.length,
-                    totalSubscribers: subscriberList.length
-                }
+                    totalSubscribers: subscriberList.length,
+                    storedCommissionsFound: storedCommissions.length
+                },
+                storedCommissionByBarber,
+                barberIds: Object.keys(barberStats)
             }
         });
 
