@@ -6,11 +6,15 @@ import { prisma } from '@/lib/db';
 export const dynamic = 'force-dynamic';
 
 /**
- * Recalcula comissões em lote para atendimentos de assinantes sem assinatura ativa.
+ * Recalcula comissões de assinantes usando a mesma fórmula do "Resumo por Profissional":
+ *   commission = workedHoursSubscription × (receitaTotal / horasTotal) × commissionRate
+ *
  * Parâmetros query:
  *   - barberId: (opcional) filtrar por barbeiro
+ *   - barberName: (opcional) filtrar por nome do barbeiro
  *   - startDate: (opcional) "YYYY-MM-DD" início do período
  *   - endDate: (opcional) "YYYY-MM-DD" fim do período
+ *   - isExclusive: "true" para assinaturas exclusivas (padrão: false = padrão)
  *   - dryRun: "true" para simular sem salvar (padrão: false)
  */
 export async function POST(request: NextRequest) {
@@ -22,10 +26,11 @@ export async function POST(request: NextRequest) {
 
         const { searchParams } = new URL(request.url);
         const barberId = searchParams.get('barberId');
-        const barberName = searchParams.get('barberName'); // ex: "Eduardo"
+        const barberName = searchParams.get('barberName');
         const startDate = searchParams.get('startDate');
         const endDate = searchParams.get('endDate');
         const dryRun = searchParams.get('dryRun') === 'true';
+        const isExclusive = searchParams.get('isExclusive') === 'true';
 
         // Resolver barberId pelo nome se fornecido
         let resolvedBarberId = barberId;
@@ -43,29 +48,62 @@ export async function POST(request: NextRequest) {
         const dateFilter: any = {};
         if (startDate) dateFilter.gte = new Date(`${startDate}T04:00:00.000Z`);
         if (endDate) dateFilter.lte = new Date(`${endDate}T04:00:00.000Z`);
+        const hasDateFilter = Object.keys(dateFilter).length > 0;
 
-        // Buscar atendimentos COMPLETED de assinantes
+        // Passo 1: Calcular receita total de assinaturas no período (todos os barbeiros)
+        // Buscar receivables pagos de assinatura para calcular a taxa horária efetiva
+        const allPaidReceivables = await prisma.accountReceivable.findMany({
+            where: {
+                category: 'SUBSCRIPTION',
+                status: 'PAID',
+                ...(hasDateFilter ? { paymentDate: dateFilter } : {}),
+            },
+            include: {
+                subscription: { select: { isExclusive: true } }
+            }
+        });
+
+        // Filtrar pelo tipo (exclusiva ou padrão)
+        const filteredReceivables = allPaidReceivables.filter(r => {
+            const sub = r.subscription as any;
+            const subIsExclusive = sub?.isExclusive === true;
+            return isExclusive ? subIsExclusive : !subIsExclusive;
+        });
+        const totalReceivedAmount = filteredReceivables.reduce((sum, r) => sum + Number(r.amount), 0);
+
+        // Passo 2: Calcular total de horas de assinatura no período (todos os barbeiros)
+        const allSubAppointments = await prisma.appointment.findMany({
+            where: {
+                status: 'COMPLETED',
+                isSubscriptionAppointment: true,
+                ...(hasDateFilter ? { date: dateFilter } : {}),
+                client: {
+                    subscriptions: {
+                        some: { isExclusive: isExclusive, status: 'ACTIVE' } as any
+                    }
+                }
+            },
+            select: { workedHoursSubscription: true }
+        });
+        const totalServiceHours = allSubAppointments.reduce(
+            (sum, a) => sum + (Number(a.workedHoursSubscription) || 0), 0
+        );
+
+        // Taxa horária efetiva = receita total / horas totais (mesma fórmula do Resumo por Profissional)
+        const effectiveHourlyRate = totalServiceHours > 0 ? totalReceivedAmount / totalServiceHours : 0;
+
+        // Passo 3: Buscar atendimentos do barbeiro alvo para recalcular
         const appointments = await prisma.appointment.findMany({
             where: {
                 status: 'COMPLETED',
                 isSubscriptionAppointment: true,
                 ...(resolvedBarberId ? { barberId: resolvedBarberId } : {}),
-                ...(Object.keys(dateFilter).length > 0 ? { date: dateFilter } : {}),
+                ...(hasDateFilter ? { date: dateFilter } : {}),
             },
             include: {
                 barber: true,
-                products: true,
-                services: { include: { service: true } },
                 commission: true,
-                client: {
-                    include: {
-                        subscriptions: {
-                            where: { status: 'ACTIVE' },
-                            take: 1,
-                            select: { servicesIncluded: true }
-                        }
-                    }
-                }
+                client: { select: { name: true } }
             }
         });
 
@@ -81,31 +119,22 @@ export async function POST(request: NextRequest) {
                 continue;
             }
 
-            const productsTotal = app.products.reduce((sum, p) => sum + p.totalPrice, 0);
-            const activeSub = app.client.subscriptions?.[0];
+            const workedHours = Number(app.workedHoursSubscription) || 0;
 
-            let extraServicesTotal = 0;
-
-            // Usa totalAmount como base — já reflete o valor real cobrado
-            // (0 para serviços cobertos pela assinatura, valor real para extras)
-            extraServicesTotal = Math.max(0, app.totalAmount - productsTotal);
-
-            const workedHours = app.workedHoursSubscription || 0;
-            const newCommission = (workedHours * barber.hourlyRate) + (extraServicesTotal * barber.commissionRate / 100);
-            const oldCommission = app.commission?.amount ?? 0;
-
+            // Comissão = horas do atendimento × taxa horária efetiva × percentual de comissão
+            const newCommission = workedHours * effectiveHourlyRate * (barber.commissionRate / 100);
+            const oldCommission = Number(app.commission?.amount) || 0;
             const diff = Math.abs(newCommission - oldCommission);
 
             results.push({
                 id: app.id,
                 date: app.date,
                 barber: barber.name,
-                client: app.client.name,
-                totalAmount: app.totalAmount,
-                hasActiveSub: !!activeSub,
-                extraServicesTotal,
-                oldCommission,
-                newCommission,
+                client: (app.client as any).name,
+                workedHours,
+                effectiveHourlyRate: parseFloat(effectiveHourlyRate.toFixed(4)),
+                oldCommission: parseFloat(oldCommission.toFixed(2)),
+                newCommission: parseFloat(newCommission.toFixed(2)),
                 diff: parseFloat(diff.toFixed(2)),
                 action: diff > 0.01 ? 'updated' : 'unchanged'
             });
@@ -132,13 +161,20 @@ export async function POST(request: NextRequest) {
             }
         }
 
+        const totalNewCommission = results.reduce((sum, r) => sum + (r.newCommission || 0), 0);
+
         return NextResponse.json({
             dryRun,
+            globalMetrics: {
+                totalReceivedAmount: parseFloat(totalReceivedAmount.toFixed(2)),
+                totalServiceHours: parseFloat(totalServiceHours.toFixed(4)),
+                effectiveHourlyRate: parseFloat(effectiveHourlyRate.toFixed(4)),
+            },
             totalAppointments: appointments.length,
+            totalNewCommission: parseFloat(totalNewCommission.toFixed(2)),
             totalUpdated: dryRun ? 0 : totalUpdated,
             totalSkipped,
             totalChanges: results.filter(r => r.action === 'updated').length,
-            totalDiff: parseFloat(results.reduce((sum, r) => sum + (r.diff || 0), 0).toFixed(2)),
             details: results
         });
 
