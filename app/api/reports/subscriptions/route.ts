@@ -93,6 +93,7 @@ export async function GET(request: NextRequest) {
             },
             include: {
                 barber: true,
+                commission: true,
                 services: {
                     include: {
                         service: true
@@ -254,6 +255,7 @@ export async function GET(request: NextRequest) {
             const barberName = barber.name;
             const commissionRate = barber.commissionRate;
             const hourlyRateBarber = barber.hourlyRate || 0;
+            const storedCommission = Number((app as any).commission?.amount) || 0;
 
             // Serviços incluídos na assinatura do cliente
             const clientSub = (app as any).client?.subscriptions?.[0];
@@ -265,10 +267,13 @@ export async function GET(request: NextRequest) {
                     name: barberName,
                     commissionRate,
                     hourlyRate: hourlyRateBarber,
-                    totalMinutes: 0,  // só serviços da assinatura
-                    services: {}      // só serviços da assinatura
+                    totalMinutes: 0,           // só serviços da assinatura
+                    storedCommissionTotal: 0,  // soma das comissões armazenadas no DB
+                    services: {}               // só serviços da assinatura
                 };
             }
+
+            barberStats[barberId].storedCommissionTotal += storedCommission;
 
             const services = (app as any).services || [];
             services.forEach((appService: any) => {
@@ -295,8 +300,13 @@ export async function GET(request: NextRequest) {
         const barbers = Object.values(barberStats).map(b => {
             const totalHours = b.totalMinutes / 60;
             const totalValue = totalHours * hourlyRate;
-            // Comissão proporcional sobre receita de assinaturas (somente serviços da assinatura)
-            const commission = (totalValue * b.commissionRate) / 100;
+
+            // Usar comissão armazenada no DB se disponível (calculada pelo endpoint recalculate-commissions)
+            // Caso contrário, calcular ao vivo como fallback
+            const hasStoredCommission = b.storedCommissionTotal > 0;
+            const commission = hasStoredCommission
+                ? b.storedCommissionTotal
+                : (totalValue * b.commissionRate) / 100;
             const house = totalValue - commission;
 
             return {
@@ -305,7 +315,8 @@ export async function GET(request: NextRequest) {
                 totalHours,
                 totalValue,
                 commission,
-                house
+                house,
+                commissionSource: hasStoredCommission ? 'stored' : 'calculated'
             };
         });
 
