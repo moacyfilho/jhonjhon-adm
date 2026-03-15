@@ -271,6 +271,11 @@ export async function GET(request: NextRequest) {
 
         // 6a. Buscar comissões armazenadas para todos os subscription appointments no período
         // Sem filtro de subscription.status para incluir clientes que cancelaram depois
+        // Para o modo padrão (isExclusiveMode=false): aceitar isExclusive=false OR null (registros antigos)
+        const subscriptionTypeFilter = isExclusiveMode
+            ? { isExclusive: true }
+            : { OR: [{ isExclusive: false }, { isExclusive: null }] };
+
         const storedCommissions = await prisma.commission.findMany({
             where: {
                 appointment: {
@@ -279,8 +284,7 @@ export async function GET(request: NextRequest) {
                     date: { gte: startDate, lte: endDate },
                     client: {
                         subscriptions: {
-                            some: { isExclusive: isExclusiveMode } as any
-                            // Sem status: 'ACTIVE' — inclui ex-assinantes do período
+                            some: subscriptionTypeFilter as any
                         }
                     }
                 }
