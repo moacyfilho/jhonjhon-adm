@@ -269,24 +269,14 @@ export async function GET(request: NextRequest) {
             ? totalUsageCount / subscriptionsCount
             : 0;
 
-        // 6a. Buscar comissões armazenadas para todos os subscription appointments no período
-        // Sem filtro de subscription.status para incluir clientes que cancelaram depois
-        // Para o modo padrão (isExclusiveMode=false): aceitar isExclusive=false OR null (registros antigos)
-        const subscriptionTypeFilter = isExclusiveMode
-            ? { isExclusive: true }
-            : { OR: [{ isExclusive: false }, { isExclusive: null }] };
-
+        // 6a. Buscar comissões armazenadas para subscription appointments no período
+        // Sem filtro de tipo de assinatura aqui — os barbers da tabela já são filtrados via processedAppointments
         const storedCommissions = await prisma.commission.findMany({
             where: {
                 appointment: {
                     isSubscriptionAppointment: true,
                     status: 'COMPLETED',
-                    date: { gte: startDate, lte: endDate },
-                    client: {
-                        subscriptions: {
-                            some: subscriptionTypeFilter as any
-                        }
-                    }
+                    date: { gte: startDate, lte: endDate }
                 }
             },
             select: { barberId: true, amount: true }
