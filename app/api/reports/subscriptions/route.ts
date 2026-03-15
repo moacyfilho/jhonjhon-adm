@@ -251,10 +251,6 @@ export async function GET(request: NextRequest) {
         const hourlyRate = totalServiceHours > 0
             ? receivedAmount / totalServiceHours
             : 0;
-        // effectiveHourlyRate para cálculo de comissão (mesma fórmula do recalculate-commissions)
-        const effectiveHourlyRate = totalWorkedHours > 0
-            ? commissionBase / totalWorkedHours
-            : 0;
 
         // Frequência (Atendimentos Totais / Total de Assinantes que usaram ou total de ativos?)
         const subscriptionsCount = await prisma.subscription.count({
@@ -268,6 +264,24 @@ export async function GET(request: NextRequest) {
         const averageFrequency = subscriptionsCount > 0
             ? totalUsageCount / subscriptionsCount
             : 0;
+
+        // 6a. Buscar comissões armazenadas para subscription appointments no período
+        const storedCommissions = await prisma.commission.findMany({
+            where: {
+                appointment: {
+                    isSubscriptionAppointment: true,
+                    status: 'COMPLETED',
+                    date: { gte: startDate, lte: endDate }
+                }
+            },
+            select: { barberId: true, amount: true }
+        });
+
+        const storedCommissionByBarber: Record<string, number> = {};
+        storedCommissions.forEach(c => {
+            if (!storedCommissionByBarber[c.barberId]) storedCommissionByBarber[c.barberId] = 0;
+            storedCommissionByBarber[c.barberId] += Number(c.amount);
+        });
 
         // 6b. Build Barber Table Data
         const barberStats: Record<string, any> = {};
@@ -325,10 +339,8 @@ export async function GET(request: NextRequest) {
             const totalHours = b.totalMinutes / 60;
             const totalValue = totalHours * hourlyRate;
 
-            // Comissão = totalHoras × barber.hourlyRate
-            // Mesma fórmula usada ao finalizar atendimento (PATCH /api/appointments/[id])
-            // Não depende de registros armazenados (que podem estar incompletos)
-            const commission = totalHours * b.hourlyRate;
+            // Comissão dos atendimentos de assinatura (registros armazenados no DB)
+            const commission = storedCommissionByBarber[b.id] ?? 0;
             const house = totalValue - commission;
 
             return {
