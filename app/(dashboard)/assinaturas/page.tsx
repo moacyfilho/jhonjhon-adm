@@ -167,6 +167,8 @@ export default function AssinaturasPage() {
   const [reportData, setReportData] = useState<SubscriptionReport | null>(null);
   const [reportDate, setReportDate] = useState<Date>(new Date());
   const [loadingReport, setLoadingReport] = useState(false);
+  const [rangeStart, setRangeStart] = useState('');
+  const [rangeEnd, setRangeEnd] = useState('');
 
   const [plans, setPlans] = useState<SubscriptionPlan[]>([]);
   // Resource States
@@ -203,12 +205,17 @@ export default function AssinaturasPage() {
     fetchReport();
   }, [reportDate]);
 
-  const fetchReport = async () => {
+  const fetchReport = async (start?: string, end?: string) => {
     try {
       setLoadingReport(true);
-      const dateStr = format(reportDate, 'yyyy-MM-dd');
-      // FILTER BY STANDARD (exclude exclusive)
-      const response = await fetch(`/api/reports/subscriptions?date=${dateStr}&type=standard`);
+      let url: string;
+      if (start && end) {
+        url = `/api/reports/subscriptions?startDate=${start}&endDate=${end}&type=standard`;
+      } else {
+        const dateStr = format(reportDate, 'yyyy-MM-dd');
+        url = `/api/reports/subscriptions?date=${dateStr}&type=standard`;
+      }
+      const response = await fetch(url);
       if (!response.ok) throw new Error('Erro ao carregar relatório');
       const data = await response.json();
       setReportData(data);
@@ -599,18 +606,54 @@ export default function AssinaturasPage() {
         {/* TAB: VISÃO GERAL (Dashboard) */}
         <TabsContent value="overview" className="space-y-6">
           {/* Seletor de Mês */}
-          <div className="flex items-center gap-4 bg-[#1a1a1a] p-2 rounded-md border border-[#333] w-fit mb-4">
-            <Button variant="ghost" size="icon" onClick={() => handleMonthChange('prev')} className="h-8 w-8 text-white hover:bg-white/10">
-              <span className="text-lg">←</span>
-            </Button>
-            <div className="text-center min-w-[150px]">
-              <h2 className="text-sm font-semibold capitalize text-white">
-                {format(reportDate, "MMMM 'de' yyyy", { locale: ptBR })}
-              </h2>
+          <div className="flex flex-wrap items-center gap-3 mb-4">
+            <div className="flex items-center gap-2 bg-[#1a1a1a] p-2 rounded-md border border-[#333]">
+              <Button variant="ghost" size="icon" onClick={() => handleMonthChange('prev')} className="h-8 w-8 text-white hover:bg-white/10">
+                <span className="text-lg">←</span>
+              </Button>
+              <div className="text-center min-w-[150px]">
+                <h2 className="text-sm font-semibold capitalize text-white">
+                  {format(reportDate, "MMMM 'de' yyyy", { locale: ptBR })}
+                </h2>
+              </div>
+              <Button variant="ghost" size="icon" onClick={() => handleMonthChange('next')} className="h-8 w-8 text-white hover:bg-white/10">
+                <span className="text-lg">→</span>
+              </Button>
             </div>
-            <Button variant="ghost" size="icon" onClick={() => handleMonthChange('next')} className="h-8 w-8 text-white hover:bg-white/10">
-              <span className="text-lg">→</span>
-            </Button>
+            <div className="flex items-center gap-2 bg-[#1a1a1a] p-2 rounded-md border border-[#333]">
+              <span className="text-xs text-gray-400">De</span>
+              <input
+                type="date"
+                value={rangeStart}
+                onChange={e => setRangeStart(e.target.value)}
+                className="bg-transparent text-white text-xs border-none outline-none"
+              />
+              <span className="text-xs text-gray-400">até</span>
+              <input
+                type="date"
+                value={rangeEnd}
+                onChange={e => setRangeEnd(e.target.value)}
+                className="bg-transparent text-white text-xs border-none outline-none"
+              />
+              <Button
+                size="sm"
+                className="h-7 px-3 text-xs bg-gold text-black hover:bg-gold/80"
+                onClick={() => { if (rangeStart && rangeEnd) fetchReport(rangeStart, rangeEnd); }}
+                disabled={!rangeStart || !rangeEnd}
+              >
+                Filtrar
+              </Button>
+              {(rangeStart || rangeEnd) && (
+                <Button
+                  size="sm"
+                  variant="ghost"
+                  className="h-7 px-2 text-xs text-gray-400 hover:text-white"
+                  onClick={() => { setRangeStart(''); setRangeEnd(''); fetchReport(); }}
+                >
+                  ✕
+                </Button>
+              )}
+            </div>
           </div>
 
           {loadingReport ? (

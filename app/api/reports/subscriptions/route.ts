@@ -8,13 +8,22 @@ export async function GET(request: NextRequest) {
     try {
         const searchParams = request.nextUrl.searchParams;
         const dateParam = searchParams.get('date'); // YYYY-MM-DD
+        const startDateParam = searchParams.get('startDate'); // YYYY-MM-DD
+        const endDateParam = searchParams.get('endDate'); // YYYY-MM-DD
         const type = searchParams.get('type') || 'standard'; // 'standard' | 'exclusive'
         const isExclusiveMode = type === 'exclusive';
 
-        // Determine date range (default to current month)
-        const referenceDate = dateParam ? parseISO(dateParam) : new Date();
-        const startDate = startOfMonth(referenceDate);
-        const endDate = endOfMonth(referenceDate);
+        // Determine date range: custom range > month > current month
+        let startDate: Date, endDate: Date;
+        if (startDateParam && endDateParam) {
+            startDate = parseISO(startDateParam);
+            endDate = parseISO(endDateParam);
+            endDate.setHours(23, 59, 59, 999);
+        } else {
+            const referenceDate = dateParam ? parseISO(dateParam) : new Date();
+            startDate = startOfMonth(referenceDate);
+            endDate = endOfMonth(referenceDate);
+        }
 
         // Buffer dates to handle Timezone edge cases
         const startBuffer = subDays(startDate, 2);
