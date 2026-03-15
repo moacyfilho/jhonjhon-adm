@@ -271,51 +271,15 @@ export async function PATCH(
       let commissionAmount = 0;
       if (barber) {
         // Comissão APENAS sobre serviços (produtos excluídos da base de comissão)
-        if (isSubscriber) {
-          // Comissão por hora nos serviços de assinatura
-          const hourlyCommission = workedHours * barber.hourlyRate;
-
-          // Comissão % nos serviços extras (não incluídos na assinatura)
-          const subForCommission = activeSubscription || await prisma.subscription.findFirst({
-            where: { clientId: currentAppointment.clientId, status: 'ACTIVE' }
-          });
-          let extraServicesTotal = 0;
-          if (subForCommission) {
-            const servicesIncludedStr = subForCommission.servicesIncluded || '';
-            let includedServices: string[] = [];
-            if (servicesIncludedStr) {
-              try {
-                const parsed = JSON.parse(servicesIncludedStr);
-                if (parsed?.services && Array.isArray(parsed.services)) {
-                  includedServices = parsed.services.map((s: string) => s.trim().toLowerCase());
-                }
-              } catch {
-                includedServices = servicesIncludedStr.split(/[,+]/).map((s: string) => s.trim().toLowerCase()).filter(Boolean);
-              }
-            }
-            for (const item of servicesToCreate) {
-              const dbService = dbServices.find(s => s.id === item.serviceId);
-              const svcName = dbService?.name.toLowerCase() || '';
-              const isIncluded = includedServices.length === 0 || includedServices.some((inc: string) =>
-                svcName.includes(inc) || inc.includes(svcName) || inc === dbService?.id
-              );
-              if (!isIncluded) extraServicesTotal += item.price;
-            }
-          } else {
-            // Assinatura não encontrada (expirou/cancelada): usa totalAmount como base
-            // Evita comissão R$0 em atendimentos com flag isSubscriptionAppointment sem assinatura ativa
-            const finalAmt = updateData.totalAmount !== undefined ? updateData.totalAmount : currentAppointment.totalAmount;
-            extraServicesTotal = Math.max(0, finalAmt - productsTotal);
-          }
-          const extraCommission = (extraServicesTotal * barber.commissionRate) / 100;
-          commissionAmount = hourlyCommission + extraCommission;
-        } else {
-          const finalTotalAmount = updateData.totalAmount !== undefined
-            ? updateData.totalAmount
-            : currentAppointment.totalAmount;
-          const commissionBase = Math.max(0, finalTotalAmount - productsTotal);
-          commissionAmount = (commissionBase * barber.commissionRate) / 100;
-        }
+        // Comissão baseada no totalAmount real (o que o cliente efetivamente pagou)
+        // Para assinantes: totalAmount já reflete o desconto (0 para cobertos, valor real para extras)
+        // Componente por hora (quando hourlyRate > 0, ex: futura configuração por barbeiro)
+        const hourlyCommission = isSubscriber ? workedHours * barber.hourlyRate : 0;
+        const finalTotalAmount = updateData.totalAmount !== undefined
+          ? updateData.totalAmount
+          : currentAppointment.totalAmount;
+        const commissionBase = Math.max(0, finalTotalAmount - productsTotal);
+        commissionAmount = hourlyCommission + (commissionBase * barber.commissionRate) / 100;
       }
 
       // Transação para aplicar tudo

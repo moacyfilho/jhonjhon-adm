@@ -86,31 +86,9 @@ export async function POST(request: NextRequest) {
 
             let extraServicesTotal = 0;
 
-            if (activeSub) {
-                // Assinatura ativa: calcular com base nos serviços extras
-                const servicesIncludedStr = activeSub.servicesIncluded || '';
-                let includedServices: string[] = [];
-                if (servicesIncludedStr) {
-                    try {
-                        const parsed = JSON.parse(servicesIncludedStr);
-                        if (parsed?.services && Array.isArray(parsed.services)) {
-                            includedServices = parsed.services.map((s: string) => s.trim().toLowerCase());
-                        }
-                    } catch {
-                        includedServices = servicesIncludedStr.split(/[,+]/).map((s: string) => s.trim().toLowerCase()).filter(Boolean);
-                    }
-                }
-                for (const svc of app.services) {
-                    const svcName = svc.service.name.toLowerCase();
-                    const isIncluded = includedServices.length === 0
-                        ? svcName.includes('corte')
-                        : includedServices.some(inc => svcName.includes(inc) || inc.includes(svcName));
-                    if (!isIncluded) extraServicesTotal += svc.price;
-                }
-            } else {
-                // Sem assinatura ativa: usa totalAmount como base (corrige comissão R$0)
-                extraServicesTotal = Math.max(0, app.totalAmount - productsTotal);
-            }
+            // Usa totalAmount como base — já reflete o valor real cobrado
+            // (0 para serviços cobertos pela assinatura, valor real para extras)
+            extraServicesTotal = Math.max(0, app.totalAmount - productsTotal);
 
             const workedHours = app.workedHoursSubscription || 0;
             const newCommission = (workedHours * barber.hourlyRate) + (extraServicesTotal * barber.commissionRate / 100);
