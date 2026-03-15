@@ -265,24 +265,6 @@ export async function GET(request: NextRequest) {
             ? totalUsageCount / subscriptionsCount
             : 0;
 
-        // 6a. Buscar comissões armazenadas para subscription appointments no período
-        const storedCommissions = await prisma.commission.findMany({
-            where: {
-                appointment: {
-                    isSubscriptionAppointment: true,
-                    status: 'COMPLETED',
-                    date: { gte: startDate, lte: endDate }
-                }
-            },
-            select: { barberId: true, amount: true }
-        });
-
-        const storedCommissionByBarber: Record<string, number> = {};
-        storedCommissions.forEach(c => {
-            if (!storedCommissionByBarber[c.barberId]) storedCommissionByBarber[c.barberId] = 0;
-            storedCommissionByBarber[c.barberId] += Number(c.amount);
-        });
-
         // 6b. Build Barber Table Data
         const barberStats: Record<string, any> = {};
         const serviceNames = new Set<string>();
