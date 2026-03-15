@@ -22,9 +22,22 @@ export async function POST(request: NextRequest) {
 
         const { searchParams } = new URL(request.url);
         const barberId = searchParams.get('barberId');
+        const barberName = searchParams.get('barberName'); // ex: "Eduardo"
         const startDate = searchParams.get('startDate');
         const endDate = searchParams.get('endDate');
         const dryRun = searchParams.get('dryRun') === 'true';
+
+        // Resolver barberId pelo nome se fornecido
+        let resolvedBarberId = barberId;
+        if (!resolvedBarberId && barberName) {
+            const found = await prisma.barber.findFirst({
+                where: { name: { contains: barberName, mode: 'insensitive' } }
+            });
+            if (!found) {
+                return NextResponse.json({ error: `Barbeiro "${barberName}" não encontrado` }, { status: 404 });
+            }
+            resolvedBarberId = found.id;
+        }
 
         // Montar filtro de data
         const dateFilter: any = {};
@@ -36,7 +49,7 @@ export async function POST(request: NextRequest) {
             where: {
                 status: 'COMPLETED',
                 isSubscriptionAppointment: true,
-                ...(barberId ? { barberId } : {}),
+                ...(resolvedBarberId ? { barberId: resolvedBarberId } : {}),
                 ...(Object.keys(dateFilter).length > 0 ? { date: dateFilter } : {}),
             },
             include: {
@@ -155,4 +168,12 @@ export async function POST(request: NextRequest) {
         console.error('Erro ao recalcular comissões:', error);
         return NextResponse.json({ error: 'Falha ao recalcular comissões' }, { status: 500 });
     }
+}
+
+// GET = dryRun automático (simular via navegador)
+export async function GET(request: NextRequest) {
+    const url = new URL(request.url);
+    url.searchParams.set('dryRun', 'true');
+    const fakeRequest = new Request(url.toString(), { method: 'POST', headers: request.headers });
+    return POST(new NextRequest(fakeRequest));
 }
