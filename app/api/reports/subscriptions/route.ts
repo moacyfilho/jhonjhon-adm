@@ -269,25 +269,6 @@ export async function GET(request: NextRequest) {
             ? totalUsageCount / subscriptionsCount
             : 0;
 
-        // 6a. Buscar comissões armazenadas para subscription appointments no período
-        // Sem filtro de tipo de assinatura aqui — os barbers da tabela já são filtrados via processedAppointments
-        const storedCommissions = await prisma.commission.findMany({
-            where: {
-                appointment: {
-                    isSubscriptionAppointment: true,
-                    status: 'COMPLETED',
-                    date: { gte: startDate, lte: endDate }
-                }
-            },
-            select: { barberId: true, amount: true }
-        });
-
-        const storedCommissionByBarber: Record<string, number> = {};
-        storedCommissions.forEach(c => {
-            if (!storedCommissionByBarber[c.barberId]) storedCommissionByBarber[c.barberId] = 0;
-            storedCommissionByBarber[c.barberId] += Number(c.amount);
-        });
-
         // 6b. Build Barber Table Data
         const barberStats: Record<string, any> = {};
         const serviceNames = new Set<string>();
@@ -344,10 +325,10 @@ export async function GET(request: NextRequest) {
             const totalHours = b.totalMinutes / 60;
             const totalValue = totalHours * hourlyRate;
 
-            // Usar comissão armazenada no DB (mesma fonte que "Saldos: Serviços")
-            // Calculada como workedHoursSubscription × barber.hourlyRate quando o atendimento foi finalizado
-            const commission = storedCommissionByBarber[b.id] ??
-                (b.totalWorkedHours * effectiveHourlyRate * (b.commissionRate / 100));
+            // Comissão = totalHoras × barber.hourlyRate
+            // Mesma fórmula usada ao finalizar atendimento (PATCH /api/appointments/[id])
+            // Não depende de registros armazenados (que podem estar incompletos)
+            const commission = totalHours * b.hourlyRate;
             const house = totalValue - commission;
 
             return {
@@ -383,11 +364,8 @@ export async function GET(request: NextRequest) {
                     rawReceivables: rawReceivables.length,
                     filteredReceivables: filteredReceivables.length,
                     paidFromList: paidSubscribers.length,
-                    totalSubscribers: subscriberList.length,
-                    storedCommissionsFound: storedCommissions.length
-                },
-                storedCommissionByBarber,
-                barberIds: Object.keys(barberStats)
+                    totalSubscribers: subscriberList.length
+                }
             }
         });
 
