@@ -155,8 +155,9 @@ export async function GET(request: NextRequest) {
 
             totalServiceMinutes += durationMinutes;
 
-            // workedHoursSubscription é o campo usado pelo recalculate-commissions para a fórmula de comissão
-            const workedHours = Number((app as any).workedHoursSubscription) || 0;
+            // workedHoursSubscription é o campo preferido; fallback para durationMinutes em appointments antigos
+            const storedWorkedHours = Number((app as any).workedHoursSubscription) || 0;
+            const workedHours = storedWorkedHours > 0 ? storedWorkedHours : durationMinutes / 60;
             totalWorkedHours += workedHours;
 
             return {
