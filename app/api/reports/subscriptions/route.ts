@@ -93,7 +93,6 @@ export async function GET(request: NextRequest) {
             },
             include: {
                 barber: true,
-                commission: true,
                 services: {
                     include: {
                         service: true
@@ -139,12 +138,13 @@ export async function GET(request: NextRequest) {
         // 4. Calculate Global Metrics
         // Contar apenas minutos dos serviços incluídos na assinatura (excluir extras pagos)
         let totalServiceMinutes = 0;
+        let totalWorkedHours = 0; // usando workedHoursSubscription (mesma fonte do recalculate-commissions)
 
         const processedAppointments = appointments.map(app => {
             const clientSub = (app as any).client?.subscriptions?.[0];
             const includedServices = parseIncludedServices(clientSub?.servicesIncluded);
 
-            // Somar só duração dos serviços da assinatura
+            // Somar só duração dos serviços da assinatura (para exibição das horas em atendimentos)
             const services = (app as any).services || [];
             let durationMinutes = 0;
             for (const s of services) {
@@ -155,9 +155,14 @@ export async function GET(request: NextRequest) {
 
             totalServiceMinutes += durationMinutes;
 
+            // workedHoursSubscription é o campo usado pelo recalculate-commissions para a fórmula de comissão
+            const workedHours = Number((app as any).workedHoursSubscription) || 0;
+            totalWorkedHours += workedHours;
+
             return {
                 ...app,
-                durationMinutes
+                durationMinutes,
+                workedHours
             };
         });
 
@@ -228,8 +233,13 @@ export async function GET(request: NextRequest) {
         console.log(`[DEBUG] Final Totals - Received: ${receivedAmount}, Pending: ${pendingAmount}, Grand: ${grandTotal}`);
 
         // 7. Calculate Derived Metrics
+        // hourlyRate para exibição no cabeçalho (baseado em horas de serviço)
         const hourlyRate = totalServiceHours > 0
             ? receivedAmount / totalServiceHours
+            : 0;
+        // effectiveHourlyRate para cálculo de comissão (mesma fórmula do recalculate-commissions)
+        const effectiveHourlyRate = totalWorkedHours > 0
+            ? receivedAmount / totalWorkedHours
             : 0;
 
         // Frequência (Atendimentos Totais / Total de Assinantes que usaram ou total de ativos?)
@@ -255,7 +265,6 @@ export async function GET(request: NextRequest) {
             const barberName = barber.name;
             const commissionRate = barber.commissionRate;
             const hourlyRateBarber = barber.hourlyRate || 0;
-            const storedCommission = Number((app as any).commission?.amount) || 0;
 
             // Serviços incluídos na assinatura do cliente
             const clientSub = (app as any).client?.subscriptions?.[0];
@@ -267,13 +276,14 @@ export async function GET(request: NextRequest) {
                     name: barberName,
                     commissionRate,
                     hourlyRate: hourlyRateBarber,
-                    totalMinutes: 0,           // só serviços da assinatura
-                    storedCommissionTotal: 0,  // soma das comissões armazenadas no DB
-                    services: {}               // só serviços da assinatura
+                    totalMinutes: 0,     // minutos de serviço (para exibição)
+                    totalWorkedHours: 0, // workedHoursSubscription (para cálculo de comissão)
+                    services: {}
                 };
             }
 
-            barberStats[barberId].storedCommissionTotal += storedCommission;
+            // Acumular workedHoursSubscription do barbeiro (fonte correta para comissão)
+            barberStats[barberId].totalWorkedHours += (app as any).workedHours || 0;
 
             const services = (app as any).services || [];
             services.forEach((appService: any) => {
@@ -301,12 +311,9 @@ export async function GET(request: NextRequest) {
             const totalHours = b.totalMinutes / 60;
             const totalValue = totalHours * hourlyRate;
 
-            // Usar comissão armazenada no DB se disponível (calculada pelo endpoint recalculate-commissions)
-            // Caso contrário, calcular ao vivo como fallback
-            const hasStoredCommission = b.storedCommissionTotal > 0;
-            const commission = hasStoredCommission
-                ? b.storedCommissionTotal
-                : (totalValue * b.commissionRate) / 100;
+            // Comissão usando workedHoursSubscription × effectiveHourlyRate × commissionRate
+            // (mesma fórmula do endpoint recalculate-commissions)
+            const commission = b.totalWorkedHours * effectiveHourlyRate * (b.commissionRate / 100);
             const house = totalValue - commission;
 
             return {
@@ -315,8 +322,7 @@ export async function GET(request: NextRequest) {
                 totalHours,
                 totalValue,
                 commission,
-                house,
-                commissionSource: hasStoredCommission ? 'stored' : 'calculated'
+                house
             };
         });
 
