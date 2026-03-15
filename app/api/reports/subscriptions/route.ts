@@ -243,10 +243,6 @@ export async function GET(request: NextRequest) {
             )
             .reduce((sum, r) => sum + Number(r.amount), 0);
 
-        // Usar arReceivedAmount para comissões (consistente com recalculate-commissions)
-        // Usar receivedAmount (planos) para exibição nos cards de receita
-        const commissionBase = arReceivedAmount > 0 ? arReceivedAmount : receivedAmount;
-
         // hourlyRate para exibição no cabeçalho (baseado em horas de serviço e receita dos planos)
         const hourlyRate = totalServiceHours > 0
             ? receivedAmount / totalServiceHours
@@ -339,8 +335,8 @@ export async function GET(request: NextRequest) {
             const totalHours = b.totalMinutes / 60;
             const totalValue = totalHours * hourlyRate;
 
-            // Comissão dos atendimentos de assinatura (registros armazenados no DB)
-            const commission = storedCommissionByBarber[b.id] ?? 0;
+            // Comissão = horas atendidas × valor da hora × commissionRate%
+            const commission = totalHours * hourlyRate * (b.commissionRate / 100);
             const house = totalValue - commission;
 
             return {
