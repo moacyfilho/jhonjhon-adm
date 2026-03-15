@@ -269,7 +269,32 @@ export async function GET(request: NextRequest) {
             ? totalUsageCount / subscriptionsCount
             : 0;
 
-        // 6. Build Barber Table Data
+        // 6a. Buscar comissões armazenadas para todos os subscription appointments no período
+        // Sem filtro de subscription.status para incluir clientes que cancelaram depois
+        const storedCommissions = await prisma.commission.findMany({
+            where: {
+                appointment: {
+                    isSubscriptionAppointment: true,
+                    status: 'COMPLETED',
+                    date: { gte: startDate, lte: endDate },
+                    client: {
+                        subscriptions: {
+                            some: { isExclusive: isExclusiveMode } as any
+                            // Sem status: 'ACTIVE' — inclui ex-assinantes do período
+                        }
+                    }
+                }
+            },
+            select: { barberId: true, amount: true }
+        });
+
+        const storedCommissionByBarber: Record<string, number> = {};
+        storedCommissions.forEach(c => {
+            if (!storedCommissionByBarber[c.barberId]) storedCommissionByBarber[c.barberId] = 0;
+            storedCommissionByBarber[c.barberId] += Number(c.amount);
+        });
+
+        // 6b. Build Barber Table Data
         const barberStats: Record<string, any> = {};
         const serviceNames = new Set<string>();
 
@@ -325,9 +350,10 @@ export async function GET(request: NextRequest) {
             const totalHours = b.totalMinutes / 60;
             const totalValue = totalHours * hourlyRate;
 
-            // Comissão usando workedHoursSubscription × effectiveHourlyRate × commissionRate
-            // (mesma fórmula do endpoint recalculate-commissions)
-            const commission = b.totalWorkedHours * effectiveHourlyRate * (b.commissionRate / 100);
+            // Usar comissão armazenada no DB (mesma fonte que "Saldos: Serviços")
+            // Calculada como workedHoursSubscription × barber.hourlyRate quando o atendimento foi finalizado
+            const commission = storedCommissionByBarber[b.id] ??
+                (b.totalWorkedHours * effectiveHourlyRate * (b.commissionRate / 100));
             const house = totalValue - commission;
 
             return {
