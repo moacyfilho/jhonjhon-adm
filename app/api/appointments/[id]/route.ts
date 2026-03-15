@@ -301,6 +301,11 @@ export async function PATCH(
               );
               if (!isIncluded) extraServicesTotal += item.price;
             }
+          } else {
+            // Assinatura não encontrada (expirou/cancelada): usa totalAmount como base
+            // Evita comissão R$0 em atendimentos com flag isSubscriptionAppointment sem assinatura ativa
+            const finalAmt = updateData.totalAmount !== undefined ? updateData.totalAmount : currentAppointment.totalAmount;
+            extraServicesTotal = Math.max(0, finalAmt - productsTotal);
           }
           const extraCommission = (extraServicesTotal * barber.commissionRate) / 100;
           commissionAmount = hourlyCommission + extraCommission;
