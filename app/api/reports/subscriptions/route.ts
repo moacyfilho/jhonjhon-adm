@@ -234,13 +234,26 @@ export async function GET(request: NextRequest) {
         console.log(`[DEBUG] Final Totals - Received: ${receivedAmount}, Pending: ${pendingAmount}, Grand: ${grandTotal}`);
 
         // 7. Calculate Derived Metrics
-        // hourlyRate para exibição no cabeçalho (baseado em horas de serviço)
+        // arReceivedAmount: receita real pelos ARs pagos no período (mesma fonte do recalculate-commissions)
+        const arReceivedAmount = filteredReceivables
+            .filter(r =>
+                r.status === 'PAID' &&
+                r.paymentDate &&
+                isWithinInterval(r.paymentDate, { start: startDate, end: endDate })
+            )
+            .reduce((sum, r) => sum + Number(r.amount), 0);
+
+        // Usar arReceivedAmount para comissões (consistente com recalculate-commissions)
+        // Usar receivedAmount (planos) para exibição nos cards de receita
+        const commissionBase = arReceivedAmount > 0 ? arReceivedAmount : receivedAmount;
+
+        // hourlyRate para exibição no cabeçalho (baseado em horas de serviço e receita dos planos)
         const hourlyRate = totalServiceHours > 0
             ? receivedAmount / totalServiceHours
             : 0;
         // effectiveHourlyRate para cálculo de comissão (mesma fórmula do recalculate-commissions)
         const effectiveHourlyRate = totalWorkedHours > 0
-            ? receivedAmount / totalWorkedHours
+            ? commissionBase / totalWorkedHours
             : 0;
 
         // Frequência (Atendimentos Totais / Total de Assinantes que usaram ou total de ativos?)
