@@ -130,8 +130,10 @@ export async function GET(request: NextRequest) {
         };
 
         const isServiceIncluded = (serviceName: string, included: string[]): boolean => {
-            if (included.length === 0) return true; // sem dados: todos incluídos
             const name = serviceName.toLowerCase().trim();
+            // Sempre excluir hidratações, acabamentos e tratamentos (são extras, nunca assinatura)
+            if (/hidrat|acabamento|tratamento/.test(name)) return false;
+            if (included.length === 0) return true; // sem dados: todos incluídos
             return included.some(inc => name.includes(inc) || inc.includes(name));
         };
 
