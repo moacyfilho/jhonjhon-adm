@@ -247,10 +247,6 @@ export async function GET(request: NextRequest) {
         const hourlyRate = totalServiceHours > 0
             ? receivedAmount / totalServiceHours
             : 0;
-        // effectiveHourlyRate para cálculo de comissão (baseado em workedHoursSubscription)
-        const effectiveHourlyRate = totalWorkedHours > 0
-            ? receivedAmount / totalWorkedHours
-            : 0;
 
         // Frequência (Atendimentos Totais / Total de Assinantes que usaram ou total de ativos?)
         const subscriptionsCount = await prisma.subscription.count({
@@ -321,8 +317,8 @@ export async function GET(request: NextRequest) {
             const totalHours = b.totalMinutes / 60;
             const totalValue = totalHours * hourlyRate;
 
-            // Comissão = workedHoursSubscription × effectiveHourlyRate × commissionRate%
-            const commission = b.totalWorkedHours * effectiveHourlyRate * (b.commissionRate / 100);
+            // Comissão = horas de serviço de assinatura (CORTE/BARBA) × hourlyRate × commissionRate%
+            const commission = totalHours * hourlyRate * (b.commissionRate / 100);
             const house = totalValue - commission;
 
             return {
