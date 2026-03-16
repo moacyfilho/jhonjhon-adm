@@ -43,20 +43,13 @@ export async function GET(request: NextRequest) {
             endDate = new Date(new Date(`${nextMonthStr}T04:00:00.000Z`).getTime() - 1);
         }
 
-        // 1. Total Services
-        const serviceTotals = await prisma.appointmentService.aggregate({
+        // 1. Total Services (soma totalAmount dos atendimentos — valor real cobrado)
+        const serviceTotals = await prisma.appointment.aggregate({
             where: {
-                appointment: {
-                    date: {
-                        gte: startDate,
-                        lte: endDate,
-                    },
-                    status: 'COMPLETED',
-                },
+                date: { gte: startDate, lte: endDate },
+                status: 'COMPLETED',
             },
-            _sum: {
-                price: true,
-            },
+            _sum: { totalAmount: true },
         });
 
         // 2. Total Products
@@ -207,10 +200,10 @@ export async function GET(request: NextRequest) {
 
         return NextResponse.json({
             summary: {
-                servicesTotal: serviceTotals._sum.price || 0,
+                servicesTotal: serviceTotals._sum.totalAmount || 0,
                 productsTotal: (productTotals._sum.totalPrice || 0) + (standaloneProductSales._sum.totalAmount || 0),
                 commissionsTotal: commissionTotals._sum.amount || 0,
-                netTotal: (serviceTotals._sum.price || 0) + (productTotals._sum.totalPrice || 0) + (standaloneProductSales._sum.totalAmount || 0) - (commissionTotals._sum.amount || 0),
+                netTotal: (serviceTotals._sum.totalAmount || 0) + (productTotals._sum.totalPrice || 0) + (standaloneProductSales._sum.totalAmount || 0) - (commissionTotals._sum.amount || 0),
             },
             details: {
                 services,
