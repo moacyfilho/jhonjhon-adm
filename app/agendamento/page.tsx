@@ -93,12 +93,17 @@ export default function AgendamentoPage() {
   const [lookingUpClient, setLookingUpClient] = useState(false);
   const [clientFound, setClientFound] = useState<boolean | null>(null);
 
+  const [showIdentifyModal, setShowIdentifyModal] = useState(false);
+  const [modalPhone, setModalPhone] = useState('');
+  const [modalLooking, setModalLooking] = useState(false);
+
   useEffect(() => {
     fetchServices();
     fetchBarbers();
     fetchPlans();
     calculateMaxDate();
     setMounted(true);
+    setShowIdentifyModal(true);
   }, []);
 
   // Auto-seleciona o primeiro barbeiro quando a lista carregar
@@ -465,8 +470,97 @@ export default function AgendamentoPage() {
 
 
 
+  const handleModalSubmit = async (e: React.FormEvent) => {
+    e.preventDefault();
+    const digits = modalPhone.replace(/\D/g, '');
+    if (digits.length < 8) return;
+
+    setModalLooking(true);
+    try {
+      const res = await fetch(`/api/public/client-lookup?phone=${encodeURIComponent(modalPhone)}`);
+      const data = await res.json();
+      if (data.found) {
+        setFormData(prev => ({
+          ...prev,
+          clientPhone: modalPhone,
+          clientName: data.client.name,
+          clientEmail: data.client.email || '',
+        }));
+        setClientFound(true);
+        toast.success(`Olá, ${data.client.name}! Seus dados foram preenchidos automaticamente.`);
+      } else {
+        setFormData(prev => ({ ...prev, clientPhone: modalPhone }));
+        setClientFound(false);
+      }
+    } catch {
+      setFormData(prev => ({ ...prev, clientPhone: modalPhone }));
+    } finally {
+      setModalLooking(false);
+      setShowIdentifyModal(false);
+    }
+  };
+
   // Só renderiza o conteúdo principal após a montagem no cliente para evitar erros de hidratação
   if (!mounted) return null;
+
+  // Modal de identificação por telefone
+  if (showIdentifyModal) {
+    return (
+      <div className="min-h-screen bg-gradient-to-br from-gray-900 via-black to-gray-900 flex items-center justify-center p-4">
+        <div className="fixed inset-0 bg-black/80 backdrop-blur-sm z-50 flex items-center justify-center p-4">
+          <Card className="w-full max-w-md bg-gray-950 border-gold/40 shadow-2xl shadow-gold/10">
+            <CardContent className="pt-8 pb-8 px-8 space-y-6">
+              {/* Logo / ícone */}
+              <div className="flex flex-col items-center gap-3">
+                <div className="w-16 h-16 rounded-full bg-gold/10 border border-gold/30 flex items-center justify-center">
+                  <Phone className="w-8 h-8 text-gold" />
+                </div>
+                <div className="text-center">
+                  <h2 className="text-2xl font-serif font-bold text-gold">Bem-vindo!</h2>
+                  <p className="text-gray-400 text-sm mt-1">
+                    Digite seu telefone para identificarmos você
+                  </p>
+                </div>
+              </div>
+
+              <form onSubmit={handleModalSubmit} className="space-y-4">
+                <div className="space-y-2">
+                  <Label className="text-gray-300 font-medium">Telefone (com DDD)</Label>
+                  <Input
+                    autoFocus
+                    value={modalPhone}
+                    onChange={(e) => setModalPhone(e.target.value)}
+                    placeholder="(00) 00000-0000"
+                    className="bg-gray-900 border-gold/30 focus:border-gold text-white placeholder:text-gray-600 h-12 text-lg text-center tracking-widest"
+                  />
+                </div>
+
+                <Button
+                  type="submit"
+                  disabled={modalLooking || modalPhone.replace(/\D/g, '').length < 8}
+                  className="w-full h-12 bg-gold hover:bg-gold/90 text-black font-bold text-base"
+                >
+                  {modalLooking ? (
+                    <><Loader2 className="w-5 h-5 mr-2 animate-spin" /> Identificando...</>
+                  ) : (
+                    'Continuar'
+                  )}
+                </Button>
+
+                <button
+                  type="button"
+                  onClick={() => setShowIdentifyModal(false)}
+                  className="w-full text-sm text-gray-500 hover:text-gray-300 transition-colors py-1"
+                >
+                  Sou novo cliente, continuar sem identificar
+                </button>
+              </form>
+            </CardContent>
+          </Card>
+        </div>
+      </div>
+    );
+  }
 
   if (success) {
     return (
