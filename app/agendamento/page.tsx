@@ -90,6 +90,9 @@ export default function AgendamentoPage() {
   const [selectedDate, setSelectedDate] = useState<Date | undefined>(undefined); // Data selecionada no calendário
   const [paymentLink, setPaymentLink] = useState<string | null>(null);
 
+  const [lookingUpClient, setLookingUpClient] = useState(false);
+  const [clientFound, setClientFound] = useState<boolean | null>(null);
+
   useEffect(() => {
     fetchServices();
     fetchBarbers();
@@ -110,6 +113,34 @@ export default function AgendamentoPage() {
   //     });
   //   }
   // }, [barbers]);
+
+  const lookupClientByPhone = async (phone: string) => {
+    const digits = phone.replace(/\D/g, '');
+    if (digits.length < 8) {
+      setClientFound(null);
+      return;
+    }
+    setLookingUpClient(true);
+    setClientFound(null);
+    try {
+      const res = await fetch(`/api/public/client-lookup?phone=${encodeURIComponent(phone)}`);
+      const data = await res.json();
+      if (data.found) {
+        setFormData(prev => ({
+          ...prev,
+          clientName: data.client.name,
+          clientEmail: data.client.email || prev.clientEmail,
+        }));
+        setClientFound(true);
+      } else {
+        setClientFound(false);
+      }
+    } catch {
+      setClientFound(false);
+    } finally {
+      setLookingUpClient(false);
+    }
+  };
 
   const calculateMaxDate = () => {
     // Padrão: 30 dias no futuro (será atualizado pela API se houver configurações)
@@ -626,14 +657,36 @@ export default function AgendamentoPage() {
                           <Phone className="h-4 w-4" />
                           Telefone (com DDD) *
                         </Label>
-                        <Input
-                          id="clientPhone"
-                          value={formData.clientPhone}
-                          onChange={(e) => setFormData(prev => ({ ...prev, clientPhone: e.target.value }))}
-                          placeholder="(00) 00000-0000"
-                          required
-                          className="bg-gray-900/70 border-gold/30 focus:border-gold text-white placeholder:text-gray-500 h-12"
-                        />
+                        <div className="relative">
+                          <Input
+                            id="clientPhone"
+                            value={formData.clientPhone}
+                            onChange={(e) => {
+                              setFormData(prev => ({ ...prev, clientPhone: e.target.value }));
+                              setClientFound(null);
+                            }}
+                            onBlur={(e) => lookupClientByPhone(e.target.value)}
+                            placeholder="(00) 00000-0000"
+                            required
+                            className="bg-gray-900/70 border-gold/30 focus:border-gold text-white placeholder:text-gray-500 h-12 pr-10"
+                          />
+                          {lookingUpClient && (
+                            <Loader2 className="absolute right-3 top-3.5 h-5 w-5 animate-spin text-gold" />
+                          )}
+                          {!lookingUpClient && clientFound === true && (
+                            <CheckCircle2 className="absolute right-3 top-3.5 h-5 w-5 text-green-500" />
+                          )}
+                        </div>
+                        {clientFound === true && (
+                          <p className="text-sm text-green-400 flex items-center gap-1">
+                            ✓ Cliente identificado! Dados preenchidos automaticamente.
+                          </p>
+                        )}
+                        {clientFound === false && (
+                          <p className="text-sm text-gray-500">
+                            Novo cliente — preencha seu nome abaixo.
+                          </p>
+                        )}
                       </div>
 
                       <div className="space-y-2 md:col-span-2">
@@ -1032,21 +1085,36 @@ export default function AgendamentoPage() {
                         <Label htmlFor="subClientPhone" className="text-gray-300 font-medium">
                           WhatsApp *
                         </Label>
-                        <Input
-                          id="subClientPhone"
-                          value={formData.clientPhone}
-                          onChange={(e) => {
-                            // Mascara simples de telefone
-                            let v = e.target.value.replace(/\D/g, '');
-                            if (v.length > 11) v = v.slice(0, 11);
-                            if (v.length > 2) v = `(${v.slice(0, 2)}) ${v.slice(2)}`;
-                            if (v.length > 9) v = `${v.slice(0, 9)}-${v.slice(9)}`;
-                            setFormData(prev => ({ ...prev, clientPhone: v }));
-                          }}
-                          placeholder="(00) 00000-0000"
-                          required
-                          className="bg-gray-900/50 border-gold/20 focus:border-gold text-white placeholder:text-gray-600"
-                        />
+                        <div className="relative">
+                          <Input
+                            id="subClientPhone"
+                            value={formData.clientPhone}
+                            onChange={(e) => {
+                              let v = e.target.value.replace(/\D/g, '');
+                              if (v.length > 11) v = v.slice(0, 11);
+                              if (v.length > 2) v = `(${v.slice(0, 2)}) ${v.slice(2)}`;
+                              if (v.length > 9) v = `${v.slice(0, 9)}-${v.slice(9)}`;
+                              setFormData(prev => ({ ...prev, clientPhone: v }));
+                              setClientFound(null);
+                            }}
+                            onBlur={(e) => lookupClientByPhone(e.target.value)}
+                            placeholder="(00) 00000-0000"
+                            required
+                            className="bg-gray-900/50 border-gold/20 focus:border-gold text-white placeholder:text-gray-600 pr-10"
+                          />
+                          {lookingUpClient && (
+                            <Loader2 className="absolute right-3 top-3 h-5 w-5 animate-spin text-gold" />
+                          )}
+                          {!lookingUpClient && clientFound === true && (
+                            <CheckCircle2 className="absolute right-3 top-3 h-5 w-5 text-green-500" />
+                          )}
+                        </div>
+                        {clientFound === true && (
+                          <p className="text-sm text-green-400">✓ Cliente identificado! Dados preenchidos.</p>
+                        )}
+                        {clientFound === false && (
+                          <p className="text-sm text-gray-500">Novo cliente — preencha seu nome abaixo.</p>
+                        )}
                       </div>
 
                       <div className="space-y-2 md:col-span-2">
